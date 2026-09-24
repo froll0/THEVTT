@@ -20,5 +20,9 @@
     "@types/ws": "^8.5.0",
     "esbuild": "^0.25.0",
     "tsx": "^4.20.0"
+  },
+  "exports": {
+    "./app": "./src/app.ts",
+    "./upnp": "./src/upnp.ts"
   }
 }

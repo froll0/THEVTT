@@ -18,6 +18,16 @@ const bridge: DesktopBridge = {
     write: (key, value) => ipcRenderer.invoke('store:write', key, value),
   },
   info: () => ipcRenderer.invoke('app:info'),
+  server: {
+    getConfig: () => ipcRenderer.invoke('server:get-config'),
+    setConfig: (cfg) => ipcRenderer.invoke('server:set-config', cfg),
+    status: () => ipcRenderer.invoke('server:status'),
+    onStatus: (cb) => {
+      const listener = (_: unknown, s: Parameters<typeof cb>[0]) => cb(s);
+      ipcRenderer.on('server:status', listener);
+      return () => ipcRenderer.removeListener('server:status', listener);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('thevtt', bridge);

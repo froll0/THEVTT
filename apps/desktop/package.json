@@ -21,6 +21,7 @@
     "dist": "pnpm build && electron-builder --config electron-builder.yml"
   },
   "devDependencies": {
+    "@thevtt/server": "workspace:*",
     "@thevtt/shared": "workspace:*",
     "@thevtt/systems": "workspace:*",
     "@types/react": "^19.2.0",

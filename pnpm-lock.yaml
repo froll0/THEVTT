@@ -20,6 +20,9 @@ importers:
 
   apps/desktop:
     devDependencies:
+      '@thevtt/server':
+        specifier: workspace:*
+        version: link:../server
       '@thevtt/shared':
         specifier: workspace:*
         version: link:../../packages/shared
