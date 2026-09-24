@@ -2,6 +2,7 @@ import { getSystem } from '@thevtt/systems';
 import { ArrowLeft, ArrowLeftRight, Crosshair, Server, Dices, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Swords, Map as MapIcon, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TitleBar } from '../components/Shell';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Avatar } from '../components/ui';
 import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
@@ -171,11 +172,13 @@ export function TableView({ campaignId }: { campaignId: string }) {
           {dockOpen && state && (
             <div className="dock-panel">
               <div className="dock-title">{tabs.find((t) => t.id === tab)?.label}</div>
-              {tab === 'chat' && <ChatPanel />}
-              {tab === 'initiative' && <InitiativePanel />}
-              {tab === 'sheet' && <SheetPanel placeAt={viewCenter} />}
-              {tab === 'scene' && isGm && <ScenePanel />}
-              {tab === 'notes' && isGm && <NotesPanel />}
+              <ErrorBoundary area="Il pannello" key={tab}>
+                {tab === 'chat' && <ChatPanel />}
+                {tab === 'initiative' && <InitiativePanel />}
+                {tab === 'sheet' && <SheetPanel placeAt={viewCenter} />}
+                {tab === 'scene' && isGm && <ScenePanel />}
+                {tab === 'notes' && isGm && <NotesPanel />}
+              </ErrorBoundary>
             </div>
           )}
         </aside>

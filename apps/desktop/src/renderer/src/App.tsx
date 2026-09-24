@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Sidebar, TitleBar } from './components/Shell';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toasts } from './components/ui';
 import { useApp } from './store/app';
 import { applySettings, useSettings } from './store/settings';
@@ -48,7 +49,9 @@ export function App() {
   if (route.name === 'table') {
     return (
       <>
-        <TableView key={route.campaignId} campaignId={route.campaignId} />
+        <ErrorBoundary area="Il tavolo" key={route.campaignId}>
+          <TableView campaignId={route.campaignId} />
+        </ErrorBoundary>
         <Toasts />
       </>
     );
@@ -60,6 +63,7 @@ export function App() {
       <div className={`body sidebar-${sidebarPosition}`}>
         <Sidebar />
         <main className="main">
+          <ErrorBoundary area="Questa pagina" key={route.name}>
           {route.name === 'home' && <HomeView />}
           {route.name === 'campaigns' && <CampaignsView />}
           {route.name === 'campaign' && <CampaignView key={route.id} id={route.id} />}
@@ -67,6 +71,7 @@ export function App() {
           {route.name === 'character' && <CharacterEditor key={route.id ?? 'new'} id={route.id} systemId={route.systemId} assignTo={route.assignTo} />}
           {route.name === 'friends' && <FriendsView />}
           {route.name === 'settings' && <SettingsView />}
+          </ErrorBoundary>
         </main>
       </div>
       <Toasts />

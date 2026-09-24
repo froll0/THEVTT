@@ -53,7 +53,10 @@ export function ChatPanel() {
   const endRef = useRef<HTMLDivElement>(null);
   const log = state?.log ?? [];
 
-  useEffect(() => endRef.current?.scrollIntoView({ block: 'end' }), [log.length]);
+  useEffect(() => {
+    // braces matter: recent Chromium returns a Promise from scrollIntoView, which React would take for a cleanup
+    endRef.current?.scrollIntoView({ block: 'end' });
+  }, [log.length]);
 
   const send = () => {
     const t = text.trim();
@@ -126,6 +129,7 @@ export function InitiativePanel() {
               <span className="grow ellipsis">{e.name}</span>
               {isGm ? (
                 <input
+                  key={e.value}
                   className="input ini-value"
                   type="number"
                   defaultValue={e.value}

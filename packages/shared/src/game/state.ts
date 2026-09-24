@@ -132,7 +132,8 @@ export function createInitialState(opts: {
 
 /** The view of the state a given user is allowed to see. */
 export function viewFor(state: GameState, userId: string): GameState {
-  if (userId === state.gmId) return state;
+  // always a copy: the host mutates its state in place, a shared reference would leak later changes
+  if (userId === state.gmId) return structuredClone(state);
   const active = state.scenes[state.activeSceneId];
   const tokens: Record<string, Token> = {};
   for (const t of Object.values(state.tokens)) {
@@ -141,7 +142,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     tokens[t.id] = t;
   }
   const visibleTokenIds = new Set(Object.keys(tokens));
-  return {
+  return structuredClone({
     ...state,
     scenes: active ? { [active.id]: active } : {},
     tokens,
@@ -152,7 +153,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     },
     log: state.log.filter((l) => !l.private || l.authorId === userId),
     gmNotes: '',
-  };
+  });
 }
 
 /** Asset ids referenced by a (filtered) state. */

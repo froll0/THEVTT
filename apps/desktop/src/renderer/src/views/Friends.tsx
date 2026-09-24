@@ -10,7 +10,10 @@ export function FriendsView() {
   const [results, setResults] = useState<UserPublic[]>([]);
 
   useEffect(() => {
-    if (query.trim().length < 2) return setResults([]);
+    if (query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
     const t = setTimeout(() => api.searchUsers(query.trim()).then(setResults).catch(() => setResults([])), 250);
     return () => clearTimeout(t);
   }, [api, query]);
