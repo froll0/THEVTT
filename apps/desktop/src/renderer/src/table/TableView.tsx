@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { ArrowLeft, Crosshair, Dices, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Swords, Map as MapIcon, UserRoundPlus, Users } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Crosshair, Server, Dices, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Swords, Map as MapIcon, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TitleBar } from '../components/Shell';
 import { Avatar } from '../components/ui';
@@ -130,10 +130,13 @@ export function TableView({ campaignId }: { campaignId: string }) {
           {state && (
             <div className="toolbar glass top-right">
               {isGm && <span className="badge live"><Radio size={11} /> Host</span>}
+              <ConnectionBadge isGm={isGm} onlinePlayers={players.filter((p) => p.online).map((p) => p.id)} />
               <div className="avatars">
                 <Avatar user={{ ...(campaign.members.find((m) => m.role === 'gm')?.user ?? user), online: true }} size={24} presence />
                 {players.map((p) => (
-                  <Avatar key={p.id} user={{ displayName: p.displayName, avatarColor: p.color, online: p.online }} size={24} presence />
+                  <span key={p.id} className="avatar-route" data-route={p.online ? (table.routes[p.id] ?? 'relay') : undefined} title={`${p.displayName}${p.online ? (table.routes[p.id] === 'p2p' ? ' · connessione diretta' : ' · via server') : ' · offline'}`}>
+                    <Avatar user={{ displayName: p.displayName, avatarColor: p.color, online: p.online }} size={24} presence />
+                  </span>
                 ))}
               </div>
               <span className="faint small">{getSystem(state.systemId)?.shortName}</span>
@@ -178,5 +181,28 @@ export function TableView({ campaignId }: { campaignId: string }) {
         </aside>
       </div>
     </div>
+  );
+}
+
+function ConnectionBadge({ isGm, onlinePlayers }: { isGm: boolean; onlinePlayers: string[] }) {
+  const routes = useTable((s) => s.routes);
+  if (isGm) {
+    if (!onlinePlayers.length) return null;
+    const direct = onlinePlayers.filter((id) => routes[id] === 'p2p').length;
+    return (
+      <span className={`badge ${direct === onlinePlayers.length ? 'live' : ''}`} title="Giocatori collegati direttamente al tuo computer">
+        <ArrowLeftRight size={11} /> {direct}/{onlinePlayers.length} diretti
+      </span>
+    );
+  }
+  const direct = Object.values(routes).includes('p2p');
+  return direct ? (
+    <span className="badge live" title="Collegato direttamente al computer del master">
+      <ArrowLeftRight size={11} /> Diretta
+    </span>
+  ) : (
+    <span className="badge" title="Collegato al master tramite il server">
+      <Server size={11} /> Via server
+    </span>
   );
 }

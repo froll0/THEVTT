@@ -1,4 +1,5 @@
 import cors from '@fastify/cors';
+import type { RtcConfig } from '@thevtt/shared';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { resolveToken } from './auth';
 import { openDb, type Db } from './db';
@@ -25,7 +26,11 @@ export interface Ctx {
 export interface AppOptions {
   dbPath: string;
   logger?: boolean;
+  /** ICE servers handed to clients for direct GM ↔ player connections */
+  iceServers?: RtcConfig['iceServers'];
 }
+
+export const DEFAULT_ICE_SERVERS: RtcConfig['iceServers'] = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
 
 export function bearer(req: FastifyRequest): string | undefined {
   const h = req.headers.authorization;
@@ -60,6 +65,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   });
 
   app.get('/health', async () => ({ ok: true, name: 'thevtt-lobby', version: '0.1.0' }));
+  app.get('/rtc/config', async (): Promise<RtcConfig> => ({ iceServers: opts.iceServers ?? DEFAULT_ICE_SERVERS }));
   authRoutes(app, ctx);
   socialRoutes(app, ctx);
   campaignRoutes(app, ctx);

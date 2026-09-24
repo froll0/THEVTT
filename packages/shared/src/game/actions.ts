@@ -30,7 +30,8 @@ export type GameAction =
 export type PlayerToHost = { k: 'hello' } | { k: 'action'; action: GameAction; seq?: number };
 
 export type HostToPlayer =
-  | { k: 'state'; state: GameState }
+  /** rev grows with every state sent: receivers drop stale snapshots */
+  | { k: 'state'; state: GameState; rev: number }
   | { k: 'asset'; id: string; dataUrl: string }
   | { k: 'rejected'; seq?: number; reason: string }
   | { k: 'ping'; x: number; y: number; sceneId: string; color: string; from: string };

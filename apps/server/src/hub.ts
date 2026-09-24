@@ -183,6 +183,18 @@ export class Hub implements Presence {
         if (peer) this.send(peer, { t: 'relay', campaignId: msg.campaignId, from: userId, payload: msg.payload });
         return;
       }
+      case 'rtc.signal': {
+        const s = this.sessions.get(msg.campaignId);
+        if (!s) throw new Error('La sessione non è attiva');
+        // Signaling only flows between the host and players seated at its table.
+        if (s.host === ws) {
+          const peer = s.peers.get(msg.to);
+          if (peer) this.send(peer, { t: 'rtc.signal', campaignId: msg.campaignId, from: userId, data: msg.data });
+        } else if (s.peers.get(userId) === ws && msg.to === s.hostId) {
+          this.send(s.host, { t: 'rtc.signal', campaignId: msg.campaignId, from: userId, data: msg.data });
+        } else throw new Error('Non sei seduto a questo tavolo');
+        return;
+      }
       default:
         throw new Error('Tipo di messaggio sconosciuto');
     }

@@ -7,11 +7,14 @@ import {
   type GameState,
   type HostToPlayer,
   type PlayerToHost,
+  type RtcConfig,
   type TableCharacter,
 } from '@thevtt/shared';
 import { create } from 'zustand';
+import { FALLBACK_ICE, PeerLink } from '../lib/p2p';
 import { localStore } from '../lib/platform';
 import { useApp } from './app';
+import { useSettings } from './settings';
 
 export interface Ping {
   id: string;
@@ -22,6 +25,8 @@ export interface Ping {
 }
 
 type Phase = 'idle' | 'connecting' | 'live' | 'waiting';
+/** how a peer is reached: direct WebRTC link or the server relay */
+export type Route = 'p2p' | 'relay';
 
 interface SavedTable {
   state: GameState;
@@ -36,6 +41,8 @@ interface TableStore {
   assets: Record<string, string>;
   pings: Ping[];
   selectedTokenId: string | null;
+  /** host: route per player · player: route to the host */
+  routes: Record<string, Route>;
 
   host(campaign: Campaign): Promise<void>;
   join(campaign: Campaign): void;
@@ -48,6 +55,9 @@ interface TableStore {
 let host: GameHost | null = null;
 let cleanup: (() => void)[] = [];
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+/** direct links: host → one per player, player → one to the host */
+const links = new Map<string, PeerLink>();
+let lastRev = 0;
 const charTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const saveKey = (campaignId: string) => `table-${campaignId}`;
@@ -56,6 +66,9 @@ export const useTable = create<TableStore>((set, get) => {
   const apply = (msg: HostToPlayer) => {
     switch (msg.k) {
       case 'state':
+        // snapshots may arrive through both relay and direct link while switching
+        if (msg.rev <= lastRev) break;
+        lastRev = msg.rev;
         set({ state: msg.state, phase: 'live' });
         break;
       case 'asset':
@@ -115,9 +128,57 @@ export const useTable = create<TableStore>((set, get) => {
     persist();
   };
 
+  const iceServers = () =>
+    useApp
+      .getState()
+      .api.rtcConfig()
+      .then((c) => c.iceServers)
+      .catch(() => FALLBACK_ICE);
+
+  const setRoute = (userId: string, route: Route | null) =>
+    set((s) => {
+      const routes = { ...s.routes };
+      if (route) routes[userId] = route;
+      else delete routes[userId];
+      return { routes };
+    });
+
+  const openLink = (campaignId: string, peerId: string, initiator: boolean, ice: RtcConfig['iceServers'], onMessage: (p: unknown) => void, onClosed?: () => void) => {
+    // detach the previous link first, so its closing doesn't trigger fallbacks/retries
+    const previous = links.get(peerId);
+    links.delete(peerId);
+    previous?.close(true);
+    const { rt } = useApp.getState();
+    const link: PeerLink = new PeerLink({
+      initiator,
+      iceServers: ice,
+      signal: (data) => rt?.send({ t: 'rtc.signal', campaignId, to: peerId, data }),
+      onMessage,
+      onState: (st) => {
+        if (links.get(peerId) !== link) return;
+        if (st === 'open') setRoute(peerId, 'p2p');
+        if (st === 'closed') {
+          links.delete(peerId);
+          setRoute(peerId, 'relay');
+          onClosed?.();
+        }
+      },
+    });
+    links.set(peerId, link);
+    return link;
+  };
+
+  const closeLinks = () => {
+    const all = [...links.values()];
+    links.clear();
+    for (const l of all) l.close(true);
+  };
+
   const teardown = () => {
     for (const fn of cleanup) fn();
     cleanup = [];
+    closeLinks();
+    lastRev = 0;
     if (saveTimer) {
       clearTimeout(saveTimer);
       saveTimer = null;
@@ -134,12 +195,13 @@ export const useTable = create<TableStore>((set, get) => {
     assets: {},
     pings: [],
     selectedTokenId: null,
+    routes: {},
 
     async host(campaign) {
       teardown();
       const { rt, user } = useApp.getState();
       if (!rt || !user) return;
-      set({ campaignId: campaign.id, role: 'gm', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null });
+      set({ campaignId: campaign.id, role: 'gm', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, routes: {} });
 
       const saved = await localStore.read<SavedTable>(saveKey(campaign.id));
       const state =
@@ -154,18 +216,36 @@ export const useTable = create<TableStore>((set, get) => {
         assets: saved?.assets,
         send: (to, msg) => {
           if (to === me) apply(msg);
-          else rt.send({ t: 'relay.peer', campaignId: campaign.id, to, payload: msg });
+          else if (!links.get(to)?.send(msg)) rt.send({ t: 'relay.peer', campaignId: campaign.id, to, payload: msg });
         },
         onChange: persist,
         onCharacterChange: syncCharacter,
       });
       set({ assets: { ...host.assetStore } });
+      const ice = await iceServers();
+      if (!host || get().campaignId !== campaign.id) return; // left while loading
 
       cleanup.push(
         rt.on((msg) => {
           if (!host) return;
           if (msg.t === 'relay' && msg.campaignId === campaign.id) host.handle(msg.from, msg.payload as PlayerToHost);
-          if (msg.t === 'session.peer' && msg.campaignId === campaign.id && !msg.joined && host.isConnected(msg.userId)) host.disconnect(msg.userId);
+          if (msg.t === 'rtc.signal' && msg.campaignId === campaign.id) {
+            const from = msg.from;
+            if (msg.data.type === 'description' && msg.data.description.type === 'offer') {
+              if (!useSettings.getState().directConnection) {
+                rt.send({ t: 'rtc.signal', campaignId: campaign.id, to: from, data: { type: 'bye' } });
+                return;
+              }
+              // a new offer always replaces the previous link with that player
+              openLink(campaign.id, from, false, ice, (p) => host?.handle(from, p as PlayerToHost));
+            }
+            void links.get(from)?.handleSignal(msg.data);
+          }
+          if (msg.t === 'session.peer' && msg.campaignId === campaign.id && !msg.joined) {
+            links.get(msg.userId)?.close(false);
+            setRoute(msg.userId, null);
+            if (host.isConnected(msg.userId)) host.disconnect(msg.userId);
+          }
           if (msg.t === 'notify' && msg.notification.kind === 'campaign.updated' && msg.notification.campaignId === campaign.id) {
             void syncRoster(campaign.id);
           }
@@ -185,23 +265,54 @@ export const useTable = create<TableStore>((set, get) => {
       teardown();
       const { rt } = useApp.getState();
       if (!rt) return;
-      set({ campaignId: campaign.id, role: 'player', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null });
+      set({ campaignId: campaign.id, role: 'player', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, routes: {} });
+      let hostId = campaign.session?.hostId ?? campaign.gmId;
+      let retries = 0;
+      let retryTimer: ReturnType<typeof setTimeout> | null = null;
+      const icePromise = iceServers();
+
+      const connectDirect = async () => {
+        if (retryTimer) clearTimeout(retryTimer);
+        if (!useSettings.getState().directConnection || get().campaignId !== campaign.id) return;
+        const ice = await icePromise;
+        if (get().campaignId !== campaign.id || get().phase === 'waiting') return;
+        const target = hostId;
+        openLink(campaign.id, target, true, ice, (p) => apply(p as HostToPlayer), () => {
+          // the link dropped or never opened: keep playing on the relay and retry a few times
+          if (retries++ < 3 && get().campaignId === campaign.id && get().phase !== 'waiting') {
+            retryTimer = setTimeout(() => void connectDirect(), 4000 * retries);
+          }
+        });
+      };
+
       const hello = () => {
+        lastRev = 0;
         rt.send({ t: 'session.join', campaignId: campaign.id });
         const payload: PlayerToHost = { k: 'hello' };
         rt.send({ t: 'relay.host', campaignId: campaign.id, payload });
+        retries = 0;
+        void connectDirect();
       };
       cleanup.push(
         rt.on((msg) => {
           if (msg.t === 'relay' && msg.campaignId === campaign.id) apply(msg.payload as HostToPlayer);
+          if (msg.t === 'rtc.signal' && msg.campaignId === campaign.id && msg.from === hostId) void links.get(hostId)?.handleSignal(msg.data);
           if (msg.t === 'session.state' && msg.campaignId === campaign.id) {
-            if (!msg.session) set({ phase: 'waiting' });
-            else if (get().phase === 'waiting') {
-              set({ phase: 'connecting' });
-              hello();
+            if (!msg.session) {
+              closeLinks();
+              set({ phase: 'waiting', routes: {} });
+            } else {
+              hostId = msg.session.hostId;
+              if (get().phase === 'waiting') {
+                set({ phase: 'connecting' });
+                hello();
+              }
             }
           }
         }),
+        () => {
+          if (retryTimer) clearTimeout(retryTimer);
+        },
         rt.onStatus((s) => {
           if (s === 'online') hello();
         }),
@@ -213,7 +324,7 @@ export const useTable = create<TableStore>((set, get) => {
 
     leave() {
       teardown();
-      set({ campaignId: null, role: null, phase: 'idle', state: null, assets: {}, pings: [], selectedTokenId: null });
+      set({ campaignId: null, role: null, phase: 'idle', state: null, assets: {}, pings: [], selectedTokenId: null, routes: {} });
     },
 
     dispatch(action) {
@@ -227,7 +338,8 @@ export const useTable = create<TableStore>((set, get) => {
         return;
       }
       const payload: PlayerToHost = { k: 'action', action };
-      useApp.getState().rt?.send({ t: 'relay.host', campaignId, payload });
+      const direct = [...links.values()][0];
+      if (!direct?.send(payload)) useApp.getState().rt?.send({ t: 'relay.host', campaignId, payload });
     },
 
     select: (selectedTokenId) => set({ selectedTokenId }),

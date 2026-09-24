@@ -188,6 +188,9 @@ export function SettingsView() {
               ]}
             />
           </Row>
+          <Row title="Connessione diretta (P2P)" hint="Master e giocatori si collegano direttamente, senza passare dal server. Se non è possibile si usa il server in automatico.">
+            <Switch on={s.directConnection} onChange={(directConnection) => s.set({ directConnection })} />
+          </Row>
           <Row title="Barre dei punti ferita">
             <Switch on={s.board.hpBars} onChange={(hpBars) => s.setBoard({ hpBars })} />
           </Row>

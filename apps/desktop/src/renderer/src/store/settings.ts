@@ -18,6 +18,8 @@ export interface Settings {
   sidebarPosition: 'left' | 'right';
   sidebarCollapsed: boolean;
   dockPosition: 'left' | 'right';
+  /** direct WebRTC link with the GM/players instead of the server relay */
+  directConnection: boolean;
   board: {
     background: string;
     gridColor: string;
@@ -40,6 +42,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sidebarPosition: 'left',
   sidebarCollapsed: false,
   dockPosition: 'right',
+  directConnection: true,
   board: { background: '#0d0e10', gridColor: '#ffffff', gridOpacity: 0.12, tokenNames: 'hover', hpBars: true },
   customCss: '',
 };

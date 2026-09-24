@@ -110,6 +110,16 @@ describe('lobby server', () => {
     expect(await peer.next((m) => m.t === 'relay')).toMatchObject({ payload: { k: 'state' } });
     expect((await api('GET', `/campaigns/${camp.id}`, pl.token)).body.session.participants).toEqual([pl.user.id]);
 
+    // WebRTC signaling: player ↔ host only
+    const offer = { type: 'description', description: { type: 'offer', sdp: 'v=0' } };
+    peer.send({ t: 'rtc.signal', campaignId: camp.id, to: gm.user.id, data: offer });
+    expect(await host.next((m) => m.t === 'rtc.signal')).toMatchObject({ from: pl.user.id, data: offer });
+    host.send({ t: 'rtc.signal', campaignId: camp.id, to: pl.user.id, data: { type: 'bye' } });
+    expect(await peer.next((m) => m.t === 'rtc.signal')).toMatchObject({ from: gm.user.id, data: { type: 'bye' } });
+    peer.send({ t: 'rtc.signal', campaignId: camp.id, to: stranger.user.id, data: { type: 'bye' } });
+    expect(await peer.next((m) => m.t === 'error')).toMatchObject({ message: 'Non sei seduto a questo tavolo' });
+    expect((await api('GET', '/rtc/config', pl.token)).body.iceServers[0].urls).toBeTruthy();
+
     // host disconnect ends the session
     host.ws.close();
     await peer.next((m) => m.t === 'session.state' && m.session === null);

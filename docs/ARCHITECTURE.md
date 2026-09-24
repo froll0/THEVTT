@@ -6,8 +6,9 @@
    azioni, tiri di dado, stato del tavolo, mappe — gira sul computer del master
    (`GameHost` in `packages/shared`). Lo stato viene salvato in locale
    (`<userData>/data/table-<campaignId>.json`) e ripreso alla sessione successiva.
-2. **Il server è social + relay.** Conserva account, amicizie, campagne, inviti e schede dei
-   personaggi; durante la sessione inoltra messaggi opachi tra master e giocatori senza leggerli.
+2. **Il server è social + signaling (+ relay di riserva).** Conserva account, amicizie, campagne,
+   inviti e schede dei personaggi; durante la sessione mette in contatto master e giocatori per la
+   connessione diretta e, solo se questa non è possibile, inoltra messaggi opachi senza leggerli.
 3. **Il regolamento è un plugin.** Il core (tavolo, dadi, iniziativa, social) non conosce regole
    specifiche. Ogni sistema fornisce una parte logica (`packages/systems`) e una parte UI
    (`apps/desktop/src/renderer/src/systems`).
@@ -17,16 +18,35 @@
 
 ## Flusso di una sessione
 
+Il giocatore entra subito tramite relay (così gioca da subito), e in parallelo apre la connessione
+diretta. Appena il data channel è aperto, entrambi i lati passano su di esso.
+
 ```
-Giocatore                     Server (relay)                     Master (host)
+Giocatore                     Server                              Master (host)
     |  session.join  ------------> |                                  |
-    |                              | --- session.peer(joined) ------> |
     |  relay.host {hello} -------> | --- relay {from, hello} -------> | GameHost.connect()
-    |                              | <-- relay.peer {asset…, state} - | vista filtrata
-    | <--------- relay {state} --- |                                  |
-    |  relay.host {action} ------> | --- relay {from, action} ------> | valida, tira, applica
-    | <--------- relay {state} --- | <-- relay.peer (a ciascuno) ---- |
+    | <--------- relay {state} --- | <-- relay.peer {asset…, state} - | vista filtrata
+    |                              |                                  |
+    |  rtc.signal {offer} -------> | --- rtc.signal {from, offer} --> | PeerLink (answerer)
+    | <------- rtc.signal {answer, candidati ICE} ------------------- |
+    |                                                                  |
+    | ======== WebRTC data channel "game" (DTLS, affidabile) ========= |
+    |  {action} ---------------------------------------------------->  | valida, tira, applica
+    | <---------------------------------------------- {asset…, state}  |
 ```
+
+- **Trasporto** (`apps/desktop/src/renderer/src/lib/p2p.ts`): un `PeerLink` per giocatore sul master,
+  uno verso il master sul giocatore. I messaggi grandi (mappe) sono spezzati in frame da 60 KB
+  (`packages/shared/src/frames.ts`) e inviati con controllo del buffer.
+- **Ripiego**: se il canale non si apre entro 12 s o cade, i messaggi tornano sul relay senza
+  interruzioni; il giocatore ritenta fino a 3 volte. Il master può anche rifiutare le connessioni
+  dirette (impostazione "Connessione diretta").
+- **Ordine**: ogni stato inviato ha un numero di revisione crescente; durante il passaggio
+  relay → diretto il giocatore scarta gli snapshot più vecchi di quello già ricevuto.
+- **Sicurezza**: il server inoltra il signaling solo tra l'host della sessione e i giocatori seduti
+  a quel tavolo, quindi ogni link è legato a un utente autenticato. Il canale è cifrato (DTLS).
+- **ICE**: il client chiede i server STUN/TURN a `GET /rtc/config` (configurabili con
+  `THEVTT_ICE_SERVERS`).
 
 - Ogni giocatore riceve una **vista filtrata** (`viewFor`): niente token nascosti, niente tiri
   privati altrui, niente note del master, solo la scena attiva.
@@ -63,7 +83,7 @@ Il server non ha bisogno di modifiche: memorizza solo `systemId` e i dati della 
 
 - Fastify + `ws`, database `node:sqlite` (nessuna dipendenza nativa), migrazioni in `db.ts`.
 - Password con scrypt, token opachi (salvati come hash SHA-256, validità 30 giorni).
-- WebSocket su `/ws?token=…`: presenza, notifiche, sessioni e relay (payload fino a 16 MB).
+- WebSocket su `/ws?token=…`: presenza, notifiche, sessioni, signaling WebRTC e relay (payload fino a 16 MB).
 
 ## Desktop
 

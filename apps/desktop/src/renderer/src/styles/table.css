@@ -448,3 +448,23 @@
   background: var(--danger);
   border-color: var(--danger);
 }
+
+.avatar-route {
+  position: relative;
+  display: inline-flex;
+  margin-left: -6px;
+}
+.avatar-route .avatar {
+  margin-left: 0 !important;
+}
+.avatar-route[data-route='p2p']::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 2px;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  background: var(--success);
+}

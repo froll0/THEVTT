@@ -45,6 +45,7 @@ export class GameHost {
   private readonly opts: GameHostOptions;
   private readonly rng: Rng;
   private readonly now: () => number;
+  private rev = 0;
 
   constructor(opts: GameHostOptions) {
     this.opts = opts;
@@ -415,7 +416,7 @@ export class GameHost {
       this.opts.send(userId, { k: 'asset', id: assetId, dataUrl });
       known.add(assetId);
     }
-    this.opts.send(userId, { k: 'state', state: view });
+    this.opts.send(userId, { k: 'state', state: view, rev: ++this.rev });
   }
 
   private commit(): void {

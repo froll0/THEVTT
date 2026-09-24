@@ -5,3 +5,4 @@ export * from './game/state';
 export * from './game/actions';
 export * from './game/host';
 export * from './id';
+export * from './frames';

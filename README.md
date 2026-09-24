@@ -2,7 +2,9 @@
 
 Virtual tabletop **desktop** con launcher social: account, amici, inviti, campagne e personaggi.
 Durante la sessione **l'hosting è affidato al master**: regole, tiri di dado, stato del tavolo e mappe
-vivono sul suo computer. Il server centrale gestisce solo la parte social e fa da relay.
+vivono sul suo computer, e i giocatori si collegano **direttamente** a lui (WebRTC). Il server centrale
+gestisce la parte social, mette in contatto master e giocatori e fa da relay solo quando la connessione
+diretta non è possibile.
 
 Il motore non è legato a un gioco: i regolamenti sono plugin. Il primo è **D&D 5.5 (2024)**, basato
 sul System Reference Document 5.2 (CC-BY-4.0).
@@ -17,6 +19,8 @@ sul System Reference Document 5.2 (CC-BY-4.0).
 - Notifiche in tempo reale (richieste, inviti, sessioni aperte)
 
 **Tavolo** (ospitato dal master)
+- Connessione diretta master ↔ giocatori (WebRTC data channel); se non riesce, ripiego automatico e
+  trasparente sul relay del server. Indicatore "Diretta / Via server" e "n/m diretti" per il master
 - Mappa su canvas con griglia, pan/zoom, mappe caricate o trascinate sul tavolo
 - Token: movimento, PF, CA, taglia, condizioni, ritratto, token nascosti, controllo per giocatore
 - Righello (5 ft per casella, diagonali 2024), ping animati
@@ -76,14 +80,17 @@ pnpm build       # build di server e desktop
 pnpm dist        # installer (Windows NSIS, macOS DMG, Linux AppImage/deb) in apps/desktop/release
 ```
 
-Variabili d'ambiente del server: `PORT` (default 4477), `HOST`, `THEVTT_DB` (percorso SQLite).
+Variabili d'ambiente del server: `PORT` (default 4477), `HOST`, `THEVTT_DB` (percorso SQLite),
+`THEVTT_ICE_SERVERS` (server STUN/TURN in JSON, es.
+`[{"urls":"turn:turn.example.com:3478","username":"u","credential":"p"}]`; default: STUN pubblici).
+Un server TURN aumenta la percentuale di connessioni dirette dietro NAT restrittivi; senza, quei
+giocatori usano il relay.
 L'indirizzo del server si cambia dalla schermata di accesso; il default del client si imposta
 con `VITE_THEVTT_SERVER` in build.
 
 ## Prossimi passi
 
-- **Connessione diretta P2P (WebRTC)** tra master e giocatori, con il server solo per la
-  segnalazione: meno latenza e zero traffico di gioco sul server
+- Hosting senza server per partite in LAN (scoperta locale del master)
 - Nebbia di guerra e linee di vista
 - Compendio SRD (incantesimi, mostri, equipaggiamento) e attacchi/incantesimi sulla scheda
 - Livellamento guidato e sottoclassi

@@ -5,6 +5,7 @@ import type {
   CharacterRecord,
   CreateCampaignRequest,
   FriendEntry,
+  RtcConfig,
   SaveCharacterRequest,
   UserPublic,
 } from '@thevtt/shared';
@@ -56,6 +57,7 @@ export class Api {
   }
 
   health = () => this.req<{ ok: boolean }>('GET', '/health');
+  rtcConfig = () => this.req<RtcConfig>('GET', '/rtc/config');
   register = (username: string, password: string, displayName?: string) =>
     this.req<AuthResponse>('POST', '/auth/register', { username, password, displayName });
   login = (username: string, password: string) => this.req<AuthResponse>('POST', '/auth/login', { username, password });
