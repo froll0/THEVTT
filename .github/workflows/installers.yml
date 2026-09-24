@@ -56,6 +56,8 @@ jobs:
 
       - name: Installer
         working-directory: apps/desktop
+        # bash on every OS: PowerShell would split the dotted -c.extraMetadata argument
+        shell: bash
         run: pnpm exec electron-builder ${{ matrix.target }} --config electron-builder.yml --publish never -c.extraMetadata.version=${{ env.VERSION }}
         env:
           # no signing certificates yet: build unsigned installers
