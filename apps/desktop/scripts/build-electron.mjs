@@ -1,4 +1,5 @@
 import { build } from 'esbuild';
+import { pathToFileURL } from 'node:url';
 
 const common = { bundle: true, platform: 'node', target: 'node22', format: 'cjs', external: ['electron'], logLevel: 'info' };
 
@@ -9,4 +10,5 @@ export async function buildElectron(opts = {}) {
   ]);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await buildElectron({ minify: true });
+// run directly (not imported by dev.mjs); pathToFileURL keeps this true on Windows paths too
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await buildElectron({ minify: true });
