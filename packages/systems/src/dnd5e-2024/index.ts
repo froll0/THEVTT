@@ -3,6 +3,7 @@ import { ABILITIES, ABILITY_LABELS, CONDITIONS, SKILL_IDS, SKILLS } from './data
 import {
   armorClass,
   createCharacter,
+  currentHp,
   fmtMod,
   getBackground,
   getClass,
@@ -60,7 +61,7 @@ export const dnd5e2024: GameSystem<Dnd5eCharacter> = {
   tokenDefaults(c) {
     const max = maxHp(c);
     return {
-      hp: { current: c.hp.current > 0 ? Math.min(c.hp.current, max) : max, max },
+      hp: { current: currentHp(c), max },
       ac: armorClass(c),
       size: 1,
       initiativeModifier: initiativeBonus(c),

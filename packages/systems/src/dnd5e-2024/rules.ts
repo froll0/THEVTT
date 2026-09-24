@@ -36,7 +36,8 @@ export interface Dnd5eCharacter {
   speciesSkills: Skill[];
   armorId: string;
   shield: boolean;
-  hp: { current: number; temp: number };
+  /** current = null means full hit points */
+  hp: { current: number | null; temp: number };
   deathSaves: { successes: number; failures: number };
   alignment: string;
   notes: string;
@@ -80,7 +81,7 @@ export function createCharacter(): Dnd5eCharacter {
     speciesSkills: [],
     armorId: 'none',
     shield: false,
-    hp: { current: 0, temp: 0 },
+    hp: { current: null, temp: 0 },
     deathSaves: { successes: 0, failures: 0 },
     alignment: '',
     notes: '',
@@ -136,6 +137,11 @@ export function armorClass(c: Dnd5eCharacter): number {
     if (allowed) ac = Math.max(ac, 10 + dex + abilityMod(c, cls.unarmoredDefense));
   }
   return ac + (c.shield ? 2 : 0);
+}
+
+export function currentHp(c: Dnd5eCharacter): number {
+  const max = maxHp(c);
+  return c.hp.current === null ? max : Math.max(0, Math.min(max, c.hp.current));
 }
 
 export function initiativeBonus(c: Dnd5eCharacter): number {

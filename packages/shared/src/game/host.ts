@@ -184,13 +184,15 @@ export class GameHost {
         }
         const sceneId = isGm && t.sceneId && s.scenes[t.sceneId] ? t.sceneId : s.activeSceneId;
         const scene = s.scenes[sceneId]!;
+        const size = clampInt(t.size ?? 1, 1, 10);
+        const spot = this.freeSpot(sceneId, clampInt(t.x ?? 0, 0, scene.widthCells - size), clampInt(t.y ?? 0, 0, scene.heightCells - size), size);
         const token: Token = {
           id: newId(),
           sceneId,
           name: t.name.trim().slice(0, 60) || 'Token',
-          x: clampInt(t.x ?? 0, 0, scene.widthCells - 1),
-          y: clampInt(t.y ?? 0, 0, scene.heightCells - 1),
-          size: clampInt(t.size ?? 1, 1, 10),
+          x: spot.x,
+          y: spot.y,
+          size,
           color: typeof t.color === 'string' ? t.color : player?.color ?? '#c9a227',
           image: isGm && t.image && this.assets[t.image] ? t.image : null,
           ownerIds: isGm ? (t.ownerIds ?? []) : [from],
@@ -419,6 +421,28 @@ export class GameHost {
   private commit(): void {
     this.opts.onChange?.(this._state);
     this.broadcast();
+  }
+
+  /** Nearest position (spiralling out) where a token of `size` doesn't overlap another one. */
+  private freeSpot(sceneId: string, x: number, y: number, size: number): { x: number; y: number } {
+    const scene = this._state.scenes[sceneId]!;
+    const others = Object.values(this._state.tokens).filter((t) => t.sceneId === sceneId);
+    const free = (cx: number, cy: number) =>
+      cx >= 0 &&
+      cy >= 0 &&
+      cx + size <= scene.widthCells &&
+      cy + size <= scene.heightCells &&
+      !others.some((o) => cx < o.x + o.size && o.x < cx + size && cy < o.y + o.size && o.y < cy + size);
+    const maxR = Math.max(scene.widthCells, scene.heightCells);
+    for (let r = 0; r <= maxR; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          if (free(x + dx, y + dy)) return { x: x + dx, y: y + dy };
+        }
+      }
+    }
+    return { x, y };
   }
 
   private setEntries(entries: GameState['initiative']['entries']): void {

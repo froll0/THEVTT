@@ -81,6 +81,18 @@ describe('GameHost', () => {
     expect(toP1).toEqual(['asset', 'state', 'state']);
   });
 
+  it('places new tokens on a free cell', () => {
+    const { host } = setup();
+    host.dispatch('gm', { type: 'token.create', token: { name: 'A', x: 5, y: 5 } });
+    host.dispatch('gm', { type: 'token.create', token: { name: 'B', x: 5, y: 5 } });
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Ogre', x: 5, y: 5, size: 2 } });
+    const [a, b, ogre] = Object.values(host.state.tokens);
+    expect([a!.x, a!.y]).toEqual([5, 5]);
+    expect([b!.x, b!.y]).not.toEqual([5, 5]);
+    const overlaps = (p: typeof a, q: typeof a) => p!.x < q!.x + q!.size && q!.x < p!.x + p!.size && p!.y < q!.y + q!.size && q!.y < p!.y + p!.size;
+    expect(overlaps(ogre, a) || overlaps(ogre, b)).toBe(false);
+  });
+
   it('rejects actions from strangers', () => {
     const { host } = setup();
     expect(host.dispatch('intruder', { type: 'chat', text: 'hi' }).ok).toBe(false);
