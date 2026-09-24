@@ -10,8 +10,10 @@ export type Route =
   | { name: 'characters' }
   | { name: 'character'; id: string | null; systemId?: string; assignTo?: string }
   | { name: 'friends' }
-  | { name: 'settings' }
+  | { name: 'settings'; section?: SettingsSection }
   | { name: 'table'; campaignId: string };
+
+export type SettingsSection = 'appearance' | 'table' | 'server' | 'account' | 'advanced';
 
 export interface Toast {
   id: number;

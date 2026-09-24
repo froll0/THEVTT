@@ -32,6 +32,8 @@ export interface GameSystem<TCharacter = unknown> {
   createCharacter(): TCharacter;
   /** list of problems; empty means the character is complete and legal */
   validate(character: TCharacter): string[];
+  /** one line, e.g. "Nano Guerriero 3" */
+  headline?(character: TCharacter): string;
   /** compact summary shown in lists and on the table */
   summary(character: TCharacter): StatLine[];
   /** rolls offered as one-click buttons on the sheet */

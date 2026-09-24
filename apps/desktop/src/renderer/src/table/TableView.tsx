@@ -1,7 +1,7 @@
 import { getSystem } from '@thevtt/systems';
-import { ArrowLeft, ArrowLeftRight, Crosshair, Server, Dices, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Swords, Map as MapIcon, UserRoundPlus, Users } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Crosshair, Dices, Map as MapIcon, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Swords, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { TitleBar } from '../components/Shell';
+import { TopBar } from '../components/Shell';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Avatar } from '../components/ui';
 import { useApp } from '../store/app';
@@ -69,10 +69,33 @@ export function TableView({ campaignId }: { campaignId: string }) {
 
   return (
     <div className="shell table-shell">
-      <TitleBar>
-        <span className="muted">{campaign.name}</span>
-        {scene && <span className="faint">/ {scene.name}</span>}
-      </TitleBar>
+      <TopBar>
+        <div className="row no-drag table-title">
+          <button className="btn ghost sm icon" onClick={() => go({ name: 'campaign', id: campaign.id })} title={isGm ? 'Chiudi la sessione' : 'Lascia il tavolo'}>
+            <ArrowLeft size={15} />
+          </button>
+          <span className="ellipsis">{campaign.name}</span>
+          {scene && <span className="faint ellipsis">/ {scene.name}</span>}
+        </div>
+        {state && (
+          <div className="row no-drag" style={{ gap: 'var(--s3)', marginLeft: 'var(--s3)' }}>
+            <ConnectionBadge isGm={isGm} onlinePlayers={players.filter((p) => p.online).map((p) => p.id)} />
+            <div className="avatars">
+              <Avatar user={{ ...(campaign.members.find((m) => m.role === 'gm')?.user ?? user), online: true }} size={20} presence />
+              {players.map((p) => (
+                <span
+                  key={p.id}
+                  className="avatar-route"
+                  data-route={p.online ? (table.routes[p.id] ?? 'relay') : undefined}
+                  title={`${p.displayName}${p.online ? (table.routes[p.id] === 'p2p' ? ' · connessione diretta' : ' · via server') : ' · offline'}`}
+                >
+                  <Avatar user={{ displayName: p.displayName, avatarColor: p.color, online: p.online }} size={20} presence />
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </TopBar>
       <div className={`table-body dock-${dockPosition}`}>
         <div className="stage">
           {state && scene ? (
@@ -94,14 +117,8 @@ export function TableView({ campaignId }: { campaignId: string }) {
             </div>
           )}
 
-          <div className="toolbar glass top-left">
-            <button className="btn ghost sm" onClick={() => go({ name: 'campaign', id: campaign.id })} title="Lascia il tavolo">
-              <ArrowLeft size={15} /> {isGm ? 'Chiudi sessione' : 'Esci'}
-            </button>
-          </div>
-
           {state && (
-            <div className="toolbar glass left-rail">
+            <div className="float rail glass">
               {(
                 [
                   { id: 'select', icon: MousePointer2, label: 'Seleziona e sposta (V)' },
@@ -109,38 +126,22 @@ export function TableView({ campaignId }: { campaignId: string }) {
                   { id: 'ping', icon: Crosshair, label: 'Ping (P · o Alt+clic)' },
                 ] as const
               ).map((t) => (
-                <button key={t.id} className={`btn ghost icon ${tool === t.id ? 'active' : ''}`} onClick={() => setTool(t.id)} title={t.label}>
-                  <t.icon size={17} />
+                <button key={t.id} className={`tool ${tool === t.id ? 'active' : ''}`} onClick={() => setTool(t.id)} title={t.label}>
+                  <t.icon size={16} />
                 </button>
               ))}
               {isGm && (
                 <>
-                  <span className="rail-sep" />
+                  <span className="sep" />
                   <button
-                    className="btn ghost icon"
+                    className="tool"
                     title="Aggiungi token"
                     onClick={() => table.dispatch({ type: 'token.create', token: { name: 'PNG', ...viewCenter(), color: '#9a9ba3', hp: { current: 10, max: 10 }, ac: 12 } })}
                   >
-                    <UserRoundPlus size={17} />
+                    <UserRoundPlus size={16} />
                   </button>
                 </>
               )}
-            </div>
-          )}
-
-          {state && (
-            <div className="toolbar glass top-right">
-              {isGm && <span className="badge live"><Radio size={11} /> Host</span>}
-              <ConnectionBadge isGm={isGm} onlinePlayers={players.filter((p) => p.online).map((p) => p.id)} />
-              <div className="avatars">
-                <Avatar user={{ ...(campaign.members.find((m) => m.role === 'gm')?.user ?? user), online: true }} size={24} presence />
-                {players.map((p) => (
-                  <span key={p.id} className="avatar-route" data-route={p.online ? (table.routes[p.id] ?? 'relay') : undefined} title={`${p.displayName}${p.online ? (table.routes[p.id] === 'p2p' ? ' · connessione diretta' : ' · via server') : ' · offline'}`}>
-                    <Avatar user={{ displayName: p.displayName, avatarColor: p.color, online: p.online }} size={24} presence />
-                  </span>
-                ))}
-              </div>
-              <span className="faint small">{getSystem(state.systemId)?.shortName}</span>
             </div>
           )}
 
@@ -165,7 +166,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                     }
                   }}
                 >
-                  <t.icon size={17} />
+                  <t.icon size={16} />
                 </button>
               ))}
           </div>

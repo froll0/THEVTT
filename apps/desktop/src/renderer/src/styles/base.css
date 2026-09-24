@@ -1,53 +1,53 @@
 /* Design tokens. Settings write --accent, --font, --radius and --space at runtime. */
 :root {
   --accent: #c9a227;
+  --accent-fg: #111;
+  --accent-soft: color-mix(in oklab, var(--accent) 14%, transparent);
   --font: system-ui, sans-serif;
-  --radius: 10px;
+  --radius: 8px;
   --space: 1;
   --s1: calc(4px * var(--space));
   --s2: calc(8px * var(--space));
   --s3: calc(12px * var(--space));
   --s4: calc(16px * var(--space));
   --s5: calc(24px * var(--space));
-  --s6: calc(36px * var(--space));
-  --titlebar: 36px;
+  --s6: calc(40px * var(--space));
+  --topbar: 44px;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --dur: 160ms;
-  --accent-fg: #111;
-  --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+  --dur: 140ms;
   --danger: #e5484d;
-  --success: #3fb67a;
+  --success: #30a46c;
   --warning: #e5a50a;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #111214;
-  --bg-elev: #18191c;
-  --bg-elev-2: #1f2024;
-  --bg-sunken: #0c0d0f;
+  --bg: #0e0e10;
+  --bg-elev: #151517;
+  --bg-elev-2: #1c1c1f;
+  --bg-sunken: #0a0a0b;
   --fg: #ececee;
-  --fg-muted: #9a9ba3;
-  --fg-faint: #62636b;
-  --border: #2a2b30;
-  --border-strong: #3a3b42;
-  --shadow: 0 10px 30px rgb(0 0 0 / 0.45);
-  --glass-bg: rgb(24 25 28 / 0.72);
+  --fg-muted: #8b8b93;
+  --fg-faint: #57575f;
+  --border: rgb(255 255 255 / 0.07);
+  --border-strong: rgb(255 255 255 / 0.13);
+  --shadow: 0 12px 32px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.06);
+  --glass-bg: rgb(21 21 23 / 0.78);
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f6f5f2;
+  --bg: #fbfbfa;
   --bg-elev: #ffffff;
-  --bg-elev-2: #f0efeb;
-  --bg-sunken: #ebe9e4;
-  --fg: #1c1c1f;
-  --fg-muted: #66666e;
-  --fg-faint: #a0a0a8;
-  --border: #e2e0da;
-  --border-strong: #cfccc4;
-  --shadow: 0 10px 30px rgb(40 30 10 / 0.12);
-  --glass-bg: rgb(255 255 255 / 0.75);
+  --bg-elev-2: #f1f1ef;
+  --bg-sunken: #f5f5f3;
+  --fg: #18181a;
+  --fg-muted: #68686f;
+  --fg-faint: #a2a2a9;
+  --border: rgb(0 0 0 / 0.07);
+  --border-strong: rgb(0 0 0 / 0.13);
+  --shadow: 0 12px 32px rgb(0 0 0 / 0.1), 0 0 0 1px rgb(0 0 0 / 0.06);
+  --glass-bg: rgb(255 255 255 / 0.8);
 }
 
 :root[data-motion='reduce'] {
@@ -70,7 +70,7 @@ body {
   color: var(--fg);
   font-family: var(--font);
   font-size: 1rem;
-  line-height: 1.45;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none;
@@ -86,7 +86,8 @@ button {
 
 input,
 textarea,
-[contenteditable] {
+[contenteditable],
+.selectable {
   user-select: text;
 }
 
@@ -96,25 +97,36 @@ h3,
 h4 {
   margin: 0;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
-
 h1 {
-  font-size: 1.6rem;
+  font-size: 1.55rem;
 }
 h2 {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 h3 {
   font-size: 1rem;
 }
-
 p {
   margin: 0;
 }
-
 a {
-  color: var(--accent);
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--fg-faint);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+a:hover {
+  text-decoration-color: var(--fg);
+}
+code {
+  font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.88em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-elev-2);
 }
 
 ::selection {
@@ -126,13 +138,10 @@ a {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--border-strong);
   border-radius: 10px;
   border: 3px solid transparent;
   background-clip: padding-box;
-}
-::-webkit-scrollbar-thumb:hover {
-  background-color: var(--border-strong);
 }
 
 :focus-visible {
@@ -149,8 +158,14 @@ a {
 .small {
   font-size: 0.86rem;
 }
+.tiny {
+  font-size: 0.76rem;
+}
 .mono {
   font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+}
+.num {
+  font-variant-numeric: tabular-nums;
 }
 .row {
   display: flex;
@@ -172,8 +187,17 @@ a {
 .between {
   justify-content: space-between;
 }
+.end {
+  justify-content: flex-end;
+}
 .ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.center {
+  text-align: center;
+}
+.hidden {
+  display: none !important;
 }

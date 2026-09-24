@@ -15,8 +15,6 @@ export interface Settings {
   density: Density;
   glass: boolean;
   reduceMotion: boolean;
-  sidebarPosition: 'left' | 'right';
-  sidebarCollapsed: boolean;
   dockPosition: 'left' | 'right';
   /** direct WebRTC link with the GM/players instead of the server relay */
   directConnection: boolean;
@@ -35,12 +33,10 @@ export const DEFAULT_SETTINGS: Settings = {
   accent: '#c9a227',
   font: 'sans',
   uiScale: 1,
-  radius: 10,
+  radius: 8,
   density: 'comfortable',
   glass: true,
   reduceMotion: false,
-  sidebarPosition: 'left',
-  sidebarCollapsed: false,
   dockPosition: 'right',
   directConnection: true,
   board: { background: '#0d0e10', gridColor: '#ffffff', gridOpacity: 0.12, tokenNames: 'hover', hpBars: true },
@@ -54,12 +50,13 @@ export interface ThemePreset {
 }
 
 export const PRESETS: ThemePreset[] = [
-  { id: 'default', name: 'Ossidiana', patch: { theme: 'dark', accent: '#c9a227', font: 'sans', radius: 10 } },
-  { id: 'arcane', name: 'Arcano', patch: { theme: 'dark', accent: '#8b7cf6', font: 'sans', radius: 14 } },
-  { id: 'forest', name: 'Foresta', patch: { theme: 'dark', accent: '#5fb58a', font: 'rounded', radius: 12 } },
+  { id: 'default', name: 'Ossidiana', patch: { theme: 'dark', accent: '#c9a227', font: 'sans', radius: 8 } },
+  { id: 'graphite', name: 'Grafite', patch: { theme: 'dark', accent: '#e6e6e8', font: 'sans', radius: 8 } },
+  { id: 'arcane', name: 'Arcano', patch: { theme: 'dark', accent: '#8b7cf6', font: 'sans', radius: 10 } },
+  { id: 'forest', name: 'Foresta', patch: { theme: 'dark', accent: '#4fa37e', font: 'rounded', radius: 10 } },
   { id: 'ember', name: 'Brace', patch: { theme: 'dark', accent: '#e4572e', font: 'sans', radius: 6 } },
+  { id: 'paper', name: 'Carta', patch: { theme: 'light', accent: '#1f1f22', font: 'sans', radius: 8 } },
   { id: 'parchment', name: 'Pergamena', patch: { theme: 'light', accent: '#9a3b2a', font: 'serif', radius: 4 } },
-  { id: 'paper', name: 'Carta', patch: { theme: 'light', accent: '#2f6fed', font: 'sans', radius: 10 } },
   { id: 'terminal', name: 'Terminale', patch: { theme: 'dark', accent: '#39d353', font: 'mono', radius: 0 } },
 ];
 
@@ -87,8 +84,8 @@ export const useSettings = create<SettingsStore>()(
 );
 
 export function exportSettings(s: Settings): string {
-  const { theme, accent, font, uiScale, radius, density, glass, reduceMotion, sidebarPosition, sidebarCollapsed, dockPosition, board, customCss } = s;
-  return JSON.stringify({ theme, accent, font, uiScale, radius, density, glass, reduceMotion, sidebarPosition, sidebarCollapsed, dockPosition, board, customCss }, null, 2);
+  const { theme, accent, font, uiScale, radius, density, glass, reduceMotion, dockPosition, board, customCss } = s;
+  return JSON.stringify({ theme, accent, font, uiScale, radius, density, glass, reduceMotion, dockPosition, board, customCss }, null, 2);
 }
 
 const FONTS: Record<FontChoice, string> = {

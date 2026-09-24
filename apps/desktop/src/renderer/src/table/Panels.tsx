@@ -7,7 +7,7 @@ import { useApp } from '../store/app';
 import { useTable } from '../store/table';
 import { getSystemUi } from '../systems';
 
-const time = (ts: number) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const time = (ts: number) => new Date(ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 
 // ---------- chat & dice log ----------
 
@@ -39,7 +39,7 @@ function LogLine({ e, meId }: { e: LogEntry; meId: string }) {
   return (
     <div className={`log-chat ${mine ? 'mine' : ''}`}>
       <div className="small">
-        <b>{e.authorName}</b> <span className="faint">{time(e.ts)}</span> {e.private && <span className="badge">al master</span>}
+        <b className="who">{e.authorName}</b> <span className="faint tiny">{time(e.ts)}</span> {e.private && <span className="badge">privato</span>}
       </div>
       <div className="log-text">{e.text}</div>
     </div>
@@ -348,7 +348,7 @@ export function TokenInspector({ token }: { token: Token }) {
   return (
     <div className="inspector glass">
       <div className="row between">
-        <input className="input inspector-name" disabled={!canEdit} defaultValue={token.name} key={token.id + token.name} onBlur={(e) => e.target.value !== token.name && upd({ name: e.target.value })} />
+        <input className="input bare inspector-name" disabled={!canEdit} defaultValue={token.name} key={token.id + token.name} onBlur={(e) => e.target.value !== token.name && upd({ name: e.target.value })} />
         <button className="btn ghost sm icon" onClick={() => select(null)} aria-label="Chiudi">
           <X size={14} />
         </button>

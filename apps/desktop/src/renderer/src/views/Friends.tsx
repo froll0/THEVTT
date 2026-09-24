@@ -1,7 +1,7 @@
 import type { UserPublic } from '@thevtt/shared';
-import { Check, Search, UserMinus, UserPlus, X } from 'lucide-react';
+import { Check, Search, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Avatar, Empty, PageHeader } from '../components/ui';
+import { Avatar, Empty, PageHeader, Section } from '../components/ui';
 import { useApp } from '../store/app';
 
 export function FriendsView() {
@@ -26,48 +26,48 @@ export function FriendsView() {
 
   return (
     <div className="page">
-      <PageHeader title="Amici" subtitle="Aggiungi amici per invitarli nelle tue campagne." />
+      <PageHeader title="Amici" subtitle="Per invitarli nelle tue campagne." />
 
-      <div className="card col">
-        <div className="row">
-          <Search size={16} className="muted" />
-          <input className="input" placeholder="Cerca per nome utente…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <div className="col">
+        <div className="row" style={{ position: 'relative' }}>
+          <Search size={15} className="faint" style={{ position: 'absolute', left: 10 }} />
+          <input className="input" style={{ paddingLeft: 32 }} placeholder="Cerca per nome utente" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
-        {results.length > 0 && (
+        {query.trim().length >= 2 && (
           <div className="list">
             {results.map((u) => {
               const st = known.get(u.id);
               return (
                 <div className="list-item" key={u.id}>
-                  <Avatar user={u} size={30} presence />
+                  <Avatar user={u} size={28} presence />
                   <div className="grow">
-                    <b>{u.displayName}</b> <span className="faint small">@{u.username}</span>
+                    <span className="title">{u.displayName}</span> <span className="faint small">@{u.username}</span>
                   </div>
                   {st === 'accepted' ? (
-                    <span className="badge">Amici</span>
+                    <span className="faint small">Già amici</span>
                   ) : st === 'pending_out' ? (
-                    <span className="badge">Richiesta inviata</span>
+                    <span className="faint small">Richiesta inviata</span>
                   ) : (
-                    <button className="btn primary sm" onClick={() => act(() => api.requestFriend(u.username), st === 'pending_in' ? 'Ora siete amici' : 'Richiesta inviata')}>
-                      <UserPlus size={14} /> {st === 'pending_in' ? 'Accetta' : 'Aggiungi'}
+                    <button className="btn sm" onClick={() => act(() => api.requestFriend(u.username), st === 'pending_in' ? 'Ora siete amici' : 'Richiesta inviata')}>
+                      {st === 'pending_in' ? 'Accetta' : 'Aggiungi'}
                     </button>
                   )}
                 </div>
               );
             })}
+            {!results.length && <div className="empty">Nessun utente trovato su questo server.</div>}
           </div>
         )}
       </div>
 
       {incoming.length > 0 && (
-        <section className="section">
-          <div className="section-title">Richieste ricevute</div>
+        <Section title="Richieste">
           <div className="list">
             {incoming.map((f) => (
               <div className="list-item" key={f.user.id}>
-                <Avatar user={f.user} size={32} presence />
+                <Avatar user={f.user} size={30} presence />
                 <div className="grow">
-                  <b>{f.user.displayName}</b> <span className="faint small">@{f.user.username}</span>
+                  <span className="title">{f.user.displayName}</span> <span className="faint small">@{f.user.username}</span>
                 </div>
                 <button className="btn primary sm" onClick={() => act(() => api.acceptFriend(f.user.id), 'Ora siete amici')}>
                   <Check size={14} /> Accetta
@@ -78,24 +78,23 @@ export function FriendsView() {
               </div>
             ))}
           </div>
-        </section>
+        </Section>
       )}
 
-      <section className="section">
-        <div className="section-title">
-          Amici · {accepted.filter((f) => f.user.online).length} online su {accepted.length}
-        </div>
+      <Section title={`Amici · ${accepted.filter((f) => f.user.online).length} online`}>
         {accepted.length ? (
           <div className="list">
             {accepted.map((f) => (
               <div className="list-item" key={f.user.id}>
-                <Avatar user={f.user} size={34} presence />
+                <Avatar user={f.user} size={30} presence />
                 <div className="grow">
-                  <b>{f.user.displayName}</b>
-                  <div className="faint small">{f.user.online ? 'Online' : 'Offline'} · @{f.user.username}</div>
+                  <div className="title">{f.user.displayName}</div>
+                  <div className="meta">
+                    {f.user.online ? 'Online' : 'Offline'} · @{f.user.username}
+                  </div>
                 </div>
                 <button className="btn ghost sm" onClick={() => act(() => api.removeFriend(f.user.id), 'Amicizia rimossa')}>
-                  <UserMinus size={14} /> Rimuovi
+                  Rimuovi
                 </button>
               </div>
             ))}
@@ -103,22 +102,22 @@ export function FriendsView() {
         ) : (
           <Empty>Ancora nessun amico. Cerca il nome utente di chi gioca con te.</Empty>
         )}
-      </section>
+      </Section>
 
       {outgoing.length > 0 && (
-        <section className="section">
-          <div className="section-title">Richieste inviate</div>
-          <div className="row wrap">
+        <Section title="In attesa di risposta">
+          <div className="list">
             {outgoing.map((f) => (
-              <div key={f.user.id} className="chip">
-                <Avatar user={f.user} size={20} /> {f.user.displayName}
-                <button className="btn ghost sm icon" aria-label="Annulla" onClick={() => act(() => api.removeFriend(f.user.id))}>
-                  <X size={12} />
+              <div key={f.user.id} className="list-item">
+                <Avatar user={f.user} size={26} />
+                <div className="grow muted">{f.user.displayName}</div>
+                <button className="btn ghost sm" onClick={() => act(() => api.removeFriend(f.user.id))}>
+                  Annulla
                 </button>
               </div>
             ))}
           </div>
-        </section>
+        </Section>
       )}
     </div>
   );

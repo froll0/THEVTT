@@ -67,9 +67,13 @@ export class HostedServer {
   private async shutdown() {
     if (this.renewTimer) clearInterval(this.renewTimer);
     this.renewTimer = null;
-    if (this.mapping) await unmapPort(this.mapping);
+    const closing = (async () => {
+      if (this.mapping) await unmapPort(this.mapping);
+      await this.app?.close();
+    })();
+    // never let a slow router or a stuck client keep the app from quitting
+    await Promise.race([closing, new Promise((r) => setTimeout(r, 3000))]);
     this.mapping = null;
-    await this.app?.close();
     this.app = null;
   }
 

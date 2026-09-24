@@ -1,46 +1,56 @@
 import { getSystem } from '@thevtt/systems';
-import { Plus } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Empty, PageHeader } from '../components/ui';
 import { useApp } from '../store/app';
+
+export function Portrait({ src, name, size = 40 }: { src?: string | null; name: string; size?: number }) {
+  return (
+    <div
+      className="portrait"
+      style={{ width: size, height: size, backgroundImage: src ? `url(${src})` : undefined, fontSize: size * 0.4 }}
+    >
+      {!src && name.slice(0, 1).toUpperCase()}
+    </div>
+  );
+}
 
 export function CharactersView() {
   const { characters, campaigns, go } = useApp();
   return (
     <div className="page">
-      <PageHeader title="Personaggi" subtitle="I tuoi eroi, pronti a sedersi a qualsiasi tavolo.">
+      <PageHeader title="Personaggi" subtitle="I tuoi eroi, pronti per qualsiasi tavolo.">
         <button className="btn primary" onClick={() => go({ name: 'character', id: null })}>
-          <Plus size={16} /> Nuovo personaggio
+          Nuovo personaggio
         </button>
       </PageHeader>
       {characters.length ? (
-        <div className="grid">
+        <div className="list">
           {characters.map((c) => {
             const system = getSystem(c.systemId);
-            const summary = system?.summary(c.data) ?? [];
+            const headline = system?.headline?.(c.data) ?? '';
             const campaign = campaigns.find((x) => x.id === c.campaignId);
             const portrait = (c.data as { portrait?: string | null }).portrait;
+            const issues = system?.validate(c.data).length ?? 0;
             return (
-              <div key={c.id} className="card clickable col" onClick={() => go({ name: 'character', id: c.id })}>
-                <div className="row">
-                  <div
-                    className="avatar"
-                    style={{ width: 44, height: 44, borderRadius: 'var(--radius)', background: portrait ? `center/cover url(${portrait})` : 'var(--accent-soft)' }}
-                  />
-                  <div className="grow">
-                    <h3 className="ellipsis">{c.name}</h3>
-                    <div className="muted small ellipsis">{summary.slice(0, 2).map((s) => s.value).join(' · ')}</div>
+              <div key={c.id} className="list-item clickable" onClick={() => go({ name: 'character', id: c.id })}>
+                <Portrait src={portrait} name={c.name} />
+                <div className="grow">
+                  <div className="row">
+                    <span className="title ellipsis">{c.name}</span>
+                    {issues > 0 && <span className="badge">bozza</span>}
+                  </div>
+                  <div className="meta ellipsis">
+                    {headline || system?.shortName}
+                    {campaign ? ` · ${campaign.name}` : ''}
                   </div>
                 </div>
-                <div className="row between">
-                  <span className="faint small">{system?.shortName ?? c.systemId}</span>
-                  {campaign ? <span className="badge">{campaign.name}</span> : <span className="faint small">Libero</span>}
-                </div>
+                <ChevronRight size={16} className="faint" />
               </div>
             );
           })}
         </div>
       ) : (
-        <Empty>Nessun personaggio. Creane uno: la procedura guidata ti accompagna passo passo.</Empty>
+        <Empty>Nessun personaggio. La creazione guidata ti accompagna passo passo.</Empty>
       )}
     </div>
   );

@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
-import { Sidebar, TitleBar } from './components/Shell';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { TopBar } from './components/Shell';
 import { Toasts } from './components/ui';
 import { useApp } from './store/app';
+import { useHosting } from './store/hosting';
 import { applySettings, useSettings } from './store/settings';
+import { TableView } from './table/TableView';
 import { AuthView } from './views/Auth';
 import { CampaignView } from './views/Campaign';
 import { CampaignsView } from './views/Campaigns';
@@ -12,7 +14,6 @@ import { CharactersView } from './views/Characters';
 import { FriendsView } from './views/Friends';
 import { HomeView } from './views/Home';
 import { SettingsView } from './views/Settings';
-import { TableView } from './table/TableView';
 
 function useThemeSync() {
   const settings = useSettings();
@@ -28,18 +29,24 @@ function useThemeSync() {
 export function App() {
   useThemeSync();
   const { user, booting, route, boot } = useApp();
-  const sidebarPosition = useSettings((s) => s.sidebarPosition);
 
   useEffect(() => {
+    void useHosting.getState().load();
     void boot();
   }, [boot]);
 
-  if (booting) return <div className="shell"><TitleBar /></div>;
+  if (booting) {
+    return (
+      <div className="shell">
+        <TopBar />
+      </div>
+    );
+  }
 
   if (!user) {
     return (
       <div className="shell">
-        <TitleBar />
+        <TopBar />
         <AuthView />
         <Toasts />
       </div>
@@ -59,21 +66,18 @@ export function App() {
 
   return (
     <div className="shell">
-      <TitleBar />
-      <div className={`body sidebar-${sidebarPosition}`}>
-        <Sidebar />
-        <main className="main">
-          <ErrorBoundary area="Questa pagina" key={route.name}>
+      <TopBar />
+      <main className="main">
+        <ErrorBoundary area="Questa pagina" key={route.name}>
           {route.name === 'home' && <HomeView />}
           {route.name === 'campaigns' && <CampaignsView />}
           {route.name === 'campaign' && <CampaignView key={route.id} id={route.id} />}
           {route.name === 'characters' && <CharactersView />}
           {route.name === 'character' && <CharacterEditor key={route.id ?? 'new'} id={route.id} systemId={route.systemId} assignTo={route.assignTo} />}
           {route.name === 'friends' && <FriendsView />}
-          {route.name === 'settings' && <SettingsView />}
-          </ErrorBoundary>
-        </main>
-      </div>
+          {route.name === 'settings' && <SettingsView initial={route.section} />}
+        </ErrorBoundary>
+      </main>
       <Toasts />
     </div>
   );

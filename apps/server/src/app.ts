@@ -44,7 +44,8 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   hub.attach(repo);
   const ctx: Ctx = { db, repo, hub };
 
-  const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 4 * 1024 * 1024 });
+  // forceCloseConnections: closing must not wait for idle keep-alive clients (the desktop app quits with it)
+  const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 4 * 1024 * 1024, forceCloseConnections: true });
   await app.register(cors, { origin: true, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] });
 
   app.decorateRequest('userId', '');
@@ -83,8 +84,11 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
     hub.handleUpgrade(req, socket, head, userId);
   });
 
-  app.addHook('onClose', async () => {
+  // websockets are detached from the HTTP server: drop them before it waits for connections to end
+  app.addHook('preClose', async () => {
     hub.close();
+  });
+  app.addHook('onClose', async () => {
     db.close();
   });
 

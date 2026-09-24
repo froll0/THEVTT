@@ -1,37 +1,30 @@
 import type { Campaign } from '@thevtt/shared';
 import { getSystem } from '@thevtt/systems';
-import { Check, Play, Plus, Radio, X } from 'lucide-react';
-import { Avatar, Empty } from '../components/ui';
+import { Check, ChevronRight, X } from 'lucide-react';
+import { Avatar, Empty, Section } from '../components/ui';
 import { useApp } from '../store/app';
 
-export function CampaignCard({ c }: { c: Campaign }) {
+export function CampaignRow({ c }: { c: Campaign }) {
   const { go, user } = useApp();
   const isGm = c.gmId === user?.id;
-  const live = !!c.session;
+  const players = c.members.filter((m) => m.role === 'player').length;
   return (
-    <div className="card clickable campaign-card" onClick={() => go({ name: 'campaign', id: c.id })}>
-      <div className="cover" />
-      <div className="row between">
-        <h3 className="ellipsis">{c.name}</h3>
-        {live ? (
-          <span className="badge live">
-            <Radio size={11} /> In gioco
-          </span>
-        ) : (
-          <span className="badge">{isGm ? 'Master' : 'Giocatore'}</span>
-        )}
-      </div>
-      <p className="muted small" style={{ minHeight: '2.6em' }}>
-        {c.description || 'Nessuna descrizione.'}
-      </p>
-      <div className="row between">
-        <div className="avatars">
-          {c.members.map((m) => (
-            <Avatar key={m.user.id} user={m.user} size={26} />
-          ))}
+    <div className="list-item clickable" onClick={() => go({ name: 'campaign', id: c.id })}>
+      <div className="grow">
+        <div className="row">
+          <span className="title ellipsis">{c.name}</span>
+          {c.session && <span className="badge live">in gioco</span>}
         </div>
-        <span className="faint small">{getSystem(c.systemId)?.shortName ?? c.systemId}</span>
+        <div className="meta ellipsis">
+          {isGm ? 'Master' : 'Giocatore'} · {getSystem(c.systemId)?.shortName ?? c.systemId} · {players} {players === 1 ? 'giocatore' : 'giocatori'}
+        </div>
       </div>
+      <div className="avatars">
+        {c.members.slice(0, 5).map((m) => (
+          <Avatar key={m.user.id} user={m.user} size={22} />
+        ))}
+      </div>
+      <ChevronRight size={16} className="faint" />
     </div>
   );
 }
@@ -46,58 +39,55 @@ export function HomeView() {
 
   return (
     <div className="page">
-      <div className="hero">
-        <h1>
-          {greeting}, {user?.displayName}
-        </h1>
-        <p className="muted" style={{ marginTop: 6 }}>
-          {live.length ? `${live.length} ${live.length === 1 ? 'tavolo è aperto' : 'tavoli sono aperti'} in questo momento.` : 'Nessun tavolo aperto. Pronto a cominciare?'}
-        </p>
-        <div className="row" style={{ marginTop: 16 }}>
-          <button className="btn primary" onClick={() => go({ name: 'campaigns' })}>
-            <Plus size={16} /> Nuova campagna
-          </button>
+      <div className="page-header">
+        <div>
+          <h1>
+            {greeting}, {user?.displayName}
+          </h1>
+          <p>{live.length ? `${live.length === 1 ? 'Un tavolo è aperto' : `${live.length} tavoli sono aperti`} adesso.` : 'Nessun tavolo aperto.'}</p>
+        </div>
+        <div className="row">
           <button className="btn" onClick={() => go({ name: 'character', id: null })}>
-            Crea personaggio
+            Nuovo personaggio
+          </button>
+          <button className="btn primary" onClick={() => go({ name: 'campaigns' })}>
+            Nuova campagna
           </button>
         </div>
       </div>
 
       {live.length > 0 && (
-        <section className="section">
-          <div className="section-title">Tavoli aperti</div>
+        <Section title="In corso">
           <div className="list">
-            {live.map((c) => {
-              const isGm = c.gmId === user?.id;
-              return (
-                <div className="list-item" key={c.id}>
-                  <span className="status-dot online" />
-                  <div className="grow">
-                    <b>{c.name}</b>
-                    <div className="muted small">
-                      {c.session!.participants.length} giocator{c.session!.participants.length === 1 ? 'e' : 'i'} al tavolo
-                    </div>
+            {live.map((c) => (
+              <div className="list-item" key={c.id}>
+                <span className="status-dot online" />
+                <div className="grow">
+                  <div className="title">{c.name}</div>
+                  <div className="meta">
+                    {c.session!.participants.length} al tavolo · master {c.members.find((m) => m.role === 'gm')?.user.displayName}
                   </div>
-                  <button className="btn primary" onClick={() => go({ name: 'table', campaignId: c.id })}>
-                    <Play size={15} /> {isGm ? 'Torna al tavolo' : 'Entra'}
-                  </button>
                 </div>
-              );
-            })}
+                <button className="btn primary sm" onClick={() => go({ name: 'table', campaignId: c.id })}>
+                  {c.gmId === user?.id ? 'Torna al tavolo' : 'Siediti'}
+                </button>
+              </div>
+            ))}
           </div>
-        </section>
+        </Section>
       )}
 
       {(invites.length > 0 || requests.length > 0) && (
-        <section className="section">
-          <div className="section-title">In attesa di risposta</div>
+        <Section title="Da fare">
           <div className="list">
             {invites.map((inv) => (
               <div className="list-item" key={inv.id}>
-                <Avatar user={inv.from} size={32} />
+                <Avatar user={inv.from} size={28} />
                 <div className="grow">
-                  <b>{inv.campaign.name}</b>
-                  <div className="muted small">Invito da {inv.from.displayName} · {getSystem(inv.campaign.systemId)?.shortName}</div>
+                  <div className="title">Invito a «{inv.campaign.name}»</div>
+                  <div className="meta">
+                    da {inv.from.displayName} · {getSystem(inv.campaign.systemId)?.shortName}
+                  </div>
                 </div>
                 <button
                   className="btn primary sm"
@@ -107,64 +97,66 @@ export function HomeView() {
                       upsertCampaign(c);
                       await refresh(['invites']);
                       go({ name: 'campaign', id: c.id });
-                    }, 'Benvenuto nella campagna!')
+                    })
                   }
                 >
                   <Check size={14} /> Unisciti
                 </button>
-                <button className="btn ghost sm icon" onClick={() => run(async () => { await api.declineInvite(inv.id); await refresh(['invites']); })} aria-label="Rifiuta">
+                <button className="btn ghost sm icon" aria-label="Rifiuta" onClick={() => run(async () => { await api.declineInvite(inv.id); await refresh(['invites']); })}>
                   <X size={14} />
                 </button>
               </div>
             ))}
             {requests.map((f) => (
               <div className="list-item" key={f.user.id}>
-                <Avatar user={f.user} size={32} presence />
+                <Avatar user={f.user} size={28} presence />
                 <div className="grow">
-                  <b>{f.user.displayName}</b>
-                  <div className="muted small">vuole essere tuo amico</div>
+                  <div className="title">{f.user.displayName}</div>
+                  <div className="meta">vuole essere tuo amico</div>
                 </div>
                 <button className="btn primary sm" onClick={() => run(async () => { await api.acceptFriend(f.user.id); await refresh(['friends']); })}>
                   <Check size={14} /> Accetta
                 </button>
-                <button className="btn ghost sm icon" onClick={() => run(async () => { await api.removeFriend(f.user.id); await refresh(['friends']); })} aria-label="Rifiuta">
+                <button className="btn ghost sm icon" aria-label="Rifiuta" onClick={() => run(async () => { await api.removeFriend(f.user.id); await refresh(['friends']); })}>
                   <X size={14} />
                 </button>
               </div>
             ))}
           </div>
-        </section>
+        </Section>
       )}
 
-      <section className="section">
-        <div className="row between">
-          <div className="section-title">Le tue campagne</div>
-          <button className="btn ghost sm" onClick={() => go({ name: 'campaigns' })}>
-            Vedi tutte
-          </button>
-        </div>
+      <Section
+        title="Campagne"
+        action={
+          campaigns.length > 5 && (
+            <a className="small muted" onClick={() => go({ name: 'campaigns' })}>
+              Tutte
+            </a>
+          )
+        }
+      >
         {campaigns.length ? (
-          <div className="grid">
-            {campaigns.slice(0, 6).map((c) => (
-              <CampaignCard key={c.id} c={c} />
+          <div className="list">
+            {campaigns.slice(0, 5).map((c) => (
+              <CampaignRow key={c.id} c={c} />
             ))}
           </div>
         ) : (
-          <Empty>Non partecipi ancora a nessuna campagna. Creane una o aspetta un invito.</Empty>
+          <Empty>Ancora nessuna campagna. Creane una, oppure aspetta l'invito di un amico.</Empty>
         )}
-      </section>
+      </Section>
 
       {onlineFriends.length > 0 && (
-        <section className="section">
-          <div className="section-title">Amici online</div>
-          <div className="row wrap">
+        <Section title={`Amici online · ${onlineFriends.length}`}>
+          <div className="row wrap" style={{ gap: 'var(--s3)' }}>
             {onlineFriends.map((f) => (
-              <div key={f.user.id} className="chip" style={{ cursor: 'default' }}>
-                <Avatar user={f.user} size={20} presence /> {f.user.displayName}
+              <div key={f.user.id} className="row small">
+                <Avatar user={f.user} size={22} presence /> {f.user.displayName}
               </div>
             ))}
           </div>
-        </section>
+        </Section>
       )}
     </div>
   );

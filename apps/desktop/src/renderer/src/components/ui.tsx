@@ -1,6 +1,6 @@
 import type { UserPublic } from '@thevtt/shared';
 import { X } from 'lucide-react';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useApp } from '../store/app';
 
 export function Avatar({ user, size = 32, presence }: { user: Pick<UserPublic, 'displayName' | 'avatarColor' | 'online'>; size?: number; presence?: boolean }) {
@@ -18,7 +18,60 @@ export function Avatar({ user, size = 32, presence }: { user: Pick<UserPublic, '
   );
 }
 
-export function Modal({ title, children, onClose, actions }: { title: string; children: ReactNode; onClose: () => void; actions?: ReactNode }) {
+/** A button that opens a floating panel; closes on outside click or Escape. */
+export function Popover({
+  trigger,
+  children,
+  align = 'right',
+  width,
+}: {
+  trigger: (open: boolean, toggle: () => void) => ReactNode;
+  children: (close: () => void) => ReactNode;
+  align?: 'left' | 'right';
+  width?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+  return (
+    <div ref={ref} style={{ position: 'relative' }} className="no-drag">
+      {trigger(open, () => setOpen(!open))}
+      {open && (
+        <div className="popover" style={{ top: 'calc(100% + 6px)', [align]: 0, width }}>
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function Modal({
+  title,
+  children,
+  onClose,
+  actions,
+  wide,
+}: {
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+  actions?: ReactNode;
+  wide?: boolean;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -26,7 +79,7 @@ export function Modal({ title, children, onClose, actions }: { title: string; ch
   }, [onClose]);
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-label={title}>
+      <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-label={title}>
         <div className="row between">
           <h2>{title}</h2>
           <button className="btn ghost icon sm" onClick={onClose} aria-label="Chiudi">
@@ -81,6 +134,30 @@ export function Tabs<T extends string>({ value, options, onChange }: { value: T;
 
 export function Empty({ children }: { children: ReactNode }) {
   return <div className="empty">{children}</div>;
+}
+
+export function Section({ title, action, children }: { title: ReactNode; action?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="section">
+      <div className="section-head">
+        <div className="section-title">{title}</div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function Setting({ title, hint, children }: { title: ReactNode; hint?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="setting">
+      <div className="text">
+        {title}
+        {hint && <small>{hint}</small>}
+      </div>
+      <div className="control">{children}</div>
+    </div>
+  );
 }
 
 export function PageHeader({ title, subtitle, children }: { title: string; subtitle?: string; children?: ReactNode }) {
