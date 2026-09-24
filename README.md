@@ -44,6 +44,45 @@ sul System Reference Document 5.2 (CC-BY-4.0).
 - Colori di tavolo e griglia, nomi dei token, barre PF
 - CSS personalizzato, import/export del tema in JSON
 
+## Installazione (per giocare)
+
+Gli installer vengono generati automaticamente da GitHub Actions (workflow **Installer**):
+
+- **Versioni ufficiali**: pagina *Releases* del repository, un file per sistema.
+- **Ultima build di sviluppo**: tab *Actions* → workflow *Installer* → ultima esecuzione →
+  sezione *Artifacts* (serve essere loggati su GitHub).
+
+| Sistema | File | Note |
+| ------- | ---- | ---- |
+| Windows | `TheVTT-Setup-x.y.z.exe` | L'app non è ancora firmata: alla schermata blu di Windows clicca *Ulteriori informazioni* → *Esegui comunque*. |
+| macOS   | `TheVTT-x.y.z-mac-arm64.dmg` (Apple Silicon) o `-x64.dmg` (Intel) | App non firmata: dopo averla copiata in Applicazioni, se macOS dice che è danneggiata esegui `xattr -cr /Applications/TheVTT.app` nel Terminale. |
+| Linux   | `.AppImage` (qualsiasi distro) o `.deb` (Debian/Ubuntu) | Per l'AppImage: `chmod +x` e avvio con doppio clic. |
+
+### Il server
+
+Serve **un solo server** per tutto il gruppo (account, amici, campagne). Scarica
+`thevtt-server.mjs` (dalla Release o dagli Artifacts), installa Node.js 22.13+ e avvia:
+
+```bash
+node thevtt-server.mjs
+```
+
+Ascolta sulla porta 4477 e salva i dati nella cartella `data/` accanto a dove lo lanci. Nell'app,
+alla schermata di accesso, clicca sull'indirizzo del server in basso per impostarlo
+(es. `http://192.168.1.10:4477` in LAN, o l'IP pubblico con la porta 4477 aperta sul router).
+
+Per preimpostare l'indirizzo negli installer, crea la variabile di repository
+`THEVTT_SERVER_URL` (*Settings → Secrets and variables → Actions → Variables*).
+
+### Pubblicare una versione
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+Il workflow genera gli installer con quella versione e crea la Release con tutti i file.
+
 ## Struttura
 
 ```
@@ -95,4 +134,4 @@ con `VITE_THEVTT_SERVER` in build.
 - Compendio SRD (incantesimi, mostri, equipaggiamento) e attacchi/incantesimi sulla scheda
 - Livellamento guidato e sottoclassi
 - Secondo sistema di gioco per validare l'astrazione dei plugin
-- Aggiornamenti automatici dell'app e firma degli installer
+- Aggiornamenti automatici dell'app e firma degli installer (Windows e macOS)

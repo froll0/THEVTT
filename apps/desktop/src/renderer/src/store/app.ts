@@ -21,7 +21,8 @@ export interface Toast {
 
 const SERVER_KEY = 'thevtt:server';
 const TOKEN_KEY = 'thevtt:token';
-export const DEFAULT_SERVER = import.meta.env.VITE_THEVTT_SERVER ?? 'http://localhost:4477';
+// an empty build variable (e.g. unset in CI) must not produce an empty address
+export const DEFAULT_SERVER = import.meta.env.VITE_THEVTT_SERVER || 'http://localhost:4477';
 
 interface AppState {
   serverUrl: string;

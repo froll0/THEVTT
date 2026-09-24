@@ -1,5 +1,6 @@
 appId: app.thevtt.desktop
 productName: TheVTT
+copyright: Copyright © TheVTT
 directories:
   output: release
   buildResources: build
@@ -8,16 +9,26 @@ files:
   - package.json
 asar: true
 publish: null
+icon: build/icon.png
+artifactName: TheVTT-${version}-${os}-${arch}.${ext}
 win:
-  target: [nsis]
+  target:
+    - target: nsis
+      arch: [x64]
 nsis:
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: TheVTT
+  artifactName: TheVTT-Setup-${version}.${ext}
 mac:
-  target: [dmg]
-  category: public.app-category.games
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  category: public.app-category.role-playing-games
 linux:
   executableName: thevtt
-  maintainer: TheVTT
+  maintainer: TheVTT <noreply@thevtt.app>
   target: [AppImage, deb]
   category: Game

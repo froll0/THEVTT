@@ -1,0 +1,115 @@
+name: Installer
+
+# Builds the desktop installers (Windows, macOS, Linux) and the standalone server.
+# - every push that touches the app: installers downloadable from the run page ("Artifacts")
+# - a tag like v0.2.0: also publishes a GitHub Release with all the files
+# Optional repository variable THEVTT_SERVER_URL: server address pre-filled in the app.
+on:
+  push:
+    tags: ['v*']
+    branches: ['**']
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/workflows/installers.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: installers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    name: App ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Windows, os: windows-latest, target: --win }
+          - { name: macOS, os: macos-latest, target: --mac }
+          - { name: Linux, os: ubuntu-latest, target: --linux }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Versione
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=$(node -p "require('./apps/desktop/package.json').version")" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build
+        run: pnpm --filter @thevtt/desktop build
+        env:
+          VITE_THEVTT_SERVER: ${{ vars.THEVTT_SERVER_URL }}
+
+      - name: Installer
+        working-directory: apps/desktop
+        run: pnpm exec electron-builder ${{ matrix.target }} --config electron-builder.yml --publish never -c.extraMetadata.version=${{ env.VERSION }}
+        env:
+          # no signing certificates yet: build unsigned installers
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TheVTT-${{ matrix.name }}
+          if-no-files-found: error
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+
+  server:
+    name: Server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: pnpm --filter @thevtt/server bundle
+      - name: Smoke test
+        run: |
+          cd apps/server/dist
+          PORT=4477 THEVTT_DB=/tmp/smoke.sqlite node thevtt-server.mjs &
+          for i in $(seq 1 20); do curl -sf localhost:4477/health && exit 0; sleep 0.5; done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TheVTT-Server
+          if-no-files-found: error
+          path: apps/server/dist/thevtt-server.mjs
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [desktop, server]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
