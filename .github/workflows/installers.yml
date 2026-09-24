@@ -2,7 +2,8 @@ name: Installer
 
 # Builds the desktop installers (Windows, macOS, Linux) and the standalone server.
 # - every push that touches the app: installers downloadable from the run page ("Artifacts")
-# - a tag like v0.2.0: also publishes a GitHub Release with all the files
+# - a tag like v0.2.0, or a manual run with "release" set to v0.2.0: also publishes a
+#   GitHub Release with all the files (a manual run creates the tag on the built commit)
 # Optional repository variable THEVTT_SERVER_URL: server address pre-filled in the app.
 on:
   push:
@@ -15,9 +16,14 @@ on:
       - 'package.json'
       - '.github/workflows/installers.yml'
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Versione da pubblicare (es. v0.2.0). Vuoto = solo build.'
+        required: false
+        default: ''
 
 concurrency:
-  group: installers-${{ github.ref }}
+  group: installers-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -42,8 +48,12 @@ jobs:
 
       - name: Versione
         shell: bash
+        env:
+          RELEASE_INPUT: ${{ inputs.release }}
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+          if [[ -n "$RELEASE_INPUT" ]]; then
+            echo "VERSION=${RELEASE_INPUT#v}" >> "$GITHUB_ENV"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
           else
             echo "VERSION=$(node -p "require('./apps/desktop/package.json').version")" >> "$GITHUB_ENV"
@@ -101,7 +111,7 @@ jobs:
 
   release:
     name: Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(inputs.release, 'v')
     needs: [desktop, server]
     runs-on: ubuntu-latest
     permissions:
@@ -113,5 +123,9 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
+          # on a manual run the tag doesn't exist yet: it is created on the built commit
+          tag_name: ${{ inputs.release || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: TheVTT ${{ inputs.release || github.ref_name }}
           files: dist/*
           generate_release_notes: true

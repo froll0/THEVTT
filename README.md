@@ -83,6 +83,9 @@ git push origin v0.2.0
 
 Il workflow genera gli installer con quella versione e crea la Release con tutti i file.
 
+In alternativa, senza usare git: tab *Actions* → *Installer* → *Run workflow*, scrivi la versione
+(es. `v0.2.0`) nel campo *Versione da pubblicare*. GitHub crea il tag e la Release sull'ultimo commit.
+
 ## Struttura
 
 ```
