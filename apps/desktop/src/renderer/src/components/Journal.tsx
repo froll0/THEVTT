@@ -1,7 +1,9 @@
 import type { JournalEntry } from '@thevtt/shared';
 import { BookText, ChevronLeft, Plus, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Editor } from '@tiptap/react';
 import { useApp } from '../store/app';
+import { plainText, RichEditor } from './RichText';
 
 type Filter = 'all' | 'none' | string;
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error';
@@ -61,7 +63,7 @@ export function Journal({ campaignId, narrow }: { campaignId?: string | null; na
   const shown = (entries ?? []).filter(
     (e) =>
       (filter === 'all' || (filter === 'none' ? !e.campaignId : e.campaignId === filter)) &&
-      (!q || `${e.title} ${e.body}`.toLowerCase().includes(q)),
+      (!q || `${e.title} ${plainText(e.body)}`.toLowerCase().includes(q)),
   );
   const open = entries?.find((e) => e.id === openId) ?? null;
   const campaignName = (id: string | null) => (id ? (campaigns.find((c) => c.id === id)?.name ?? 'Campagna') : null);
@@ -98,7 +100,7 @@ export function Journal({ campaignId, narrow }: { campaignId?: string | null; na
           shown.map((e) => (
             <button key={e.id} className={`journal-row ${e.id === openId ? 'active' : ''}`} onClick={() => setOpenId(e.id)}>
               <b className="ellipsis">{e.title || 'Senza titolo'}</b>
-              <span className="faint tiny ellipsis">{e.body.replace(/\s+/g, ' ').slice(0, 100) || '—'}</span>
+              <span className="faint tiny ellipsis">{plainText(e.body).slice(0, 100) || '—'}</span>
               <span className="faint tiny row" style={{ gap: 6 }}>
                 {when(e.updatedAt)}
                 {filter === 'all' && e.campaignId && <span className="badge">{campaignName(e.campaignId)}</span>}
@@ -182,9 +184,10 @@ function JournalEditor({
     if (e) onSaved(e);
   };
 
+  const editorRef = useRef<Editor | null>(null);
   const stamp = () => {
     const time = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-    setBody((b) => `${b}${b && !b.endsWith('\n') ? '\n' : ''}${b ? '\n' : ''}— ${time} —\n`);
+    editorRef.current?.chain().focus('end').insertContent(`<h3>Ore ${time}</h3><p></p>`).run();
   };
 
   return (
@@ -229,13 +232,14 @@ function JournalEditor({
           </option>
         ))}
       </select>
-      <textarea
-        className="input journal-body"
+      <RichEditor
+        className="journal-body"
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={setBody}
         onBlur={() => void flush()}
+        onReady={(e) => (editorRef.current = e)}
         placeholder="Cosa è successo? PNG incontrati, indizi, promesse, tesori…"
-        aria-label="Testo della pagina"
+        ariaLabel="Testo della pagina"
       />
     </div>
   );

@@ -174,7 +174,7 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await G.getByTitle('Note e dispense').click();
   await G.getByRole('button', { name: 'Nuova' }).click();
   await G.getByPlaceholder('Titolo').fill('Lettera del sindaco');
-  await G.getByPlaceholder('Scrivi qui…').fill('Venite subito alla miniera.');
+  await G.getByLabel('Testo della nota').fill('Venite subito alla miniera.');
   await P.getByTitle('Note e dispense').click();
   await expect(P.getByText('Qui trovi le dispense del master')).toBeVisible();
   await G.getByRole('button', { name: 'Tutti' }).click();
@@ -238,7 +238,7 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await expect(journal.locator('.journal-row', { hasText: 'Varos nasconde' })).toBeVisible();
   await journal.getByRole('button', { name: 'Chiudi finestra' }).click();
   await P.getByRole('button', { name: 'Diario' }).click();
-  await expect(journal.getByLabel('Testo della pagina')).toHaveValue('Il mago Varos nasconde una chiave.');
+  await expect(journal.getByLabel('Testo della pagina')).toHaveText('Il mago Varos nasconde una chiave.');
   expect(await apiCall<unknown[]>(G, 'GET', '/journal')).toEqual([]);
 
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);

@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarClock, Crown, ImagePlus, MoreHorizontal, Plus, X } f
 import { useEffect, useState } from 'react';
 import { ChatThread } from '../components/ChatThread';
 import { coverStyle } from '../components/Cards';
+import { RichEditor, RichView } from '../components/RichText';
 import { Avatar, Empty, Field, Modal, Popover, readImage, Section } from '../components/ui';
 import { useApp } from '../store/app';
 
@@ -499,7 +500,7 @@ function SessionRecaps({ campaign, isGm }: { campaign: Campaign; isGm: boolean }
                 <b>{r.title}</b>
                 <span className="faint tiny">{new Date(r.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               </summary>
-              <p className="selectable">{r.body || '—'}</p>
+              <RichView className="selectable recap-body" value={r.body || '—'} />
               {isGm && (
                 <div className="row">
                   <button className="btn ghost sm" onClick={() => setEditing({ id: r.id, title: r.title, body: r.body })}>
@@ -545,16 +546,17 @@ function SessionRecaps({ campaign, isGm }: { campaign: Campaign; isGm: boolean }
           <Field label="Titolo">
             <input className="input" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} />
           </Field>
-          <Field label="Cosa è successo">
-            <textarea
-              className="textarea"
-              rows={10}
-              autoFocus
+          <div className="col" style={{ gap: 6 }}>
+            <span className="small muted">Cosa è successo</span>
+            <RichEditor
+              key={editing.id ?? 'new'}
+              className="recap-editor"
               value={editing.body}
-              onChange={(e) => setEditing({ ...editing, body: e.target.value })}
+              onChange={(body) => setEditing((e) => (e ? { ...e, body } : e))}
+              ariaLabel="Cosa è successo"
               placeholder="Luoghi visitati, PNG incontrati, indizi, tesori, conti in sospeso…"
             />
-          </Field>
+          </div>
         </Modal>
       )}
     </Section>

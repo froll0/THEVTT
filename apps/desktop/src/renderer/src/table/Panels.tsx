@@ -2,6 +2,7 @@ import { describeRoll, isNat, type Ambient, type Light, type LogEntry, type Note
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
+import { plainText, RichEditor, RichView } from '../components/RichText';
 import { ChevronLeft, Copy, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, Field, readImage, Switch } from '../components/ui';
@@ -632,7 +633,7 @@ export function NotesPanel() {
     .filter((n) => n.authorId === meId || n.shared === 'all' || (Array.isArray(n.shared) && n.shared.includes(meId)) || (isGm && n.authorId === state.gmId))
     .sort((a, b) => b.updatedAt - a.updatedAt);
   const q = query.trim().toLowerCase();
-  const shown = q ? notes.filter((n) => `${n.title} ${n.body}`.toLowerCase().includes(q)) : notes;
+  const shown = q ? notes.filter((n) => `${n.title} ${plainText(n.body)}`.toLowerCase().includes(q)) : notes;
   const open = notes.find((n) => n.id === openId);
 
   const create = () => {
@@ -661,7 +662,7 @@ export function NotesPanel() {
             {n.image && assets[n.image] ? <span className="note-thumb" style={{ backgroundImage: `url(${assets[n.image]})` }} /> : null}
             <span className="col grow" style={{ gap: 0, minWidth: 0 }}>
               <b className="ellipsis">{n.title || 'Senza titolo'}</b>
-              <span className="faint tiny ellipsis">{n.body.slice(0, 90) || '—'}</span>
+              <span className="faint tiny ellipsis">{plainText(n.body).slice(0, 90) || '—'}</span>
             </span>
             <span className={`badge ${n.shared === 'private' ? '' : 'live'}`} title="Chi può leggerla">
               {n.shared === 'private' ? <EyeOff size={10} /> : <Eye size={10} />}{' '}
@@ -769,9 +770,9 @@ function NoteEditor({ note, canEdit, onBack, image }: { note: Note; canEdit: boo
         )
       )}
       {canEdit ? (
-        <textarea className="textarea note-body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Scrivi qui…" />
+        <RichEditor className="note-body" value={body} onChange={setBody} placeholder="Scrivi qui…" ariaLabel="Testo della nota" />
       ) : (
-        <p className="selectable note-read">{note.body}</p>
+        <RichView className="selectable note-read" value={note.body} />
       )}
       {zoom && image && (
         <div className="lightbox" onClick={() => setZoom(false)}>
@@ -984,7 +985,7 @@ export function TokenInspector({ token }: { token: Token }) {
       </div>
       {canEdit ? (
         <>
-          <div className="row">
+          <div className="insp-stats">
             <Field label="PF">
               <div className="row" style={{ gap: 4 }}>
                 <input className="input" type="number" value={token.hp?.current ?? ''} placeholder="—" onChange={(e) => upd({ hp: { current: Number(e.target.value), max: token.hp?.max ?? Number(e.target.value) } })} />
@@ -994,11 +995,11 @@ export function TokenInspector({ token }: { token: Token }) {
             </Field>
             {isGm && (
               <Field label="CA">
-                <input className="input" type="number" style={{ width: 60 }} value={token.ac ?? ''} onChange={(e) => upd({ ac: e.target.value === '' ? null : Number(e.target.value) })} />
+                <input className="input" type="number" value={token.ac ?? ''} onChange={(e) => upd({ ac: e.target.value === '' ? null : Number(e.target.value) })} />
               </Field>
             )}
           </div>
-          <div className="row">
+          <div className="insp-stats">
             <Field label="Colore">
               <input type="color" value={token.color} onChange={(e) => upd({ color: e.target.value })} />
             </Field>
