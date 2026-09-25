@@ -381,3 +381,32 @@ describe('GM tools', () => {
     expect(host.dispatch('p1', { type: 'token.move', tokenId: tok.id, x: 5, y: 4 }).ok).toBe(true);
   });
 });
+
+describe('dynamic vision defaults', () => {
+  it('turns vision on with the first walls or with darkness, unless the GM turned it off', () => {
+    const { host } = setup();
+    const sid = host.state.activeSceneId;
+    host.dispatch('gm', { type: 'wall.create', walls: [{ x1: 1, y1: 1, x2: 5, y2: 1, kind: 'wall' }] });
+    expect(host.state.scenes[sid]!.vision).toBe(true);
+    host.dispatch('gm', { type: 'scene.update', sceneId: sid, patch: { vision: false } });
+    host.dispatch('gm', { type: 'wall.create', walls: [{ x1: 1, y1: 2, x2: 5, y2: 2, kind: 'wall' }] });
+    expect(host.state.scenes[sid]!.vision).toBe(false);
+    host.dispatch('gm', { type: 'scene.update', sceneId: sid, patch: { ambient: 'dark' } });
+    expect(host.state.scenes[sid]!.vision).toBe(true);
+  });
+});
+
+describe('monster pictures', () => {
+  it('lets the GM create a token straight from a picture, shared between copies', () => {
+    const { host } = setup();
+    const pic = 'data:image/webp;base64,UklGRg==';
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Goblin 1', image: pic } });
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Goblin 2', image: pic } });
+    const [a, b] = Object.values(host.state.tokens);
+    expect(a!.image).toBeTruthy();
+    expect(a!.image).toBe(b!.image);
+    // players can't smuggle pictures in
+    host.dispatch('p1', { type: 'token.create', token: { name: 'Lia', characterId: 'ch1', image: pic } });
+    expect(Object.values(host.state.tokens).find((t) => t.name === 'Lia')!.image).toBeNull();
+  });
+});

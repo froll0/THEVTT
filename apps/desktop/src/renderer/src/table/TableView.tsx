@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { Armchair, ArrowLeft, BookText, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Armchair, ArrowLeft, BookText, Magnet, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -40,6 +40,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     wallErase: false,
     propKind: 'crate',
     lightPreview: false,
+    snap: true,
   });
   const [tab, setTab] = useState<DockTab>('chat');
   const [dockOpen, setDockOpen] = useState(true);
@@ -67,6 +68,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
       if (e.key === 'w' && useTable.getState().role === 'gm') setTool('walls');
       if (e.key === 'o' && useTable.getState().role === 'gm') setTool('props');
       if (e.key === 'l' && useTable.getState().role === 'gm') setTool('light');
+      if (e.key === 'g') setOptions((o) => ({ ...o, snap: !o.snap }));
       if (e.key === 't') {
         setTool('draw');
         setOptions((o) => ({ ...o, drawText: true, erase: false }));
@@ -221,6 +223,15 @@ export function TableView({ campaignId }: { campaignId: string }) {
                   </button>
                 </>
               )}
+              <span className="sep" />
+              <button
+                className={`tool ${options.snap ? 'active' : ''}`}
+                aria-pressed={options.snap}
+                title={options.snap ? 'Aggancia alla griglia: attivo (G) · tieni Alt per spostare libero' : 'Movimento libero (G) · tieni Alt per agganciare alla griglia'}
+                onClick={() => setOptions((o) => ({ ...o, snap: !o.snap }))}
+              >
+                <Magnet size={16} />
+              </button>
             </div>
           )}
 

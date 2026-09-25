@@ -16,12 +16,16 @@ export interface HomebrewMonster<T = unknown> {
 interface HomebrewStore {
   loaded: boolean;
   monsters: HomebrewMonster[];
+  /** pictures for creatures (SRD or homebrew), by monster id: small data URLs */
+  images: Record<string, string>;
   load(): Promise<void>;
+  setImage(monsterId: string, dataUrl: string | null): void;
   saveMonster(systemId: string, data: unknown, id?: string): string;
   deleteMonster(id: string): void;
 }
 
 const KEY = 'homebrew-monsters';
+const IMAGES_KEY = 'monster-images';
 export const HOMEBREW_PREFIX = 'hb:';
 
 export const useHomebrew = create<HomebrewStore>((set, get) => {
@@ -29,10 +33,18 @@ export const useHomebrew = create<HomebrewStore>((set, get) => {
   return {
     loaded: false,
     monsters: [],
+    images: {},
     async load() {
       if (get().loaded) return;
-      const saved = await localStore.read<HomebrewMonster[]>(KEY);
-      set({ loaded: true, monsters: Array.isArray(saved) ? saved : [] });
+      const [saved, images] = await Promise.all([localStore.read<HomebrewMonster[]>(KEY), localStore.read<Record<string, string>>(IMAGES_KEY)]);
+      set({ loaded: true, monsters: Array.isArray(saved) ? saved : [], images: images && typeof images === 'object' ? images : {} });
+    },
+    setImage(monsterId, dataUrl) {
+      const images = { ...get().images };
+      if (dataUrl) images[monsterId] = dataUrl;
+      else delete images[monsterId];
+      set({ images });
+      void localStore.write(IMAGES_KEY, images);
     },
     saveMonster(systemId, data, id) {
       const monsterId = id ?? `${HOMEBREW_PREFIX}${newId()}`;
@@ -44,6 +56,7 @@ export const useHomebrew = create<HomebrewStore>((set, get) => {
     deleteMonster(id) {
       set((s) => ({ monsters: s.monsters.filter((m) => m.id !== id) }));
       persist();
+      if (get().images[id]) get().setImage(id, null);
     },
   };
 });

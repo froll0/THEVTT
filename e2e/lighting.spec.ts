@@ -60,7 +60,8 @@ test('walls, doors, props and dynamic light', async () => {
   await expect(G.getByLabel('Testo sulla mappa')).toHaveCount(0);
   // lights and vision from their own tool
   await G.getByTitle('Luci e visione (L)').click();
-  await G.getByRole('button', { name: /Visione dinamica spenta/ }).click();
+  // walls turned dynamic vision on by themselves
+  await expect(G.getByRole('button', { name: /Visione dinamica attiva/ })).toBeVisible();
   await G.getByRole('button', { name: 'Buio', exact: true }).click();
   await G.getByTitle('Seleziona e sposta (V)').click();
   await G.getByRole('button', { name: /Vista master/ }).click();

@@ -160,17 +160,19 @@
 
 .inspector {
   position: absolute;
-  top: var(--s3);
+  /* below the tool options bar, which can be wide */
+  top: 58px;
   right: var(--s3);
-  width: 280px;
-  padding: var(--s3);
+  width: 340px;
+  max-width: calc(100% - 90px);
+  padding: var(--s3) var(--s4);
   border-radius: calc(var(--radius) + 4px);
   display: flex;
   flex-direction: column;
   gap: var(--s3);
   z-index: 6;
   animation: pop var(--dur) var(--ease);
-  max-height: calc(100% - 90px);
+  max-height: calc(100% - 130px);
   overflow: auto;
 }
 .inspector-name {
@@ -707,9 +709,8 @@ body.dragging-window * {
 
 .light-preview {
   position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 12px;
+  right: 12px;
   z-index: 5;
   display: inline-flex;
   align-items: center;
@@ -851,7 +852,7 @@ body.dragging-window * {
   backdrop-filter: grayscale(0.7);
 }
 .paused-pill {
-  top: 12px;
+  top: 60px;
   left: 50%;
   transform: translateX(-50%);
   padding: 4px 12px;
@@ -859,4 +860,35 @@ body.dragging-window * {
   font-size: 0.8rem;
   color: var(--warning);
   z-index: 6;
+}
+.bestiary-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.bestiary-filters .select {
+  width: auto;
+  min-width: 0;
+  height: 28px;
+  font-size: 0.82rem;
+}
+.filter-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+}
+.monster-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.btn.icon.active {
+  color: var(--accent);
 }

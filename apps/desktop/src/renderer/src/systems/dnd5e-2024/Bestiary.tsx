@@ -1,8 +1,9 @@
 import { roll } from '@thevtt/shared';
 import { dnd5e } from '@thevtt/systems';
-import { Copy, Download, Minus, Pencil, Plus, Search, Swords, Trash2, Upload, X } from 'lucide-react';
+import { Copy, Download, ImagePlus, Minus, Pencil, Plus, Search, SlidersHorizontal, Swords, Trash2, Upload, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { BestiaryProps, StatBlockProps } from '..';
+import { squareImage } from '../../components/ui';
 import { useApp } from '../../store/app';
 import { HOMEBREW_PREFIX, useHomebrew } from '../../store/homebrew';
 import { MonsterEditor } from './MonsterEditor';
@@ -43,6 +44,10 @@ export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps
   const [editing, setEditing] = useState<dnd5e.MonsterDef | null>(null);
   /** the encounter being put together: monster id → how many */
   const [encounter, setEncounter] = useState<Record<string, number>>({});
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<{ type: string; size: string; crMin: string; crMax: string }>({ type: '', size: '', crMin: '', crMax: '' });
+  const images = useHomebrew((s) => s.images);
+  const setImage = useHomebrew((s) => s.setImage);
   const all = useMonsters();
   const { saveMonster, deleteMonster } = useHomebrew();
   const toast = useApp((s) => s.toast);
@@ -51,11 +56,21 @@ export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps
     return all
       .filter(({ own }) => source === 'all' || (source === 'own') === own)
       .filter(({ m }) => !q || m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q) || `gs ${m.cr}` === q)
+      .filter(({ m }) => !filters.type || m.type.toLowerCase().startsWith(filters.type.toLowerCase()))
+      .filter(({ m }) => !filters.size || m.size === filters.size)
+      .filter(({ m }) => !filters.crMin || dnd5e.crValue(m.cr) >= dnd5e.crValue(filters.crMin))
+      .filter(({ m }) => !filters.crMax || dnd5e.crValue(m.cr) <= dnd5e.crValue(filters.crMax))
       .sort((a, b) => dnd5e.crValue(a.m.cr) - dnd5e.crValue(b.m.cr) || a.m.name.localeCompare(b.m.name));
-  }, [query, source, all]);
+  }, [query, source, all, filters]);
+  // what the filters can offer, from the creatures at hand
+  const types = useMemo(() => [...new Set(all.map(({ m }) => m.type.split(/[ (]/)[0]!))].filter(Boolean).sort((a, b) => a.localeCompare(b)), [all]);
+  const crs = useMemo(() => [...new Set(all.map(({ m }) => m.cr))].sort((a, b) => dnd5e.crValue(a) - dnd5e.crValue(b)), [all]);
+  const activeFilters = Object.values(filters).filter(Boolean).length;
+  const pickImage = async (id: string, f: File) => setImage(id, await squareImage(f, 256));
   const add = (m: dnd5e.MonsterDef, index?: number, name = m.name) => {
     const hp = rollHp ? Math.max(1, roll(m.hp.dice).total) : m.hp.average;
-    onAdd?.({ name, monsterId: m.id, hp: { current: hp, max: hp }, ac: m.ac, size: dnd5e.sizeCells(m.size), darkvision: dnd5e.monsterDarkvision(m) }, index);
+    const image = useHomebrew.getState().images[m.id];
+    onAdd?.({ name, monsterId: m.id, hp: { current: hp, max: hp }, ac: m.ac, size: dnd5e.sizeCells(m.size), darkvision: dnd5e.monsterDarkvision(m), ...(image ? { image } : {}) }, index);
   };
   const bump = (id: string, by: number) =>
     setEncounter((e) => {
@@ -84,7 +99,8 @@ export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps
     toast(`«${m.name}» salvata`, 'success');
   };
   const exportAll = () => {
-    const own = all.filter((x) => x.own).map((x) => x.m);
+    // pictures travel with the creatures
+    const own = all.filter((x) => x.own).map((x) => (images[x.m.id] ? { ...x.m, image: images[x.m.id] } : x.m));
     const blob = new Blob([JSON.stringify({ thevtt: 'monsters', systemId: SYSTEM_ID, monsters: own }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -94,11 +110,12 @@ export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps
   };
   const importFile = async (f: File) => {
     try {
-      const parsed = JSON.parse(await f.text()) as { monsters?: dnd5e.MonsterDef[] };
+      const parsed = JSON.parse(await f.text()) as { monsters?: (dnd5e.MonsterDef & { image?: unknown })[] };
       const items = (parsed.monsters ?? []).filter((m) => m && typeof m.name === 'string' && Array.isArray(m.actions));
       for (const m of items) {
-        const { id: _id, ...data } = { ...dnd5e.blankMonster(), ...m };
-        saveMonster(SYSTEM_ID, data);
+        const { id: _id, image, ...data } = { ...dnd5e.blankMonster(), ...m };
+        const id = saveMonster(SYSTEM_ID, data);
+        if (typeof image === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,/.test(image) && image.length < 2_000_000) setImage(id, image);
       }
       toast(items.length ? `${items.length} creature importate` : 'Nessuna creatura nel file', items.length ? 'success' : 'error');
       if (items.length) setSource('own');
@@ -114,10 +131,59 @@ export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps
           <Search size={14} className="faint" style={{ position: 'absolute', left: 10 }} />
           <input className="input" style={{ paddingLeft: 30 }} placeholder="Cerca per nome, tipo o «gs 3»" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
+        <button className={`btn sm icon ${showFilters || activeFilters ? 'active' : ''}`} onClick={() => setShowFilters(!showFilters)} title="Filtri" aria-label="Filtri" style={{ position: 'relative' }}>
+          <SlidersHorizontal size={14} />
+          {activeFilters > 0 && <span className="count filter-count">{activeFilters}</span>}
+        </button>
         <button className="btn sm" onClick={() => setEditing(dnd5e.blankMonster())}>
           <Plus size={14} /> Nuova
         </button>
       </div>
+      {showFilters && (
+        <div className="bestiary-filters">
+          <select className="select" value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })} aria-label="Tipo di creatura">
+            <option value="">Tutti i tipi</option>
+            {types.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+          <select className="select" value={filters.size} onChange={(e) => setFilters({ ...filters, size: e.target.value })} aria-label="Taglia">
+            <option value="">Tutte le taglie</option>
+            {dnd5e.MONSTER_SIZES.map((z) => (
+              <option key={z} value={z}>
+                {z}
+              </option>
+            ))}
+          </select>
+          <div className="row" style={{ gap: 4 }}>
+            <span className="faint small">GS</span>
+            <select className="select" value={filters.crMin} onChange={(e) => setFilters({ ...filters, crMin: e.target.value })} aria-label="Grado di sfida minimo">
+              <option value="">min</option>
+              {crs.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <span className="faint">–</span>
+            <select className="select" value={filters.crMax} onChange={(e) => setFilters({ ...filters, crMax: e.target.value })} aria-label="Grado di sfida massimo">
+              <option value="">max</option>
+              {crs.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          {activeFilters > 0 && (
+            <button className="btn ghost sm" onClick={() => setFilters({ type: '', size: '', crMin: '', crMax: '' })}>
+              Azzera filtri
+            </button>
+          )}
+        </div>
+      )}
       <div className="row between">
         <div className="seg">
           {(
@@ -158,6 +224,7 @@ export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps
           <div key={m.id}>
             <div className="r">
               <button className="grow" style={{ border: 0, background: 'none', textAlign: 'left', cursor: 'pointer', padding: 0, color: 'inherit' }} onClick={() => setOpen(open === m.id ? null : m.id)}>
+                {images[m.id] && <img className="monster-thumb" src={images[m.id]} alt="" />}
                 <span>{m.name}</span> <span className="faint tiny">· GS {m.cr} · {m.type}</span> {own && <span className="tag">mia</span>}
               </button>
               {onAdd && (
@@ -174,7 +241,16 @@ export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps
             {open === m.id && (
               <div style={{ padding: '4px 0 12px' }} className="col">
                 <StatBlock monsterId={m.id} onRoll={onRoll} />
-                <div className="row">
+                <div className="row wrap">
+                  <label className="btn ghost sm" title="L’immagine diventa quella del token quando metti la creatura sulla mappa">
+                    {images[m.id] ? <img className="monster-thumb" src={images[m.id]} alt="" /> : <ImagePlus size={13} />} {images[m.id] ? 'Cambia immagine' : 'Immagine'}
+                    <input type="file" accept="image/*" hidden aria-label={`Immagine di ${m.name}`} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void pickImage(m.id, f); }} />
+                  </label>
+                  {images[m.id] && (
+                    <button className="btn ghost sm" onClick={() => setImage(m.id, null)}>
+                      Togli immagine
+                    </button>
+                  )}
                   <button className="btn ghost sm" onClick={() => setEditing(own ? m : { ...structuredClone(m), id: '', name: `${m.name} (variante)` })}>
                     {own ? <Pencil size={13} /> : <Copy size={13} />} {own ? 'Modifica' : 'Duplica e modifica'}
                   </button>

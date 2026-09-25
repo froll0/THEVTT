@@ -40,6 +40,11 @@ export function resizeMask(mask: string, oldW: number, oldH: number, w: number, 
 /** A token is visible to players if any of its cells is revealed. */
 export function tokenVisible(fog: Fog | undefined, w: number, t: { x: number; y: number; size: number }): boolean {
   if (!fog?.enabled) return true;
-  for (let dy = 0; dy < t.size; dy++) for (let dx = 0; dx < t.size; dx++) if (isRevealed(fog, w, t.x + dx, t.y + dy)) return true;
+  // tokens can sit between cells: check every cell they overlap
+  const x0 = Math.floor(t.x + 0.01);
+  const y0 = Math.floor(t.y + 0.01);
+  const x1 = Math.ceil(t.x + t.size - 0.01);
+  const y1 = Math.ceil(t.y + t.size - 0.01);
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (x >= 0 && x < w && isRevealed(fog, w, x, y)) return true;
   return false;
 }

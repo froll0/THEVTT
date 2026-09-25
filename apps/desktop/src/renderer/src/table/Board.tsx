@@ -31,6 +31,19 @@ export interface ToolOptions {
   propKind: string;
   /** GM: see the darkness as players do */
   lightPreview: boolean;
+  /** tokens and props land on the grid (Alt while dragging does the opposite) */
+  snap: boolean;
+}
+
+/**
+ * Top-left (in cells) of something `size` cells wide centred near `c`: on the
+ * grid it sits in a cell (odd sizes) or on a grid line (even ones), free it
+ * goes exactly there.
+ */
+export function placeAxis(c: number, size: number, snap: boolean): number {
+  if (!snap) return Math.round((c - size / 2) * 100) / 100;
+  const odd = size < 1 || Math.round(size) % 2 === 1;
+  return (odd ? Math.floor(c) + 0.5 : Math.round(c)) - size / 2;
 }
 
 /** Nearest grid point, corners and edge midpoints (half cells). */
@@ -268,6 +281,25 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
   const images = useRef(new Map<string, HTMLImageElement>());
   const hover = useRef<string | null>(null);
   const dirty = useRef(true);
+  /** where the pointer is (world px), for the placement preview */
+  const hoverWorld = useRef<{ x: number; y: number } | null>(null);
+  const altDown = useRef(false);
+  /** grid snapping right now: the option, flipped while Alt is held */
+  const snapNow = (L: { options: ToolOptions }) => (L.options.snap !== false) !== altDown.current;
+  const tokenDropAt = (g: { wx: number; wy: number; ox: number; oy: number }, t: { size: number }) => {
+    const L = live.current;
+    return {
+      x: placeAxis((g.wx - g.ox) / CELL + t.size / 2, t.size, snapNow(L)),
+      y: placeAxis((g.wy - g.oy) / CELL + t.size / 2, t.size, snapNow(L)),
+    };
+  };
+  const propDropAt = (g: { wx: number; wy: number; ox: number; oy: number }, p: { w: number; h: number }) => {
+    const L = live.current;
+    return {
+      x: placeAxis((g.wx - g.ox) / CELL + p.w / 2, p.w, snapNow(L)),
+      y: placeAxis((g.wy - g.oy) / CELL + p.h / 2, p.h, snapNow(L)),
+    };
+  };
   const fogCache = useRef<{ key: string; canvas: HTMLCanvasElement | null }>({ key: '', canvas: null });
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [cursor, setCursor] = useState('default');
@@ -390,7 +422,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       for (const p of Object.values(L.state.props ?? {})) {
         if (p.sceneId !== L.scene.id) continue;
         const pg = gesture.current;
-        const shown = pg.kind === 'prop' && pg.propId === p.id ? { ...p, x: snapHalf((pg.wx - pg.ox) / CELL), y: snapHalf((pg.wy - pg.oy) / CELL) } : p;
+        const shown = pg.kind === 'prop' && pg.propId === p.id ? { ...p, ...propDropAt(pg, p) } : p;
         drawProp(ctx, shown, CELL, image(p.image), tnow, L.isGm);
         if (p.id === L.selectedPropId) {
           const c = propCorners(shown);
@@ -399,6 +431,37 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
           ctx.closePath();
           ctx.setLineDash([6 / cam.zoom, 4 / cam.zoom]);
           haloStroke(ctx, accentColor(), 2 / cam.zoom, cam.zoom);
+          ctx.setLineDash([]);
+        }
+      }
+
+      // the prop about to be placed, under the cursor
+      const hw = hoverWorld.current;
+      if (hw && L.isGm && (L.tool === 'props' || L.tool === 'light') && gesture.current.kind === 'none') {
+        const kind = propKind(L.tool === 'light' ? 'light' : L.options.propKind);
+        if (kind) {
+          const ghost: Prop = {
+            id: '__preview',
+            sceneId: L.scene.id,
+            kind: kind.id,
+            image: null,
+            x: placeAxis(hw.x / CELL, kind.w, snapNow(L)),
+            y: placeAxis(hw.y / CELL, kind.h, snapNow(L)),
+            w: kind.w,
+            h: kind.h,
+            rotation: 0,
+            light: null,
+            blocksVision: false,
+            hidden: false,
+          };
+          ctx.save();
+          ctx.globalAlpha = 0.6;
+          drawProp(ctx, ghost, CELL, null, tnow, true);
+          ctx.restore();
+          ctx.beginPath();
+          ctx.rect(ghost.x * CELL, ghost.y * CELL, ghost.w * CELL, ghost.h * CELL);
+          ctx.setLineDash([6 / cam.zoom, 4 / cam.zoom]);
+          haloStroke(ctx, accentColor(), 1.5 / cam.zoom, cam.zoom);
           ctx.setLineDash([]);
         }
       }
@@ -606,8 +669,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         if (t) {
           const half = (t.size * CELL) / 2;
           const a = { x: t.x * CELL + half, y: t.y * CELL + half };
-          const nx = Math.round((g.wx - g.ox) / CELL);
-          const ny = Math.round((g.wy - g.oy) / CELL);
+          const { x: nx, y: ny } = tokenDropAt(g, t);
           const b = { x: nx * CELL + half, y: ny * CELL + half };
           const cells = Math.max(Math.abs(nx - t.x), Math.abs(ny - t.y));
           const walls = Object.values(L.state.walls ?? {})
@@ -895,7 +957,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       const light = kind.light ? { bright: metresToCells(L.scene, kind.light.bright), dim: metresToCells(L.scene, kind.light.dim), color: kind.light.color } : null;
       dispatch({
         type: 'prop.create',
-        prop: { kind: kind.id, x: snapHalf(w.x / CELL - kind.w / 2), y: snapHalf(w.y / CELL - kind.h / 2), w: kind.w, h: kind.h, light, blocksVision: !!kind.blocksVision },
+        prop: { kind: kind.id, x: placeAxis(w.x / CELL, kind.w, snapNow(L)), y: placeAxis(w.y / CELL, kind.h, snapNow(L)), w: kind.w, h: kind.h, light, blocksVision: !!kind.blocksVision },
       });
       return;
     }
@@ -964,6 +1026,12 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     const cam = cameraRef.current;
     if (!cam) return;
     const w = toWorld(e.clientX, e.clientY);
+    altDown.current = e.altKey;
+    const Lm = live.current;
+    if (Lm.tool === 'props' || Lm.tool === 'light') {
+      hoverWorld.current = w;
+      dirty.current = true;
+    }
     if (g.kind === 'pan') {
       cam.x = g.cx - (e.clientX - g.sx) / cam.zoom;
       cam.y = g.cy - (e.clientY - g.sy) / cam.zoom;
@@ -1016,9 +1084,8 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
   const onPointerUp = () => {
     const g = gesture.current;
     if (g.kind === 'drag' && g.moved) {
-      const x = Math.round((g.wx - g.ox) / CELL);
-      const y = Math.round((g.wy - g.oy) / CELL);
-      dispatch({ type: 'token.move', tokenId: g.tokenId, x, y });
+      const t = live.current.state?.tokens[g.tokenId];
+      if (t) dispatch({ type: 'token.move', tokenId: g.tokenId, ...tokenDropAt(g, t) });
     }
     const L = live.current;
     if (g.kind === 'fog' && L.scene) {
@@ -1030,7 +1097,8 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       dispatch({ type: 'fog.paint', sceneId: L.scene.id, x: x0, y: y0, w: x1 - x0, h: y1 - y0, reveal: L.options.fogReveal });
     }
     if (g.kind === 'prop' && g.moved) {
-      dispatch({ type: 'prop.update', propId: g.propId, patch: { x: snapHalf((g.wx - g.ox) / CELL), y: snapHalf((g.wy - g.oy) / CELL) } });
+      const p = L.state?.props?.[g.propId];
+      if (p) dispatch({ type: 'prop.update', propId: g.propId, patch: propDropAt(g, p) });
     }
     if (g.kind === 'room') {
       const x0 = snapHalf(Math.min(g.fx, g.tx) / CELL);
@@ -1149,6 +1217,10 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         style={{ cursor: gesture.current.kind === 'pan' ? 'grabbing' : toolCursor }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
+        onPointerLeave={() => {
+          hoverWorld.current = null;
+          dirty.current = true;
+        }}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onWheel={onWheel}

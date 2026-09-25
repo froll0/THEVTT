@@ -208,6 +208,12 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await expect(G.locator('.encounter')).toContainText('PG di livello');
   await G.getByRole('button', { name: 'Metti tutti sul tavolo' }).click();
   await expect(G.locator('.encounter')).toHaveCount(0);
+  // filters: only large creatures
+  await G.getByRole('button', { name: 'Filtri' }).click();
+  await G.getByLabel('Taglia', { exact: true }).selectOption('Grande');
+  await expect(G.locator('.rows .r', { hasText: 'Bandito' })).toHaveCount(0);
+  await G.getByRole('button', { name: 'Azzera filtri' }).click();
+  await expect(G.locator('.rows .r', { hasText: 'Bandito' }).first()).toBeVisible();
 
   // pause: players can chat but not play
   await G.getByRole('button', { name: 'Pausa gioco' }).click();

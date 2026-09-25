@@ -53,6 +53,8 @@ function cleanLight(l: unknown): Light | null {
   return { bright, dim, ...(typeof v.color === 'string' ? { color: v.color.slice(0, 20) } : {}) };
 }
 
+/** free positions: to the hundredth of a cell */
+const fine = (v: unknown, min: number, max: number) => Math.min(max, Math.max(min, Math.round((Number(v) || 0) * 100) / 100));
 const coord = (v: unknown, max: number) => Math.min(max, Math.max(0, Math.round((Number(v) || 0) * 2) / 2));
 const MAX_ASSET_BYTES = 12 * 1024 * 1024;
 /** audio travels to every player, through the relay too (16MB per message): ~11MB files */
@@ -232,6 +234,8 @@ export class GameHost {
         if (p.unit !== undefined) scene.unit = p.unit === 'ft' ? 'ft' : 'm';
         if (p.showGrid !== undefined) scene.showGrid = !!p.showGrid;
         if (p.vision !== undefined) scene.vision = !!p.vision;
+        // darkness only means something with dynamic vision on
+        if (p.vision === undefined && (p.ambient === 'dim' || p.ambient === 'dark')) scene.vision = true;
         if (p.bgCellPx !== undefined) scene.bgCellPx = p.bgCellPx === null ? null : Math.min(2000, Math.max(4, Number(p.bgCellPx) || 70));
         if (p.bgOffsetX !== undefined) scene.bgOffsetX = Math.max(-50, Math.min(50, Math.round((Number(p.bgOffsetX) || 0) * 100) / 100));
         if (p.bgOffsetY !== undefined) scene.bgOffsetY = Math.max(-50, Math.min(50, Math.round((Number(p.bgOffsetY) || 0) * 100) / 100));
@@ -283,7 +287,7 @@ export class GameHost {
           y: spot.y,
           size,
           color: typeof t.color === 'string' ? t.color : player?.color ?? '#c9a227',
-          image: isGm && t.image && this.assets[t.image] ? t.image : t.characterId && s.characters[t.characterId] ? this.portraitAsset(s.characters[t.characterId]!) : null,
+          image: isGm && t.image && this.assets[t.image] ? t.image : isGm && typeof t.image === 'string' && IMAGE_DATA_URL.test(t.image) && t.image.length <= MAX_ASSET_BYTES ? this.addAsset(t.image) : t.characterId && s.characters[t.characterId] ? this.portraitAsset(s.characters[t.characterId]!) : null,
           ownerIds: isGm ? (t.ownerIds ?? []) : [from],
           characterId: t.characterId ?? null,
           monsterId: isGm && typeof t.monsterId === 'string' ? t.monsterId : null,
@@ -302,8 +306,8 @@ export class GameHost {
         if (!t) return { ok: false, reason: 'Token inesistente' };
         if (!isGm && !t.ownerIds.includes(from)) return { ok: false, reason: 'Non controlli questo token' };
         const scene = s.scenes[t.sceneId]!;
-        const nx = clampInt(action.x, 0, scene.widthCells - t.size);
-        const ny = clampInt(action.y, 0, scene.heightCells - t.size);
+        const nx = fine(action.x, 0, scene.widthCells - t.size);
+        const ny = fine(action.y, 0, scene.heightCells - t.size);
         if (!isGm) {
           // walls, windows and closed doors stop players (the GM can move anything anywhere)
           const blocking = Object.values(s.walls ?? {})
@@ -343,8 +347,8 @@ export class GameHost {
         }
         if (patch.x !== undefined || patch.y !== undefined) {
           const scene = s.scenes[t.sceneId]!;
-          t.x = clampInt(patch.x ?? t.x, 0, scene.widthCells - t.size);
-          t.y = clampInt(patch.y ?? t.y, 0, scene.heightCells - t.size);
+          t.x = fine(patch.x ?? t.x, 0, scene.widthCells - t.size);
+          t.y = fine(patch.y ?? t.y, 0, scene.heightCells - t.size);
         }
         break;
       }
@@ -604,6 +608,8 @@ export class GameHost {
           if (wall.x1 === wall.x2 && wall.y1 === wall.y2) continue;
           s.walls![wall.id] = wall;
         }
+        // the first walls of a scene: they hide what's behind them (unless the GM turned vision off)
+        if (scene.vision === undefined && list.length) scene.vision = true;
         break;
       }
       case 'wall.update': {
@@ -661,8 +667,8 @@ export class GameHost {
         if (patch.label !== undefined) p.label = String(patch.label).slice(0, 60) || undefined;
         if (patch.w !== undefined) p.w = Math.min(40, Math.max(0.25, Math.round(Number(patch.w) * 4) / 4 || 1));
         if (patch.h !== undefined) p.h = Math.min(40, Math.max(0.25, Math.round(Number(patch.h) * 4) / 4 || 1));
-        if (patch.x !== undefined) p.x = Math.min(sc.widthCells, Math.max(-p.w, Math.round(Number(patch.x) * 4) / 4 || 0));
-        if (patch.y !== undefined) p.y = Math.min(sc.heightCells, Math.max(-p.h, Math.round(Number(patch.y) * 4) / 4 || 0));
+        if (patch.x !== undefined) p.x = fine(patch.x, -p.w, sc.widthCells);
+        if (patch.y !== undefined) p.y = fine(patch.y, -p.h, sc.heightCells);
         if (patch.rotation !== undefined) p.rotation = ((Math.round(Number(patch.rotation) || 0) % 360) + 360) % 360;
         if (patch.light !== undefined) p.light = cleanLight(patch.light);
         if (patch.blocksVision !== undefined) p.blocksVision = !!patch.blocksVision;
