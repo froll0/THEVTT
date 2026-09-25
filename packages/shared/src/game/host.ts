@@ -57,6 +57,8 @@ const coord = (v: unknown, max: number) => Math.min(max, Math.max(0, Math.round(
 const MAX_ASSET_BYTES = 12 * 1024 * 1024;
 /** audio travels to every player, through the relay too (16MB per message): ~11MB files */
 const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
+/** what players can't do while the GM has paused the game */
+const PAUSE_BLOCKED = new Set<GameAction['type']>(['token.create', 'token.move', 'token.update', 'token.delete', 'ping', 'template.create', 'drawing.create', 'wall.update']);
 const IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,/;
 const AUDIO_DATA_URL = /^data:audio\/(mpeg|mp3|ogg|wav|x-wav|webm|mp4|x-m4a|aac|flac);base64,/;
 const MAX_DRAWINGS = 500;
@@ -194,8 +196,17 @@ export class GameHost {
     const player = s.players[from];
     if (!isGm && !player) return { ok: false, reason: 'Non fai parte di questo tavolo' };
     const gmOnly = (): ActionResult | null => (isGm ? null : { ok: false, reason: 'Solo il master può farlo' });
+    if (s.paused && !isGm && PAUSE_BLOCKED.has(action.type)) return { ok: false, reason: 'Il gioco è in pausa' };
 
     switch (action.type) {
+      case 'game.pause': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!!s.paused === !!action.paused) break;
+        s.paused = !!action.paused;
+        this.system(s.paused ? 'Il master ha messo in pausa il gioco' : 'Si riprende!');
+        break;
+      }
       case 'scene.create': {
         const denied = gmOnly();
         if (denied) return denied;

@@ -1453,3 +1453,31 @@ input[type='color']::-webkit-color-swatch {
   background: var(--accent);
   transition: width 0.2s;
 }
+.recaps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.recap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s2) var(--s3);
+  background: var(--bg-elev);
+}
+.recap summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  cursor: pointer;
+  list-style: none;
+}
+.recap summary::-webkit-details-marker {
+  display: none;
+}
+.recap p {
+  white-space: pre-wrap;
+  line-height: 1.55;
+  margin: var(--s2) 0;
+  color: var(--fg-muted);
+}

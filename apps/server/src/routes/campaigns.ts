@@ -31,6 +31,37 @@ export function campaignRoutes(app: FastifyInstance, { repo, hub }: Ctx): void {
     return c;
   });
 
+  // ---------- session recaps: the GM writes, the group reads ----------
+  type RecapParams = { Params: { id: string; rid: string } };
+  const recapBody = (body: unknown) => ({
+    title: str(body, 'title', { min: 1, max: 120 }),
+    body: typeof (body as { body?: unknown } | null)?.body === 'string' ? ((body as { body: string }).body) : '',
+  });
+  const recapsChanged = (campaignId: string, userId: string) => hub.notifyCampaign(campaignId, { kind: 'campaign.updated', campaignId }, userId);
+
+  app.get<IdParams>('/campaigns/:id/recaps', async (req) => {
+    repo.requireRole(req.params.id, req.userId);
+    return repo.recaps(req.params.id);
+  });
+  app.post<IdParams>('/campaigns/:id/recaps', async (req) => {
+    repo.requireRole(req.params.id, req.userId, 'gm');
+    const r = repo.saveRecap(req.params.id, recapBody(req.body));
+    recapsChanged(req.params.id, req.userId);
+    return r;
+  });
+  app.patch<RecapParams>('/campaigns/:id/recaps/:rid', async (req) => {
+    repo.requireRole(req.params.id, req.userId, 'gm');
+    const r = repo.saveRecap(req.params.id, { ...recapBody(req.body), id: req.params.rid });
+    recapsChanged(req.params.id, req.userId);
+    return r;
+  });
+  app.delete<RecapParams>('/campaigns/:id/recaps/:rid', async (req) => {
+    repo.requireRole(req.params.id, req.userId, 'gm');
+    repo.deleteRecap(req.params.id, req.params.rid);
+    recapsChanged(req.params.id, req.userId);
+    return { ok: true };
+  });
+
   /** GM: date of the next session (ISO) or null. */
   app.put<IdParams>('/campaigns/:id/schedule', async (req) => {
     repo.requireRole(req.params.id, req.userId, 'gm');

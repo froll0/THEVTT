@@ -255,6 +255,8 @@ export interface GameState {
   music?: MusicState;
   walls?: Record<string, Wall>;
   props?: Record<string, Prop>;
+  /** set by the GM: players can talk and roll, but not touch the map */
+  paused?: boolean;
 }
 
 export function emptyMusic(): MusicState {

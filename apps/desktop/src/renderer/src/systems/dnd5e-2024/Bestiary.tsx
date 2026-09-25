@@ -1,6 +1,6 @@
 import { roll } from '@thevtt/shared';
 import { dnd5e } from '@thevtt/systems';
-import { Copy, Download, Pencil, Plus, Search, Trash2, Upload } from 'lucide-react';
+import { Copy, Download, Minus, Pencil, Plus, Search, Swords, Trash2, Upload, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { BestiaryProps, StatBlockProps } from '..';
 import { useApp } from '../../store/app';
@@ -35,12 +35,14 @@ function useMonsters() {
 
 type Source = 'all' | 'srd' | 'own';
 
-export function Dnd5eBestiary({ onAdd, onRoll }: BestiaryProps) {
+export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps) {
   const [query, setQuery] = useState('');
   const [source, setSource] = useState<Source>('all');
   const [open, setOpen] = useState<string | null>(null);
   const [rollHp, setRollHp] = useState(false);
   const [editing, setEditing] = useState<dnd5e.MonsterDef | null>(null);
+  /** the encounter being put together: monster id → how many */
+  const [encounter, setEncounter] = useState<Record<string, number>>({});
   const all = useMonsters();
   const { saveMonster, deleteMonster } = useHomebrew();
   const toast = useApp((s) => s.toast);
@@ -51,9 +53,27 @@ export function Dnd5eBestiary({ onAdd, onRoll }: BestiaryProps) {
       .filter(({ m }) => !q || m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q) || `gs ${m.cr}` === q)
       .sort((a, b) => dnd5e.crValue(a.m.cr) - dnd5e.crValue(b.m.cr) || a.m.name.localeCompare(b.m.name));
   }, [query, source, all]);
-  const add = (m: dnd5e.MonsterDef) => {
+  const add = (m: dnd5e.MonsterDef, index?: number, name = m.name) => {
     const hp = rollHp ? Math.max(1, roll(m.hp.dice).total) : m.hp.average;
-    onAdd?.({ name: m.name, monsterId: m.id, hp: { current: hp, max: hp }, ac: m.ac, size: dnd5e.sizeCells(m.size), darkvision: dnd5e.monsterDarkvision(m) });
+    onAdd?.({ name, monsterId: m.id, hp: { current: hp, max: hp }, ac: m.ac, size: dnd5e.sizeCells(m.size), darkvision: dnd5e.monsterDarkvision(m) }, index);
+  };
+  const bump = (id: string, by: number) =>
+    setEncounter((e) => {
+      const n = Math.max(0, (e[id] ?? 0) + by);
+      const next = { ...e, [id]: n };
+      if (!n) delete next[id];
+      return next;
+    });
+  const placeEncounter = () => {
+    let i = 0;
+    for (const [id, n] of Object.entries(encounter)) {
+      const m = all.find((x) => x.m.id === id)?.m;
+      if (!m) continue;
+      // several of a kind get numbered, to tell them apart on the map
+      for (let k = 0; k < n; k++) add(m, i++, n > 1 ? `${m.name} ${k + 1}` : m.name);
+    }
+    toast(`Incontro sul tavolo: ${i} ${i === 1 ? 'creatura' : 'creature'}`, 'success');
+    setEncounter({});
   };
   const save = (m: dnd5e.MonsterDef) => {
     const { id, ...data } = m;
@@ -129,6 +149,9 @@ export function Dnd5eBestiary({ onAdd, onRoll }: BestiaryProps) {
           </label>
         </div>
       )}
+      {onAdd && Object.keys(encounter).length > 0 && (
+        <EncounterBox encounter={encounter} monsters={all.map((x) => x.m)} partyLevels={partyLevels} onBump={bump} onClear={() => setEncounter({})} onPlace={placeEncounter} />
+      )}
       {list.length === 0 && <p className="faint small">{source === 'own' ? 'Nessuna creatura personalizzata. Creane una o duplica un mostro dell’SRD.' : 'Nessun risultato.'}</p>}
       <div className="rows">
         {list.map(({ m, own }) => (
@@ -138,9 +161,14 @@ export function Dnd5eBestiary({ onAdd, onRoll }: BestiaryProps) {
                 <span>{m.name}</span> <span className="faint tiny">· GS {m.cr} · {m.type}</span> {own && <span className="tag">mia</span>}
               </button>
               {onAdd && (
-                <button className="btn sm icon" title="Aggiungi al tavolo" onClick={() => add(m)}>
-                  <Plus size={13} />
-                </button>
+                <>
+                  <button className={`btn ghost sm icon ${encounter[m.id] ? 'active' : ''}`} title="Aggiungi all’incontro" onClick={() => bump(m.id, 1)}>
+                    <Swords size={13} />
+                  </button>
+                  <button className="btn sm icon" title="Aggiungi al tavolo" onClick={() => add(m)}>
+                    <Plus size={13} />
+                  </button>
+                </>
               )}
             </div>
             {open === m.id && (
@@ -168,6 +196,83 @@ export function Dnd5eBestiary({ onAdd, onRoll }: BestiaryProps) {
         ))}
       </div>
       {editing && <MonsterEditor initial={editing} onSave={save} onClose={() => setEditing(null)} />}
+    </div>
+  );
+}
+
+const DIFF_CLASS: Record<dnd5e.EncounterDifficulty, string> = { trivial: '', low: 'live', moderate: 'accent', high: 'warn', deadly: 'danger' };
+
+/** The encounter being prepared, weighed against the party with the 2024 XP budgets. */
+function EncounterBox({
+  encounter,
+  monsters,
+  partyLevels,
+  onBump,
+  onClear,
+  onPlace,
+}: {
+  encounter: Record<string, number>;
+  monsters: dnd5e.MonsterDef[];
+  partyLevels: number[];
+  onBump: (id: string, by: number) => void;
+  onClear: () => void;
+  onPlace: () => void;
+}) {
+  const rows = Object.entries(encounter)
+    .map(([id, n]) => ({ m: monsters.find((m) => m.id === id), n }))
+    .filter((r): r is { m: dnd5e.MonsterDef; n: number } => !!r.m);
+  const xp = rows.reduce((s, r) => s + r.m.xp * r.n, 0);
+  const count = rows.reduce((s, r) => s + r.n, 0);
+  const budget = dnd5e.partyBudget(partyLevels);
+  const diff = dnd5e.encounterDifficulty(partyLevels, xp);
+  const levels = [...new Set(partyLevels)].sort((a, b) => a - b);
+  return (
+    <div className="encounter">
+      <div className="row between">
+        <b className="small">Incontro · {count} {count === 1 ? 'creatura' : 'creature'}</b>
+        <button className="btn ghost sm icon" onClick={onClear} aria-label="Svuota incontro" title="Svuota">
+          <X size={13} />
+        </button>
+      </div>
+      {rows.map(({ m, n }) => (
+        <div key={m.id} className="row small">
+          <span className="grow ellipsis">
+            {m.name} <span className="faint tiny">· {m.xp} PE</span>
+          </span>
+          <button className="btn ghost sm icon" onClick={() => onBump(m.id, -1)} aria-label={`Una in meno: ${m.name}`}>
+            <Minus size={12} />
+          </button>
+          <b className="mono">{n}</b>
+          <button className="btn ghost sm icon" onClick={() => onBump(m.id, 1)} aria-label={`Una in più: ${m.name}`}>
+            <Plus size={12} />
+          </button>
+        </div>
+      ))}
+      <div className="encounter-meter">
+        <div className="row between small">
+          <span>
+            <b>{xp}</b> PE
+          </span>
+          {partyLevels.length ? <span className={`badge ${DIFF_CLASS[diff]}`}>Difficoltà {dnd5e.DIFFICULTY_LABELS[diff].toLowerCase()}</span> : null}
+        </div>
+        {partyLevels.length ? (
+          <>
+            <div className="meter">
+              <i style={{ width: `${Math.min(100, (xp / Math.max(1, budget.high)) * 100)}%` }} className={DIFF_CLASS[diff]} />
+              <span style={{ left: `${(budget.low / budget.high) * 100}%` }} />
+              <span style={{ left: `${(budget.moderate / budget.high) * 100}%` }} />
+            </div>
+            <span className="faint tiny">
+              {partyLevels.length} PG di livello {levels.join(', ')} · bassa {budget.low} · moderata {budget.moderate} · alta {budget.high}
+            </span>
+          </>
+        ) : (
+          <span className="faint tiny">Nessun personaggio al tavolo: assegna i personaggi per calcolare la difficoltà.</span>
+        )}
+      </div>
+      <button className="btn primary sm" onClick={onPlace}>
+        Metti tutti sul tavolo
+      </button>
     </div>
   );
 }

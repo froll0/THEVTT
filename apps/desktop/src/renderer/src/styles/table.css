@@ -787,3 +787,76 @@ body.dragging-window * {
 .log-who .avatar {
   font-size: 8px !important;
 }
+.encounter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--s3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-elev-2);
+}
+.encounter-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+.meter {
+  position: relative;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.meter > i {
+  display: block;
+  height: 100%;
+  background: var(--fg-faint);
+}
+.meter > i.live {
+  background: var(--success);
+}
+.meter > i.accent {
+  background: var(--accent);
+}
+.meter > i.warn {
+  background: var(--warning);
+}
+.meter > i.danger {
+  background: var(--danger);
+}
+.meter > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-strong);
+}
+.badge.warn {
+  color: var(--warning);
+  border-color: color-mix(in oklab, var(--warning) 45%, transparent);
+}
+.badge.danger {
+  color: var(--danger);
+  border-color: color-mix(in oklab, var(--danger) 45%, transparent);
+}
+.rows .btn.ghost.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.stage-paused.game-paused {
+  background: color-mix(in oklab, var(--bg) 45%, transparent);
+  backdrop-filter: grayscale(0.7);
+}
+.paused-pill {
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  color: var(--warning);
+  z-index: 6;
+}

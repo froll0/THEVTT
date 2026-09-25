@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { Armchair, ArrowLeft, BookText, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Armchair, ArrowLeft, BookText, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -119,6 +119,11 @@ export function TableView({ campaignId }: { campaignId: string }) {
           <div className="row no-drag" style={{ gap: 'var(--s3)', marginLeft: 'var(--s3)' }}>
             <ConnectionBadge isGm={isGm} onlinePlayers={players.filter((p) => p.online).map((p) => p.id)} />
             <MusicChip />
+            {isGm && (
+              <button className={`btn sm ${state.paused ? 'primary' : 'ghost'}`} onClick={() => table.dispatch({ type: 'game.pause', paused: !state.paused })} title={state.paused ? 'Riprendi il gioco' : 'Metti in pausa: i giocatori possono solo scrivere e tirare dadi'}>
+                {state.paused ? <Play size={14} /> : <Pause size={14} />} {state.paused ? 'Riprendi il gioco' : 'Pausa gioco'}
+              </button>
+            )}
             <button className="btn ghost sm" onClick={() => openWindow('journal', campaign.id, 'Diario')} title="Il tuo diario personale: appunti che legge solo tu">
               <BookText size={14} /> Diario
             </button>
@@ -148,6 +153,14 @@ export function TableView({ campaignId }: { campaignId: string }) {
               <p className="muted">Il tavolo riprende da solo appena {campaign.members.find((m) => m.role === 'gm')?.user.displayName ?? 'il master'} {status === 'online' ? 'riapre la sessione' : 'torna raggiungibile'}.</p>
             </div>
           )}
+          {state?.paused && phase !== 'waiting' && !isGm && (
+            <div className="stage-paused game-paused">
+              <Pause size={26} />
+              <h2>Gioco in pausa</h2>
+              <p className="muted">Il master ha fermato il gioco. Puoi scrivere in chat, tirare i dadi e consultare la scheda.</p>
+            </div>
+          )}
+          {state?.paused && isGm && <div className="float paused-pill glass">In pausa: i giocatori non possono muovere né disegnare</div>}
           {state && scene ? (
             <>
               <Board tool={tool} options={options} cameraRef={cameraRef} />

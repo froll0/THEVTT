@@ -363,3 +363,21 @@ describe('locked doors and labels', () => {
     expect(host.dispatch('p1', { type: 'drawing.create', points: [4, 5], color: '#fff', width: 0.6, text: '   ' }).ok).toBe(false);
   });
 });
+
+describe('GM tools', () => {
+  it('pauses the game for players but not for chat and rolls', () => {
+    const { host, lastState } = setup();
+    host.dispatch('p1', { type: 'token.create', token: { name: 'Lia', characterId: 'ch1', x: 3, y: 4 } });
+    const tok = Object.values(host.state.tokens)[0]!;
+    expect(host.dispatch('p1', { type: 'game.pause', paused: true }).ok).toBe(false);
+    expect(host.dispatch('gm', { type: 'game.pause', paused: true }).ok).toBe(true);
+    expect(lastState('p1').paused).toBe(true);
+    expect(host.dispatch('p1', { type: 'token.move', tokenId: tok.id, x: 5, y: 4 })).toEqual({ ok: false, reason: 'Il gioco è in pausa' });
+    expect(host.dispatch('p1', { type: 'chat', text: 'pausa caffè?' }).ok).toBe(true);
+    expect(host.dispatch('p1', { type: 'roll', formula: '1d20' }).ok).toBe(true);
+    // the GM keeps working
+    expect(host.dispatch('gm', { type: 'token.move', tokenId: tok.id, x: 6, y: 4 }).ok).toBe(true);
+    host.dispatch('gm', { type: 'game.pause', paused: false });
+    expect(host.dispatch('p1', { type: 'token.move', tokenId: tok.id, x: 5, y: 4 }).ok).toBe(true);
+  });
+});

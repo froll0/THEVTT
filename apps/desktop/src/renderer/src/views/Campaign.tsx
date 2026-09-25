@@ -1,4 +1,4 @@
-import type { Campaign, CharacterRecord, RsvpAnswer } from '@thevtt/shared';
+import type { Campaign, CharacterRecord, RsvpAnswer, SessionRecap } from '@thevtt/shared';
 import { getSystem } from '@thevtt/systems';
 import { ArrowLeft, CalendarClock, Crown, ImagePlus, MoreHorizontal, Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -134,6 +134,7 @@ export function CampaignView({ id }: { id: string }) {
             <p className="muted selectable campaign-description">{campaign.description || 'Aggiungi una descrizione per i giocatori (menu ⋯ › Modifica).'}</p>
           )}
           <NextSession campaign={campaign} isGm={isGm} />
+      <SessionRecaps campaign={campaign} isGm={isGm} />
 
           {!isGm && (
             <Section title="Il tuo personaggio">
@@ -453,6 +454,108 @@ function NextSession({ campaign, isGm }: { campaign: Campaign; isGm: boolean }) 
             ? 'Nessuna data in programma. Fissala: i giocatori ricevono un avviso e possono rispondere.'
             : 'Il master non ha ancora fissato la prossima sessione.'}
         </p>
+      )}
+    </Section>
+  );
+}
+
+/** What happened so far: the GM writes a recap after each session, everyone reads it. */
+function SessionRecaps({ campaign, isGm }: { campaign: Campaign; isGm: boolean }) {
+  const { api, run } = useApp();
+  const [recaps, setRecaps] = useState<SessionRecap[] | null>(null);
+  const [editing, setEditing] = useState<{ id?: string; title: string; body: string } | null>(null);
+  const [all, setAll] = useState(false);
+  useEffect(() => {
+    api.recaps(campaign.id).then(setRecaps).catch(() => setRecaps([]));
+    // the campaign object changes when the GM adds one
+  }, [api, campaign]);
+  if (!recaps || (!recaps.length && !isGm)) return null;
+  const save = () =>
+    run(async () => {
+      const e = editing!;
+      const r = e.id ? await api.updateRecap(campaign.id, e.id, e) : await api.createRecap(campaign.id, e);
+      setRecaps((list) => [r, ...(list ?? []).filter((x) => x.id !== r.id)].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      setEditing(null);
+    }, 'Riassunto salvato');
+  const shown = all ? recaps : recaps.slice(0, 3);
+  return (
+    <Section
+      title="Riassunti delle sessioni"
+      action={
+        isGm && (
+          <button className="btn ghost sm" onClick={() => setEditing({ title: `Sessione del ${new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}`, body: '' })}>
+            <Plus size={14} /> Scrivi riassunto
+          </button>
+        )
+      }
+    >
+      {recaps.length === 0 ? (
+        <p className="muted small">Dopo ogni sessione scrivi due righe su cosa è successo: i giocatori le ritrovano qui prima della volta successiva.</p>
+      ) : (
+        <div className="recaps">
+          {shown.map((r, i) => (
+            <details key={r.id} className="recap" open={i === 0}>
+              <summary>
+                <b>{r.title}</b>
+                <span className="faint tiny">{new Date(r.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              </summary>
+              <p className="selectable">{r.body || '—'}</p>
+              {isGm && (
+                <div className="row">
+                  <button className="btn ghost sm" onClick={() => setEditing({ id: r.id, title: r.title, body: r.body })}>
+                    Modifica
+                  </button>
+                  <button
+                    className="btn ghost sm danger"
+                    onClick={() =>
+                      run(async () => {
+                        await api.deleteRecap(campaign.id, r.id);
+                        setRecaps((list) => (list ?? []).filter((x) => x.id !== r.id));
+                      })
+                    }
+                  >
+                    Elimina
+                  </button>
+                </div>
+              )}
+            </details>
+          ))}
+          {recaps.length > 3 && (
+            <button className="btn ghost sm" onClick={() => setAll(!all)}>
+              {all ? 'Mostra meno' : `Tutti i riassunti (${recaps.length})`}
+            </button>
+          )}
+        </div>
+      )}
+      {editing && (
+        <Modal
+          title={editing.id ? 'Modifica riassunto' : 'Riassunto della sessione'}
+          onClose={() => setEditing(null)}
+          actions={
+            <>
+              <button className="btn ghost" onClick={() => setEditing(null)}>
+                Annulla
+              </button>
+              <button className="btn primary" disabled={!editing.title.trim()} onClick={() => void save()}>
+                Pubblica
+              </button>
+            </>
+          }
+        >
+          <Field label="Titolo">
+            <input className="input" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} />
+          </Field>
+          <Field label="Cosa è successo">
+            <textarea
+              className="textarea"
+              rows={10}
+              autoFocus
+              value={editing.body}
+              onChange={(e) => setEditing({ ...editing, body: e.target.value })}
+              placeholder="Luoghi visitati, PNG incontrati, indizi, tesori, conti in sospeso…"
+            />
+          </Field>
+        </Modal>
       )}
     </Section>
   );

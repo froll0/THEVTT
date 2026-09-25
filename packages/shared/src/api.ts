@@ -120,6 +120,16 @@ export interface ApiError {
 }
 
 /** A page of a user's personal journal (session notes…). Only its author sees it. */
+/** What happened in a session, written by the GM for the whole group. */
+export interface SessionRecap {
+  id: string;
+  campaignId: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface JournalEntry {
   id: string;
   campaignId: string | null;

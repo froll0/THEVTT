@@ -100,10 +100,19 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX idx_journal_user ON journal_entries(user_id, updated_at);
   `,
-  // 4: profile pictures and campaign covers (small data URLs)
+  // 4: profile pictures, campaign covers (small data URLs) and session recaps
   `
   ALTER TABLE users ADD COLUMN avatar TEXT;
   ALTER TABLE campaigns ADD COLUMN cover TEXT;
+  CREATE TABLE campaign_recaps (
+    id TEXT PRIMARY KEY,
+    campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX idx_recaps_campaign ON campaign_recaps(campaign_id, created_at);
   `,
 ];
 

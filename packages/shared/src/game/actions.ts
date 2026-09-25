@@ -46,6 +46,7 @@ export type GameAction =
   | { type: 'drawing.clear' }
   | { type: 'music.play'; trackId?: string; position?: number }
   | { type: 'music.pause' }
+  | { type: 'game.pause'; paused: boolean }
   | { type: 'music.seek'; position: number }
   | { type: 'music.loop'; loop: boolean }
   | { type: 'music.remove'; trackId: string }

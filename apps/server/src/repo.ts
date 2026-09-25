@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Campaign, CampaignInvite, CampaignRole, CharacterRecord, ChatMessage, FriendEntry, JournalEntry, FriendStatus, RsvpAnswer, UserPublic } from '@thevtt/shared';
+import type { Campaign, CampaignInvite, CampaignRole, CharacterRecord, ChatMessage, FriendEntry, JournalEntry, SessionRecap, FriendStatus, RsvpAnswer, UserPublic } from '@thevtt/shared';
 import { tx, type Db } from './db';
 import { badRequest, conflict, forbidden, notFound } from './errors';
 
@@ -297,6 +297,47 @@ export class Repo {
       )
       .all(userId, userId, `d:${userId}:%`, `d:%:${userId}`, userId) as Row[];
     return Object.fromEntries(rows.map((r) => [this.clientChannel(r.channel as string, userId), Number(r.n)]));
+  }
+
+  // ---------- session recaps ----------
+
+  private toRecap(r: Row): SessionRecap {
+    return {
+      id: r.id as string,
+      campaignId: r.campaign_id as string,
+      title: r.title as string,
+      body: r.body as string,
+      createdAt: r.created_at as string,
+      updatedAt: r.updated_at as string,
+    };
+  }
+
+  recaps(campaignId: string): SessionRecap[] {
+    return (this.db.prepare('SELECT * FROM campaign_recaps WHERE campaign_id = ? ORDER BY created_at DESC').all(campaignId) as Row[]).map((r) => this.toRecap(r));
+  }
+
+  recap(campaignId: string, id: string): SessionRecap {
+    const r = this.db.prepare('SELECT * FROM campaign_recaps WHERE id = ? AND campaign_id = ?').get(id, campaignId) as Row | undefined;
+    if (!r) throw notFound('Riassunto non trovato');
+    return this.toRecap(r);
+  }
+
+  saveRecap(campaignId: string, input: { id?: string; title: string; body: string }): SessionRecap {
+    if (input.body.length > 100_000) throw badRequest('Riassunto troppo lungo');
+    const t = now();
+    if (input.id) {
+      this.recap(campaignId, input.id);
+      this.db.prepare('UPDATE campaign_recaps SET title = ?, body = ?, updated_at = ? WHERE id = ?').run(input.title, input.body, t, input.id);
+      return this.recap(campaignId, input.id);
+    }
+    const id = randomUUID();
+    this.db.prepare('INSERT INTO campaign_recaps (id, campaign_id, title, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)').run(id, campaignId, input.title, input.body, t, t);
+    return this.recap(campaignId, id);
+  }
+
+  deleteRecap(campaignId: string, id: string): void {
+    this.recap(campaignId, id);
+    this.db.prepare('DELETE FROM campaign_recaps WHERE id = ?').run(id);
   }
 
   // ---------- journal ----------

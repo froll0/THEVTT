@@ -29,6 +29,7 @@ import {
 export * from './backgrounds';
 export * from './classes';
 export * from './data';
+export * from './encounters';
 export * from './equipment';
 export * from './feats';
 export * from './monsters';

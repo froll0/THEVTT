@@ -218,6 +218,27 @@ describe('journal', () => {
     expect((await api('GET', '/journal', a.token)).body).toEqual([]);
   });
 
+  it('lets the GM write session recaps the group can read', async () => {
+    const gm = await register('recapgm');
+    const pl = await register('recappl');
+    const other = await register('recapother');
+    await api('POST', '/friends/requests', gm.token, { username: 'recappl' });
+    await api('POST', `/friends/${gm.user.id}/accept`, pl.token);
+    const camp = (await api('POST', '/campaigns', gm.token, { name: 'Cronache', systemId: 'dnd5e-2024' })).body;
+    await api('POST', `/campaigns/${camp.id}/invites`, gm.token, { userId: pl.user.id });
+    const [inv] = (await api('GET', '/invites', pl.token)).body;
+    await api('POST', `/invites/${inv.id}/accept`, pl.token);
+    const r = (await api('POST', `/campaigns/${camp.id}/recaps`, gm.token, { title: 'Sessione 1', body: 'Il drago è fuggito.' })).body;
+    expect(r).toMatchObject({ title: 'Sessione 1', campaignId: camp.id });
+    expect((await api('POST', `/campaigns/${camp.id}/recaps`, pl.token, { title: 'x' })).status).toBe(403);
+    expect((await api('GET', `/campaigns/${camp.id}/recaps`, pl.token)).body).toHaveLength(1);
+    expect((await api('GET', `/campaigns/${camp.id}/recaps`, other.token)).status).toBe(404);
+    expect((await api('PATCH', `/campaigns/${camp.id}/recaps/${r.id}`, gm.token, { title: 'Sessione 1', body: 'Il drago è tornato.' })).body.body).toContain('tornato');
+    expect((await api('DELETE', `/campaigns/${camp.id}/recaps/${r.id}`, pl.token)).status).toBe(403);
+    expect((await api('DELETE', `/campaigns/${camp.id}/recaps/${r.id}`, gm.token)).status).toBe(200);
+    expect((await api('GET', `/campaigns/${camp.id}/recaps`, pl.token)).body).toEqual([]);
+  });
+
   it('stores profile pictures and campaign covers', async () => {
     const a = await register('ritratto');
     const b = await register('altro');

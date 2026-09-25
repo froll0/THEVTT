@@ -23,7 +23,9 @@ export interface SheetProps<T = any> {
 
 export interface BestiaryProps {
   /** at the table: put the creature on the map (darkvision in metres here). Absent in the compendium. */
-  onAdd?: (token: Partial<Omit<Token, 'id'>> & { name: string }) => void;
+  onAdd?: (token: Partial<Omit<Token, 'id'>> & { name: string }, index?: number) => void;
+  /** levels of the characters at the table, to weigh encounters */
+  partyLevels?: number[];
   onRoll: (formula: string, label: string) => void;
 }
 

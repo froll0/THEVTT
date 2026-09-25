@@ -428,14 +428,22 @@ export function BestiaryPanel({ placeAt }: { placeAt: () => { x: number; y: numb
   if (!state) return null;
   const ui = getSystemUi(state.systemId);
   if (!ui?.Bestiary) return <div className="panel-body muted small">Nessun bestiario per questo sistema.</div>;
+  // the characters seated at the table
+  const partyLevels = Object.values(state.players)
+    .map((p) => (p.characterId ? (state.characters[p.characterId]?.data as { level?: number } | undefined)?.level : undefined))
+    .filter((l): l is number => typeof l === 'number' && l > 0);
   return (
     <div className="panel-body">
       <ui.Bestiary
-        onAdd={(token) => {
+        partyLevels={partyLevels}
+        onAdd={(token, index = 0) => {
           const scene = state.scenes[state.activeSceneId];
           const darkvision = token.darkvision && scene ? metresToCells(scene, token.darkvision) : 0;
-          useTable.getState().selectNextToken();
-          dispatch({ type: 'token.create', token: { ...token, darkvision, ...placeAt(), color: '#8b8b93' } });
+          // a group spreads out in rows of four around the centre of the view
+          const at = placeAt();
+          const size = token.size ?? 1;
+          if (index === 0) useTable.getState().selectNextToken();
+          dispatch({ type: 'token.create', token: { ...token, darkvision, x: at.x + (index % 4) * size, y: at.y + Math.floor(index / 4) * size, color: '#8b8b93' } });
         }}
         onRoll={(formula, label) => dispatch({ type: 'roll', formula, label, private: true })}
       />

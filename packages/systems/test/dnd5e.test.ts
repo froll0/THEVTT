@@ -224,3 +224,14 @@ describe('bestiary data', () => {
     expect(problems).toEqual([]);
   });
 });
+
+describe('encounter budget (2024)', () => {
+  it('adds each character and grades the monsters', () => {
+    expect(dnd5e.partyBudget([3, 3, 3, 3])).toEqual({ low: 600, moderate: 900, high: 1600 });
+    expect(dnd5e.encounterDifficulty([3, 3, 3, 3], 200)).toBe('trivial');
+    expect(dnd5e.encounterDifficulty([3, 3, 3, 3], 500)).toBe('low');
+    expect(dnd5e.encounterDifficulty([3, 3, 3, 3], 900)).toBe('moderate');
+    expect(dnd5e.encounterDifficulty([3, 3, 3, 3], 1100)).toBe('high');
+    expect(dnd5e.encounterDifficulty([3, 3, 3, 3], 2000)).toBe('deadly');
+  });
+});

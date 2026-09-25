@@ -7,6 +7,7 @@ import type {
   CreateCampaignRequest,
   FriendEntry,
   JournalEntry,
+  SessionRecap,
   RsvpAnswer,
   RtcConfig,
   SaveCharacterRequest,
@@ -101,6 +102,11 @@ export class Api {
   messages = (channel: string) => this.req<ChatMessage[]>('GET', `/chat/${encodeURIComponent(channel)}`);
   sendMessage = (channel: string, text: string) => this.req<ChatMessage>('POST', `/chat/${encodeURIComponent(channel)}`, { text });
   markRead = (channel: string) => this.req('POST', `/chat/${encodeURIComponent(channel)}/read`);
+
+  recaps = (campaignId: string) => this.req<SessionRecap[]>('GET', `/campaigns/${campaignId}/recaps`);
+  createRecap = (campaignId: string, body: { title: string; body: string }) => this.req<SessionRecap>('POST', `/campaigns/${campaignId}/recaps`, body);
+  updateRecap = (campaignId: string, id: string, body: { title: string; body: string }) => this.req<SessionRecap>('PATCH', `/campaigns/${campaignId}/recaps/${id}`, body);
+  deleteRecap = (campaignId: string, id: string) => this.req('DELETE', `/campaigns/${campaignId}/recaps/${id}`);
 
   journal = () => this.req<JournalEntry[]>('GET', '/journal');
   createJournal = (body: { title?: string; body?: string; campaignId?: string | null }) => this.req<JournalEntry>('POST', '/journal', body);

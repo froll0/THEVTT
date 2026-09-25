@@ -80,6 +80,12 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await P.getByLabel('Messaggio').fill('Porto io le patatine');
   await P.getByLabel('Messaggio').press('Enter');
   await expect(G.locator('.msg', { hasText: 'Porto io le patatine' })).toBeVisible();
+  // the GM writes what happened last time, the player reads it
+  await G.getByRole('button', { name: 'Scrivi riassunto' }).click();
+  await G.locator('.modal').getByLabel('Titolo').fill('Sessione zero');
+  await G.locator('.modal').getByLabel('Cosa è successo').fill('Il gruppo si è incontrato alla locanda del Gigante.');
+  await G.getByRole('button', { name: 'Pubblica' }).click();
+  await expect(P.getByText('Il gruppo si è incontrato alla locanda del Gigante.')).toBeVisible();
 
   // session: GM hosts, player sits, direct link comes up
   await G.getByRole('button', { name: 'Avvia sessione' }).click();
@@ -194,13 +200,27 @@ test('a group plays at a table hosted inside the GM app', async () => {
   const row = G.locator('.rows .r', { hasText: 'Gnomo furioso' });
   await expect(row).toBeVisible();
   await row.getByTitle('Aggiungi al tavolo').click();
+  // an encounter weighed against the party, placed all at once
+  const bandit = G.locator('.rows .r', { hasText: 'Bandito' }).first();
+  await bandit.getByTitle('Aggiungi all’incontro').click();
+  await bandit.getByTitle('Aggiungi all’incontro').click();
+  await expect(G.locator('.encounter')).toContainText('2 creature');
+  await expect(G.locator('.encounter')).toContainText('PG di livello');
+  await G.getByRole('button', { name: 'Metti tutti sul tavolo' }).click();
+  await expect(G.locator('.encounter')).toHaveCount(0);
+
+  // pause: players can chat but not play
+  await G.getByRole('button', { name: 'Pausa gioco' }).click();
+  await expect(P.getByRole('heading', { name: 'Gioco in pausa' })).toBeVisible();
+  await G.getByRole('button', { name: 'Riprendi il gioco' }).click();
+  await expect(P.getByRole('heading', { name: 'Gioco in pausa' })).toHaveCount(0);
 
   // music: the GM plays a track, it plays for the player too
   await G.getByTitle('Musica').click();
   await G.locator('.panel-body input[type=file]').setInputFiles(fileURLToPath(new URL('./fixtures/taverna.wav', import.meta.url)));
   await G.getByRole('button', { name: 'Riproduci taverna' }).click();
   await expect(P.locator('.music-chip', { hasText: 'taverna' })).toHaveAttribute('data-audible', 'true', { timeout: 15_000 });
-  await G.getByRole('button', { name: 'Pausa' }).first().click();
+  await G.getByRole('button', { name: 'Pausa', exact: true }).first().click();
   await expect(P.locator('.music-chip')).toHaveAttribute('data-audible', 'false');
 
   // personal journal: a window next to the map, saved on the server, private
