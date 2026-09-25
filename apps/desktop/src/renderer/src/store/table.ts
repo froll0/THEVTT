@@ -314,7 +314,12 @@ export const useTable = create<TableStore>((set, get) => {
           if (retryTimer) clearTimeout(retryTimer);
         },
         rt.onStatus((s) => {
-          if (s === 'online') hello();
+          // the socket dropped (often because the GM's computer, which hosts the server, went away):
+          // pause the table. On reconnect the server replays session.state, which resumes it.
+          if (s !== 'online' && get().phase !== 'waiting') {
+            closeLinks();
+            set({ phase: 'waiting', routes: {} });
+          }
         }),
         () => rt.send({ t: 'session.leave', campaignId: campaign.id }),
       );

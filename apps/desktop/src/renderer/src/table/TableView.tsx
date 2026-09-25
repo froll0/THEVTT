@@ -13,7 +13,7 @@ import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, ScenePa
 type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'scene' | 'notes';
 
 export function TableView({ campaignId }: { campaignId: string }) {
-  const { campaigns, user, go } = useApp();
+  const { campaigns, user, go, status } = useApp();
   const campaign = campaigns.find((c) => c.id === campaignId);
   const table = useTable();
   const dockPosition = useSettings((s) => s.dockPosition);
@@ -101,6 +101,13 @@ export function TableView({ campaignId }: { campaignId: string }) {
       </TopBar>
       <div className={`table-body dock-${dockPosition}`}>
         <div className="stage">
+          {state && scene && phase === 'waiting' && !isGm && (
+            <div className="stage-paused">
+              <Radio size={26} />
+              <h2>{status === 'online' ? 'Il master si è allontanato' : 'Connessione al master persa'}</h2>
+              <p className="muted">Il tavolo riprende da solo appena {campaign.members.find((m) => m.role === 'gm')?.user.displayName ?? 'il master'} {status === 'online' ? 'riapre la sessione' : 'torna raggiungibile'}.</p>
+            </div>
+          )}
           {state && scene ? (
             <Board tool={tool} options={options} cameraRef={cameraRef} />
           ) : (
