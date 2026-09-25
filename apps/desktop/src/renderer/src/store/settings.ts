@@ -18,6 +18,10 @@ export interface Settings {
   dockPosition: 'left' | 'right';
   /** direct WebRTC link with the GM/players instead of the server relay */
   directConnection: boolean;
+  /** table music volume, 0..1 (each player sets their own) */
+  musicVolume: number;
+  /** rolling 3D dice on the table */
+  dice3d: boolean;
   board: {
     background: string;
     gridColor: string;
@@ -39,6 +43,8 @@ export const DEFAULT_SETTINGS: Settings = {
   reduceMotion: false,
   dockPosition: 'right',
   directConnection: true,
+  musicVolume: 0.6,
+  dice3d: true,
   board: { background: '#0d0e10', gridColor: '#ffffff', gridOpacity: 0.12, tokenNames: 'hover', hpBars: true },
   customCss: '',
 };

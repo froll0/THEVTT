@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { ArrowLeft, ArrowLeftRight, Eraser, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Eraser, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -8,11 +8,12 @@ import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
 import { Board, CELL, type Tool, type ToolOptions } from './Board';
+import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, ScenePanel, SheetPanel, TokenInspector } from './Panels';
 
 const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
 
-type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'scene' | 'notes';
+type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'scene' | 'notes' | 'music';
 
 export function TableView({ campaignId }: { campaignId: string }) {
   const { campaigns, user, go, status } = useApp();
@@ -71,6 +72,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     { id: 'bestiary', label: 'Bestiario', icon: BookOpen, gm: true },
     { id: 'scene', label: 'Scene', icon: MapIcon, gm: true },
     { id: 'notes', label: 'Note e dispense', icon: NotebookPen },
+    { id: 'music', label: 'Musica', icon: Music, gm: true },
   ];
 
   return (
@@ -86,6 +88,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
         {state && (
           <div className="row no-drag" style={{ gap: 'var(--s3)', marginLeft: 'var(--s3)' }}>
             <ConnectionBadge isGm={isGm} onlinePlayers={players.filter((p) => p.online).map((p) => p.id)} />
+            <MusicChip />
             <div className="avatars">
               <Avatar user={{ ...(campaign.members.find((m) => m.role === 'gm')?.user ?? user), online: true }} size={20} presence />
               {players.map((p) => (
@@ -102,6 +105,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
           </div>
         )}
       </TopBar>
+      {state && <MusicPlayer />}
       <div className={`table-body dock-${dockPosition}`}>
         <div className="stage">
           {state && scene && phase === 'waiting' && !isGm && (
@@ -272,6 +276,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 {tab === 'bestiary' && isGm && <BestiaryPanel placeAt={viewCenter} />}
                 {tab === 'scene' && isGm && <ScenePanel />}
                 {tab === 'notes' && <NotesPanel />}
+                {tab === 'music' && isGm && <MusicPanel />}
               </ErrorBoundary>
             </div>
           )}

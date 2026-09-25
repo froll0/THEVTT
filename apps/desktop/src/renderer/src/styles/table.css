@@ -574,3 +574,45 @@
   border-radius: 50%;
   background: currentColor;
 }
+
+/* ---------- music ---------- */
+.now-playing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+}
+.track-list {
+  display: flex;
+  flex-direction: column;
+}
+.track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-top: 1px solid var(--border);
+  padding: 2px 0;
+}
+.track:first-child {
+  border-top: 0;
+}
+.track.active .input {
+  color: var(--accent);
+  font-weight: 600;
+}
+.music-chip {
+  max-width: 180px;
+  cursor: pointer;
+  background: none;
+}
+.btn.on {
+  color: var(--accent);
+}
+.range {
+  accent-color: var(--accent);
+  height: 4px;
+  min-width: 0;
+}

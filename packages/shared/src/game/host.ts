@@ -32,8 +32,8 @@ export interface GameHostOptions {
 
 const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'color', 'name'];
 const MAX_ASSET_BYTES = 12 * 1024 * 1024;
-/** audio travels to every player: keep tracks to a sane size (~15MB file) */
-const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
+/** audio travels to every player, through the relay too (16MB per message): ~11MB files */
+const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
 const IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,/;
 const AUDIO_DATA_URL = /^data:audio\/(mpeg|mp3|ogg|wav|x-wav|webm|mp4|x-m4a|aac|flac);base64,/;
 const MAX_DRAWINGS = 500;
@@ -583,7 +583,7 @@ export class GameHost {
         }
         if (audio) {
           if (!target || !('track' in target)) return { ok: false, reason: 'Formato non supportato' };
-          if (action.dataUrl.length > MAX_AUDIO_BYTES) return { ok: false, reason: 'Brano troppo grande (max ~15MB)' };
+          if (action.dataUrl.length > MAX_AUDIO_BYTES) return { ok: false, reason: 'Brano troppo grande (max ~11MB)' };
         } else {
           if (!IMAGE_DATA_URL.test(action.dataUrl)) return { ok: false, reason: 'Formato immagine non supportato' };
           if (action.dataUrl.length > MAX_ASSET_BYTES) return { ok: false, reason: 'Immagine troppo grande (max ~9MB)' };
