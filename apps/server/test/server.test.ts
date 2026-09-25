@@ -197,3 +197,24 @@ describe('chat and scheduling', () => {
     peer.ws.close();
   });
 });
+
+describe('journal', () => {
+  it('keeps each journal private to its author', async () => {
+    const a = await register('diarioa');
+    const b = await register('diariob');
+    const camp = (await api('POST', '/campaigns', a.token, { name: 'Diari', systemId: 'dnd5e-2024' })).body;
+    const e = (await api('POST', '/journal', a.token, { title: 'Sessione 1', body: 'Abbiamo trovato la miniera.', campaignId: camp.id })).body;
+    expect(e).toMatchObject({ title: 'Sessione 1', campaignId: camp.id });
+    // not a member: can't file a page under that campaign
+    expect((await api('POST', '/journal', b.token, { title: 'x', campaignId: camp.id })).status).toBe(404);
+    expect((await api('GET', '/journal', b.token)).body).toEqual([]);
+    expect((await api('PATCH', `/journal/${e.id}`, b.token, { body: 'hack' })).status).toBe(404);
+    const upd = (await api('PATCH', `/journal/${e.id}`, a.token, { body: 'Abbiamo trovato la miniera. E un drago.' })).body;
+    expect(upd.body).toContain('drago');
+    expect(upd.title).toBe('Sessione 1');
+    expect((await api('GET', '/journal', a.token)).body).toHaveLength(1);
+    expect((await api('DELETE', `/journal/${e.id}`, b.token)).status).toBe(404);
+    expect((await api('DELETE', `/journal/${e.id}`, a.token)).status).toBe(200);
+    expect((await api('GET', '/journal', a.token)).body).toEqual([]);
+  });
+});

@@ -12,6 +12,7 @@ export type Route =
   | { name: 'character'; id: string | null; systemId?: string; assignTo?: string }
   | { name: 'friends' }
   | { name: 'compendium' }
+  | { name: 'journal' }
   | { name: 'settings'; section?: SettingsSection }
   | { name: 'table'; campaignId: string };
 

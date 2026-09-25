@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Campaign, CampaignInvite, CampaignRole, CharacterRecord, ChatMessage, FriendEntry, FriendStatus, RsvpAnswer, UserPublic } from '@thevtt/shared';
+import type { Campaign, CampaignInvite, CampaignRole, CharacterRecord, ChatMessage, FriendEntry, JournalEntry, FriendStatus, RsvpAnswer, UserPublic } from '@thevtt/shared';
 import { tx, type Db } from './db';
 import { badRequest, conflict, forbidden, notFound } from './errors';
 
@@ -293,6 +293,53 @@ export class Repo {
       )
       .all(userId, userId, `d:${userId}:%`, `d:%:${userId}`, userId) as Row[];
     return Object.fromEntries(rows.map((r) => [this.clientChannel(r.channel as string, userId), Number(r.n)]));
+  }
+
+  // ---------- journal ----------
+
+  private toEntry(r: Row): JournalEntry {
+    return {
+      id: r.id as string,
+      campaignId: (r.campaign_id as string | null) ?? null,
+      title: r.title as string,
+      body: r.body as string,
+      createdAt: r.created_at as string,
+      updatedAt: r.updated_at as string,
+    };
+  }
+
+  journal(userId: string): JournalEntry[] {
+    return (this.db.prepare('SELECT * FROM journal_entries WHERE user_id = ? ORDER BY updated_at DESC').all(userId) as Row[]).map((r) => this.toEntry(r));
+  }
+
+  journalEntry(userId: string, id: string): JournalEntry {
+    const r = this.db.prepare('SELECT * FROM journal_entries WHERE id = ? AND user_id = ?').get(id, userId) as Row | undefined;
+    if (!r) throw notFound('Pagina non trovata');
+    return this.toEntry(r);
+  }
+
+  saveJournalEntry(userId: string, input: { id?: string; campaignId?: string | null; title?: string; body?: string }): JournalEntry {
+    if (input.campaignId) this.requireRole(input.campaignId, userId);
+    const body = input.body ?? '';
+    if (body.length > 200_000) throw badRequest('Pagina troppo lunga');
+    if (input.id) {
+      const cur = this.journalEntry(userId, input.id);
+      this.db
+        .prepare('UPDATE journal_entries SET title = ?, body = ?, campaign_id = ?, updated_at = ? WHERE id = ?')
+        .run(input.title ?? cur.title, input.body ?? cur.body, input.campaignId === undefined ? cur.campaignId : input.campaignId, now(), input.id);
+      return this.journalEntry(userId, input.id);
+    }
+    const id = randomUUID();
+    const t = now();
+    this.db
+      .prepare('INSERT INTO journal_entries (id, user_id, campaign_id, title, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(id, userId, input.campaignId ?? null, input.title || 'Nuova pagina', body, t, t);
+    return this.journalEntry(userId, id);
+  }
+
+  deleteJournalEntry(userId: string, id: string): void {
+    this.journalEntry(userId, id);
+    this.db.prepare('DELETE FROM journal_entries WHERE id = ?').run(id);
   }
 
   // ---------- invites ----------

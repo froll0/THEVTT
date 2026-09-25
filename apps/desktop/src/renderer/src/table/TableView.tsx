@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { Armchair, ArrowLeft, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Armchair, ArrowLeft, BookText, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -15,6 +15,7 @@ import { PROP_KINDS } from './props';
 import { BestiaryPanel, ChatPanel, DiceBar, DoorInspector, InitiativePanel, NotesPanel, PropInspector, ScenePanel, SheetPanel, SheetWindow, TokenInspector } from './Panels';
 import { FloatingWindow, MinimizedWindow } from '../components/FloatingWindow';
 import { useWindows } from '../store/windows';
+import { Journal } from '../components/Journal';
 
 const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
 
@@ -118,6 +119,9 @@ export function TableView({ campaignId }: { campaignId: string }) {
           <div className="row no-drag" style={{ gap: 'var(--s3)', marginLeft: 'var(--s3)' }}>
             <ConnectionBadge isGm={isGm} onlinePlayers={players.filter((p) => p.online).map((p) => p.id)} />
             <MusicChip />
+            <button className="btn ghost sm" onClick={() => openWindow('journal', campaign.id, 'Diario')} title="Il tuo diario personale: appunti che legge solo tu">
+              <BookText size={14} /> Diario
+            </button>
             <div className="avatars">
               <Avatar user={{ ...(campaign.members.find((m) => m.role === 'gm')?.user ?? user), online: true }} size={20} presence />
               {players.map((p) => (
@@ -446,6 +450,8 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 <ErrorBoundary area="La finestra">
                   {w.kind === 'sheet' ? (
                     <SheetWindow characterId={w.ref} width={w.w} placeAt={viewCenter} />
+                  ) : w.kind === 'journal' ? (
+                    <Journal campaignId={w.ref} narrow={w.w < 600} />
                   ) : (
                     <CompendiumEntryView
                       systemId={state.systemId}

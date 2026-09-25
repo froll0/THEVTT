@@ -14,6 +14,7 @@ import { CharacterEditor } from './views/CharacterEditor';
 import { CharactersView } from './views/Characters';
 import { FriendsView } from './views/Friends';
 import { HomeView } from './views/Home';
+import { JournalView } from './views/JournalView';
 import { SettingsView } from './views/Settings';
 
 function useThemeSync() {
@@ -77,6 +78,7 @@ export function App() {
           {route.name === 'character' && <CharacterEditor key={route.id ?? 'new'} id={route.id} systemId={route.systemId} assignTo={route.assignTo} />}
           {route.name === 'friends' && <FriendsView />}
           {route.name === 'compendium' && <CompendiumView />}
+          {route.name === 'journal' && <JournalView />}
           {route.name === 'settings' && <SettingsView initial={route.section} />}
         </ErrorBoundary>
       </main>

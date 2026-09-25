@@ -4,12 +4,12 @@ import { create } from 'zustand';
  * Floating windows over the table (character sheets, compendium pages):
  * moved, resized and minimised at will. Geometry is remembered per content.
  */
-export type WindowKind = 'sheet' | 'compendium';
+export type WindowKind = 'sheet' | 'compendium' | 'journal';
 
 export interface FloatWin {
   id: string;
   kind: WindowKind;
-  /** character id or compendium entry id */
+  /** character id, compendium entry id or campaign id (journal) */
   ref: string;
   title: string;
   x: number;
@@ -54,7 +54,7 @@ export const useWindows = create<WindowStore>((set, get) => ({
       return;
     }
     const saved = loadGeo()[id];
-    const size = kind === 'sheet' ? { w: 760, h: 640 } : { w: 520, h: 560 };
+    const size = kind === 'sheet' ? { w: 760, h: 640 } : kind === 'journal' ? { w: 640, h: 520 } : { w: 520, h: 560 };
     // new windows cascade from the top left of the board
     const n = get().windows.length;
     const geo = saved ?? { x: 80 + n * 28, y: 16 + n * 28, ...size };

@@ -203,6 +203,18 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await G.getByRole('button', { name: 'Pausa' }).first().click();
   await expect(P.locator('.music-chip')).toHaveAttribute('data-audible', 'false');
 
+  // personal journal: a window next to the map, saved on the server, private
+  await P.getByRole('button', { name: 'Diario' }).click();
+  const journal = P.getByRole('dialog', { name: 'Diario' });
+  await journal.getByRole('button', { name: 'Nuova pagina' }).click();
+  await journal.getByLabel('Titolo della pagina').fill('La cripta');
+  await journal.getByLabel('Testo della pagina').fill('Il mago Varos nasconde una chiave.');
+  await expect(journal.locator('.journal-row', { hasText: 'Varos nasconde' })).toBeVisible();
+  await journal.getByRole('button', { name: 'Chiudi finestra' }).click();
+  await P.getByRole('button', { name: 'Diario' }).click();
+  await expect(journal.getByLabel('Testo della pagina')).toHaveValue('Il mago Varos nasconde una chiave.');
+  expect(await apiCall<unknown[]>(G, 'GET', '/journal')).toEqual([]);
+
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   expect(player.errors, player.errors.join('\n')).toEqual([]);
 });

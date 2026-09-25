@@ -114,3 +114,13 @@ export interface ApiError {
   error: string;
   message: string;
 }
+
+/** A page of a user's personal journal (session notes…). Only its author sees it. */
+export interface JournalEntry {
+  id: string;
+  campaignId: string | null;
+  title: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}

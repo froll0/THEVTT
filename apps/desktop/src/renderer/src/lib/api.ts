@@ -6,6 +6,7 @@ import type {
   ChatMessage,
   CreateCampaignRequest,
   FriendEntry,
+  JournalEntry,
   RsvpAnswer,
   RtcConfig,
   SaveCharacterRequest,
@@ -100,4 +101,10 @@ export class Api {
   messages = (channel: string) => this.req<ChatMessage[]>('GET', `/chat/${encodeURIComponent(channel)}`);
   sendMessage = (channel: string, text: string) => this.req<ChatMessage>('POST', `/chat/${encodeURIComponent(channel)}`, { text });
   markRead = (channel: string) => this.req('POST', `/chat/${encodeURIComponent(channel)}/read`);
+
+  journal = () => this.req<JournalEntry[]>('GET', '/journal');
+  createJournal = (body: { title?: string; body?: string; campaignId?: string | null }) => this.req<JournalEntry>('POST', '/journal', body);
+  updateJournal = (id: string, patch: { title?: string; body?: string; campaignId?: string | null }) =>
+    this.req<JournalEntry>('PATCH', `/journal/${id}`, patch);
+  deleteJournal = (id: string) => this.req('DELETE', `/journal/${id}`);
 }

@@ -87,6 +87,19 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (campaign_id, user_id)
   );
   `,
+  `
+  -- personal journal: private to its author, optionally tied to a campaign
+  CREATE TABLE journal_entries (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX idx_journal_user ON journal_entries(user_id, updated_at);
+  `,
 ];
 
 export type Db = DatabaseSync;
