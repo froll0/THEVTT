@@ -254,9 +254,9 @@ button.stat:hover {
 }
 .sheet-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
 }
 .sheet-tabs button {
   border: 0;
@@ -292,6 +292,23 @@ button.stat:hover {
   }
   .abilities {
     grid-template-columns: repeat(3, 1fr);
+  }
+  .stat-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .stat {
+    padding: 5px 7px;
+  }
+  .stat b {
+    font-size: 0.98rem;
+  }
+  .sheet-tabs button {
+    padding: 5px 7px 7px;
+    font-size: 0.86rem;
+  }
+  .sheet {
+    gap: var(--s3);
   }
 }
 .ab {

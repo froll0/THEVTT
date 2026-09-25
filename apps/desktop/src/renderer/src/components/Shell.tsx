@@ -156,7 +156,7 @@ export function TopBar({ children, nav = true }: { children?: ReactNode; nav?: b
           {NAV.map((n) => (
             <button key={n.label} className={n.match.includes(route.name) ? 'active' : ''} onClick={() => go(n.route)}>
               {n.label}
-              {n.route.name === 'campaigns' && live && <span className="dot" title="Un tavolo è aperto" />}
+              {n.route.name === 'campaigns' && live && <span className="dot" aria-hidden title="Un tavolo è aperto" />}
             </button>
           ))}
         </nav>

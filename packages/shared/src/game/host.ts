@@ -149,7 +149,8 @@ export class GameHost {
         if (p.name !== undefined) scene.name = String(p.name).slice(0, 80);
         if (p.widthCells !== undefined) scene.widthCells = clampInt(p.widthCells, 1, 200);
         if (p.heightCells !== undefined) scene.heightCells = clampInt(p.heightCells, 1, 200);
-        if (p.cellDistance !== undefined) scene.cellDistance = clampInt(p.cellDistance, 1, 1000);
+        if (p.cellDistance !== undefined) scene.cellDistance = Math.min(1000, Math.max(0.1, Math.round(Number(p.cellDistance) * 10) / 10 || 1));
+        if (p.unit !== undefined) scene.unit = p.unit === 'ft' ? 'ft' : 'm';
         if (p.showGrid !== undefined) scene.showGrid = !!p.showGrid;
         if (p.background !== undefined) {
           if (p.background !== null && !this.assets[p.background]) return { ok: false, reason: 'Immagine sconosciuta' };

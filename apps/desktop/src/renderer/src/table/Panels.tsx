@@ -290,6 +290,25 @@ export function ScenePanel() {
           <input className="input" type="number" min={1} max={200} defaultValue={active.heightCells} key={`h-${active.id}-${active.heightCells}`} onBlur={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { heightCells: Number(e.target.value) } })} />
         </Field>
       </div>
+      <div className="row">
+        <Field label="Distanza per casella">
+          <input
+            className="input"
+            type="number"
+            step={0.5}
+            min={0.1}
+            defaultValue={active.cellDistance}
+            key={`d-${active.id}-${active.cellDistance}`}
+            onBlur={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { cellDistance: Number(e.target.value) } })}
+          />
+        </Field>
+        <Field label="Unità">
+          <select className="select" value={active.unit ?? 'ft'} onChange={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { unit: e.target.value as 'm' | 'ft' } })}>
+            <option value="m">metri</option>
+            <option value="ft">piedi</option>
+          </select>
+        </Field>
+      </div>
       <div className="row between">
         <span className="small">Griglia visibile</span>
         <Switch on={active.showGrid} onChange={(showGrid) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { showGrid } })} />

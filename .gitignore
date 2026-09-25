@@ -9,3 +9,4 @@ apps/server/data/
 *.sqlite-*
 test-results/
 playwright-report/
+.scratch/

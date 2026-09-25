@@ -55,8 +55,13 @@ export function Board({ tool, cameraRef }: { tool: Tool; cameraRef: React.RefObj
     const { width, height } = wrapRef.current.getBoundingClientRect();
     const w = scene.widthCells * CELL;
     const h = scene.heightCells * CELL;
-    const zoom = Math.min(1.2, Math.max(0.2, Math.min(width / w, height / h) * 0.9));
-    cameraRef.current = { zoom, x: w / 2 - width / 2 / zoom, y: h / 2 - height / 2 / zoom };
+    // fit the map, but never so small that tokens become specks: then centre on the tokens
+    const fit = Math.min(width / w, height / h) * 0.9;
+    const zoom = Math.min(1.2, Math.max(0.6, fit));
+    const toks = Object.values(state?.tokens ?? {}).filter((t) => t.sceneId === scene.id);
+    const cx = zoom > fit && toks.length ? (toks.reduce((a, t) => a + t.x + t.size / 2, 0) / toks.length) * CELL : w / 2;
+    const cy = zoom > fit && toks.length ? (toks.reduce((a, t) => a + t.y + t.size / 2, 0) / toks.length) * CELL : h / 2;
+    cameraRef.current = { zoom, x: cx - width / 2 / zoom, y: cy - height / 2 / zoom };
     dirty.current = true;
   }, [scene?.id, cameraRef]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -234,7 +239,9 @@ export function Board({ tool, cameraRef }: { tool: Tool; cameraRef: React.RefObj
         ctx.lineTo(b.x, b.y);
         ctx.stroke();
         ctx.setLineDash([]);
-        const label = `${cells * L.scene.cellDistance} ft`;
+        const unit = L.scene.unit ?? 'ft';
+        const dist = Math.round(cells * L.scene.cellDistance * 10) / 10;
+        const label = `${String(dist).replace('.', ',')} ${unit}`;
         ctx.font = `700 ${14 / cam.zoom}px system-ui, sans-serif`;
         const w = ctx.measureText(label).width + 14 / cam.zoom;
         ctx.fillStyle = 'rgba(0,0,0,0.8)';

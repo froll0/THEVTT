@@ -14,8 +14,10 @@ export interface Scene {
   background: string | null;
   widthCells: number;
   heightCells: number;
-  /** feet (or any unit) per cell, shown on the ruler */
+  /** distance per cell, shown on the ruler */
   cellDistance: number;
+  /** unit of cellDistance; scenes saved before it existed are in feet */
+  unit?: 'm' | 'ft';
   showGrid: boolean;
 }
 
@@ -102,7 +104,7 @@ export interface GameState {
 export const LOG_LIMIT = 300;
 
 export function createScene(id: string, name: string): Scene {
-  return { id, name, background: null, widthCells: 30, heightCells: 20, cellDistance: 5, showGrid: true };
+  return { id, name, background: null, widthCells: 30, heightCells: 20, cellDistance: 1.5, unit: 'm', showGrid: true };
 }
 
 export function createInitialState(opts: {
