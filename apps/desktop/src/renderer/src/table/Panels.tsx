@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Field, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
+import { useWindows } from '../store/windows';
 import { getSystemUi } from '../systems';
 
 /** Initiative bonus of a token: from its character sheet or its bestiary entry. */
@@ -293,69 +294,74 @@ export function InitiativePanel() {
 
 // ---------- character sheet ----------
 
-export function SheetPanel({ placeAt }: { placeAt: () => { x: number; y: number } }) {
-  const { state, dispatch, role } = useTable();
+/** Dock tab: the characters at the table (the GM's all of them, a player's own). Each opens in its own window. */
+export function SheetPanel() {
+  const { state, role } = useTable();
   const meId = useApp((s) => s.user?.id ?? '');
+  const open = useWindows((s) => s.open);
+  const windows = useWindows((s) => s.windows);
   const isGm = role === 'gm';
   const characters = useMemo(() => Object.values(state?.characters ?? {}), [state?.characters]);
-  const [openId, setOpenId] = useState<string | null>(null);
   if (!state) return null;
   const system = getSystem(state.systemId);
-  const ui = getSystemUi(state.systemId);
-  // players only ever receive their own characters; the one assigned to them comes first
+  if (!system) return <div className="panel-body muted small">Sistema di gioco non supportato.</div>;
   const assigned = state.players[meId]?.characterId;
-  const selected = isGm ? characters.find((c) => c.id === openId) : characters.find((c) => c.id === assigned) ?? characters[0];
+  const list = [...characters].sort((a, b) => Number(b.id === assigned) - Number(a.id === assigned));
 
-  if (!system || !ui) return <div className="panel-body muted small">Sistema di gioco non supportato.</div>;
-
-  if (isGm && !selected) {
-    return (
-      <div className="panel-body col">
-        {characters.length === 0 && <p className="muted small">Nessun personaggio al tavolo. I giocatori li assegnano dalla pagina della campagna.</p>}
-        <div className="char-list">
-          {characters.map((c) => {
-            const d = system.tokenDefaults(c.data);
-            const portrait = (c.data as { portrait?: string } | null)?.portrait;
-            const owner = state.players[c.ownerId];
-            return (
-              <button key={c.id} className="char-row" onClick={() => setOpenId(c.id)}>
-                <span className="portrait" style={{ width: 34, height: 34, backgroundImage: portrait ? `url(${portrait})` : undefined, borderColor: owner?.color }}>
-                  {!portrait && (c.name || '?').slice(0, 1).toUpperCase()}
+  return (
+    <div className="panel-body col">
+      {list.length === 0 && (
+        <p className="muted small">{isGm ? 'Nessun personaggio al tavolo. I giocatori li assegnano dalla pagina della campagna.' : 'Non hai un personaggio in questa campagna. Assegnalo dalla pagina della campagna.'}</p>
+      )}
+      <div className="char-list">
+        {list.map((c) => {
+          const d = system.tokenDefaults(c.data);
+          const portrait = (c.data as { portrait?: string } | null)?.portrait;
+          const owner = state.players[c.ownerId];
+          const isOpen = windows.some((w) => w.id === `sheet:${c.id}`);
+          return (
+            <button key={c.id} className={`char-row ${isOpen ? 'active' : ''}`} onClick={() => open('sheet', c.id, c.name)} title="Apri la scheda in una finestra">
+              <span className="portrait" style={{ width: 34, height: 34, backgroundImage: portrait ? `url(${portrait})` : undefined, borderColor: owner?.color }}>
+                {!portrait && (c.name || '?').slice(0, 1).toUpperCase()}
+              </span>
+              <span className="col grow" style={{ gap: 0, minWidth: 0 }}>
+                <b className="ellipsis">{c.name}</b>
+                <span className="faint tiny ellipsis">
+                  {system.headline?.(c.data) ?? ''}
+                  {isGm ? ` · ${owner?.displayName ?? '—'}` : ''}
                 </span>
-                <span className="col grow" style={{ gap: 0, minWidth: 0 }}>
-                  <b className="ellipsis">{c.name}</b>
-                  <span className="faint tiny ellipsis">
-                    {system.headline?.(c.data) ?? ''} · {owner?.displayName ?? '—'}
-                  </span>
+              </span>
+              {d.hp && (
+                <span className="char-stat" title="Punti ferita">
+                  <small>PF</small>
+                  {d.hp.current}/{d.hp.max}
                 </span>
-                {d.hp && (
-                  <span className="char-stat" title="Punti ferita">
-                    <small>PF</small>
-                    {d.hp.current}/{d.hp.max}
-                  </span>
-                )}
-                {d.ac != null && (
-                  <span className="char-stat" title="Classe armatura">
-                    <small>CA</small>
-                    {d.ac}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+              )}
+              {d.ac != null && (
+                <span className="char-stat" title="Classe armatura">
+                  <small>CA</small>
+                  {d.ac}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
-    );
-  }
+      {list.length > 0 && <p className="faint tiny">Le schede si aprono in finestre che puoi spostare, allargare e ridurre.</p>}
+    </div>
+  );
+}
 
-  if (!selected) {
-    return (
-      <div className="panel-body">
-        <p className="muted small">Non hai un personaggio in questa campagna. Assegnalo dalla pagina della campagna.</p>
-      </div>
-    );
-  }
-
+/** Contents of a character sheet window. */
+export function SheetWindow({ characterId, width, placeAt }: { characterId: string; width: number; placeAt: () => { x: number; y: number } }) {
+  const { state, dispatch, role } = useTable();
+  const meId = useApp((s) => s.user?.id ?? '');
+  if (!state) return null;
+  const selected = state.characters[characterId];
+  const system = getSystem(state.systemId);
+  const ui = getSystemUi(state.systemId);
+  if (!selected || !system || !ui) return <p className="muted small">Questo personaggio non è più al tavolo.</p>;
+  const isGm = role === 'gm';
   const onMap = Object.values(state.tokens).find((t) => t.characterId === selected.id && t.sceneId === state.activeSceneId);
   const place = () => {
     const d = system.tokenDefaults(selected.data);
@@ -365,18 +371,16 @@ export function SheetPanel({ placeAt }: { placeAt: () => { x: number; y: number 
       token: { name: selected.name, characterId: selected.id, ...placeAt(), size: d.size, hp: d.hp, ac: d.ac, ownerIds: [selected.ownerId], color: owner?.color },
     });
   };
-
   return (
-    <div className="panel-body col">
-      {isGm && (
-        <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => setOpenId(null)}>
-          <ChevronLeft size={14} /> Tutti i personaggi
+    <div className="col">
+      {!onMap && (isGm || selected.ownerId === meId) && (
+        <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={place}>
+          <MapPinned size={14} /> Metti sulla mappa
         </button>
       )}
       <ui.Sheet
-        key={selected.id}
         data={selected.data}
-        compact
+        compact={width < 620}
         editable={isGm || selected.ownerId === meId}
         onChange={(data) => {
           dispatch({ type: 'character.update', characterId: selected.id, data });
@@ -389,11 +393,6 @@ export function SheetPanel({ placeAt }: { placeAt: () => { x: number; y: number 
         onRoll={(formula, label) => dispatch({ type: 'roll', formula, label: `${selected.name} · ${label}` })}
         onShare={(card) => dispatch({ type: 'card', card: { ...card, subtitle: [selected.name, card.subtitle].filter(Boolean).join(' · ') } })}
       />
-      {!onMap && (
-        <button className="btn" onClick={place}>
-          <MapPinned size={15} /> Metti sulla mappa
-        </button>
-      )}
     </div>
   );
 }

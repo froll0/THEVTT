@@ -1,5 +1,5 @@
 import type { ChatCard } from '@thevtt/shared';
-import { ChevronLeft, MessageSquareShare, Search } from 'lucide-react';
+import { ChevronLeft, ExternalLink, MessageSquareShare, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useHomebrew } from '../store/homebrew';
 import { getSystemUi, type CompendiumEntry } from '../systems';
@@ -16,18 +16,58 @@ function useEntries(systemId: string) {
   }, [ui, homebrew, systemId]);
 }
 
+type Actions = {
+  onRoll?: (formula: string, label: string) => void;
+  onShare?: (card: ChatCard) => void;
+  /** table: open the page in a floating window */
+  onPopOut?: (entry: CompendiumEntry) => void;
+};
+
+function EntryPage({ e, onRoll, onShare, onPopOut }: { e: CompendiumEntry } & Actions) {
+  return (
+    <article className="comp-page">
+      <header className="col" style={{ gap: 2 }}>
+        <span className="faint tiny">{e.category}</span>
+        <h2>{e.title}</h2>
+        {e.subtitle && <span className="muted small">{e.subtitle}</span>}
+        {(onShare && e.card) || onPopOut ? (
+          <div className="row wrap" style={{ gap: 4, marginTop: 4 }}>
+            {onShare && e.card && (
+              <button className="btn sm" onClick={() => onShare(e.card!())}>
+                <MessageSquareShare size={14} /> Mostra in chat
+              </button>
+            )}
+            {onPopOut && (
+              <button className="btn ghost sm" onClick={() => onPopOut(e)}>
+                <ExternalLink size={14} /> Apri in finestra
+              </button>
+            )}
+          </div>
+        ) : null}
+      </header>
+      {e.render({ onRoll })}
+    </article>
+  );
+}
+
+/** One compendium page by id: the content of a floating window at the table. */
+export function CompendiumEntryView({ systemId, entryId, ...actions }: { systemId: string; entryId: string } & Actions) {
+  const all = useEntries(systemId);
+  const e = all.find((x) => x.e.id === entryId)?.e;
+  return e ? <EntryPage e={e} {...actions} /> : <p className="muted small">Voce non trovata.</p>;
+}
+
 export function Compendium({
   systemId,
   compact,
   onRoll,
   onShare,
+  onPopOut,
 }: {
   systemId: string;
   /** narrow layout (table dock): list and page one at a time */
   compact?: boolean;
-  onRoll?: (formula: string, label: string) => void;
-  onShare?: (card: ChatCard) => void;
-}) {
+} & Actions) {
   const ui = getSystemUi(systemId);
   const all = useEntries(systemId);
   const [query, setQuery] = useState('');
@@ -93,23 +133,7 @@ export function Compendium({
     </div>
   );
 
-  const page = (e: CompendiumEntry) => (
-    <article className="comp-page">
-      <header className="row between">
-        <div className="col" style={{ gap: 0, minWidth: 0 }}>
-          <span className="faint tiny">{e.category}</span>
-          <h2>{e.title}</h2>
-          {e.subtitle && <span className="muted small">{e.subtitle}</span>}
-        </div>
-        {onShare && e.card && (
-          <button className="btn sm" onClick={() => onShare(e.card!())}>
-            <MessageSquareShare size={14} /> Mostra in chat
-          </button>
-        )}
-      </header>
-      {e.render({ onRoll })}
-    </article>
-  );
+  const page = (e: CompendiumEntry) => <EntryPage e={e} onRoll={onRoll} onShare={onShare} onPopOut={onPopOut} />;
 
   if (compact) {
     return (

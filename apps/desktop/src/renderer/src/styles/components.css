@@ -884,6 +884,18 @@ input[type='color']::-webkit-color-swatch {
   height: 100%;
   min-height: 0;
 }
+.compendium.compact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  height: auto;
+}
+.compendium.compact .comp-page {
+  max-width: none;
+}
+.compendium.compact .comp-page h2 {
+  font-size: 1.1rem;
+}
 .comp-side {
   display: flex;
   flex-direction: column;

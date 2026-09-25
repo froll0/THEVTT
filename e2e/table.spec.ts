@@ -90,7 +90,9 @@ test('a group plays at a table hosted inside the GM app', async () => {
 
   // player: token and rolls from the sheet
   await P.getByTitle('Scheda').click();
-  await P.getByRole('button', { name: 'Metti sulla mappa' }).click();
+  await P.locator('.char-row', { hasText: 'Brunhild' }).click();
+  const sheetWin = P.getByRole('dialog', { name: 'Brunhild' });
+  await sheetWin.getByRole('button', { name: 'Metti sulla mappa' }).click();
   await P.locator('.rows button', { hasText: 'Atletica' }).click();
   await P.getByTitle('Tira 1d20').click();
   await P.locator('.sheet-tabs button', { hasText: 'Combattimento' }).click();
@@ -109,6 +111,8 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await P.locator('.sheet-tabs button', { hasText: 'Principale' }).click();
   await P.getByTitle('Danno').click();
   await expect.poll(async () => (await apiCall<{ data: { hp?: { current: number | null } } }[]>(P, 'GET', '/characters'))[0]?.data.hp?.current, { timeout: 10_000 }).toBe(12);
+  // minimised, the window leaves the board free
+  await sheetWin.getByRole('button', { name: 'Riduci' }).click();
 
   // bestiary + fog of war: covered monsters never reach players
   await G.getByTitle('Bestiario').click();
@@ -147,11 +151,11 @@ test('a group plays at a table hosted inside the GM app', async () => {
   // the GM sees a list of characters and opens one; players only get their own sheet
   await G.getByTitle('Scheda').click();
   await G.locator('.char-row', { hasText: 'Brunhild' }).click();
-  await expect(G.locator('.sheet-head', { hasText: 'Brunhild' })).toBeVisible();
-  await G.getByRole('button', { name: 'Tutti i personaggi' }).click();
+  await expect(G.getByRole('dialog', { name: 'Brunhild' }).locator('.sheet-head', { hasText: 'Brunhild' })).toBeVisible();
+  await G.getByRole('dialog', { name: 'Brunhild' }).getByRole('button', { name: 'Chiudi finestra' }).click();
 
   // sharing an attack from the sheet posts a card with roll buttons
-  await P.getByTitle('Scheda').click();
+  await sheetWin.getByRole('button', { name: 'Espandi' }).click();
   await P.locator('.sheet-tabs button', { hasText: 'Combattimento' }).click();
   await P.locator('.attack', { hasText: 'Spada lunga' }).getByTitle('Mostra in chat').click();
   await G.getByTitle('Chat e tiri').click();
@@ -176,7 +180,7 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await P.getByTitle('Compendio').click();
   await P.getByLabel('Cerca nel compendio').fill('palla di fuoco');
   await P.locator('.comp-row', { hasText: 'Palla di fuoco' }).first().click();
-  await P.getByRole('button', { name: 'Mostra in chat' }).click();
+  await P.locator('.compendium').getByRole('button', { name: 'Mostra in chat' }).click();
   await G.getByTitle('Chat e tiri').click();
   await expect(G.locator('.log-card', { hasText: 'Palla di fuoco' })).toBeVisible();
 

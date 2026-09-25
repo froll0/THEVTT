@@ -2,7 +2,7 @@ import { getSystem } from '@thevtt/systems';
 import { ArrowLeft, ArrowLeftRight, Eraser, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
-import { Compendium } from '../components/Compendium';
+import { Compendium, CompendiumEntryView } from '../components/Compendium';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Avatar } from '../components/ui';
 import { useApp } from '../store/app';
@@ -11,7 +11,9 @@ import { useTable } from '../store/table';
 import { Board, CELL, type Tool, type ToolOptions } from './Board';
 import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
-import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, ScenePanel, SheetPanel, TokenInspector } from './Panels';
+import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, ScenePanel, SheetPanel, SheetWindow, TokenInspector } from './Panels';
+import { FloatingWindow } from '../components/FloatingWindow';
+import { useWindows } from '../store/windows';
 
 const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
 
@@ -27,6 +29,9 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const [tab, setTab] = useState<DockTab>('chat');
   const [dockOpen, setDockOpen] = useState(true);
   const cameraRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
+  const { windows, open: openWindow, closeAll } = useWindows();
+  // windows belong to this table
+  useEffect(() => closeAll, [campaignId, closeAll]);
   const isGm = campaign?.gmId === user?.id;
 
   useEffect(() => {
@@ -278,7 +283,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
               <ErrorBoundary area="Il pannello" key={tab}>
                 {tab === 'chat' && <ChatPanel />}
                 {tab === 'initiative' && <InitiativePanel />}
-                {tab === 'sheet' && <SheetPanel placeAt={viewCenter} />}
+                {tab === 'sheet' && <SheetPanel />}
                 {tab === 'bestiary' && isGm && <BestiaryPanel placeAt={viewCenter} />}
                 {tab === 'scene' && isGm && <ScenePanel />}
                 {tab === 'notes' && <NotesPanel />}
@@ -290,6 +295,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                       compact
                       onRoll={(formula, label) => table.dispatch({ type: 'roll', formula, label, private: isGm })}
                       onShare={(card) => table.dispatch({ type: 'card', card })}
+                      onPopOut={(e) => openWindow('compendium', e.id, e.title)}
                     />
                   </div>
                 )}
@@ -297,6 +303,26 @@ export function TableView({ campaignId }: { campaignId: string }) {
             </div>
           )}
         </aside>
+        {state && (
+          <div className="windows-layer">
+            {windows.map((w) => (
+              <FloatingWindow key={w.id} win={w}>
+                <ErrorBoundary area="La finestra">
+                  {w.kind === 'sheet' ? (
+                    <SheetWindow characterId={w.ref} width={w.w} placeAt={viewCenter} />
+                  ) : (
+                    <CompendiumEntryView
+                      systemId={state.systemId}
+                      entryId={w.ref}
+                      onRoll={(formula, label) => table.dispatch({ type: 'roll', formula, label, private: isGm })}
+                      onShare={(card) => table.dispatch({ type: 'card', card })}
+                    />
+                  )}
+                </ErrorBoundary>
+              </FloatingWindow>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
