@@ -98,3 +98,44 @@ describe('GameHost', () => {
     expect(host.dispatch('intruder', { type: 'chat', text: 'hi' }).ok).toBe(false);
   });
 });
+
+describe('fog of war and area templates', () => {
+  it('hides tokens under the fog from players but not from the GM', () => {
+    const { host, lastState } = setup();
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Goblin', x: 10, y: 10 } });
+    host.dispatch('p1', { type: 'token.create', token: { name: 'Lia', characterId: 'ch1', x: 2, y: 2 } });
+    expect(host.dispatch('p1', { type: 'fog.enable', sceneId: 's1', enabled: true }).ok).toBe(false);
+    host.dispatch('gm', { type: 'fog.enable', sceneId: 's1', enabled: true });
+    // everything is covered: players still see their own token
+    expect(Object.values(lastState('p1').tokens).map((t) => t.name)).toEqual(['Lia']);
+    expect(Object.keys(lastState('p2').tokens)).toHaveLength(0);
+    expect(Object.keys(lastState('gm').tokens)).toHaveLength(2);
+    host.dispatch('gm', { type: 'fog.paint', sceneId: 's1', x: 9, y: 9, w: 3, h: 3, reveal: true });
+    expect(Object.values(lastState('p2').tokens).map((t) => t.name)).toEqual(['Goblin']);
+    host.dispatch('gm', { type: 'fog.fill', sceneId: 's1', reveal: false });
+    expect(Object.keys(lastState('p2').tokens)).toHaveLength(0);
+  });
+
+  it('keeps the revealed area when the scene is resized', () => {
+    const { host } = setup();
+    host.dispatch('gm', { type: 'fog.enable', sceneId: 's1', enabled: true });
+    host.dispatch('gm', { type: 'fog.paint', sceneId: 's1', x: 0, y: 0, w: 2, h: 2, reveal: true });
+    host.dispatch('gm', { type: 'scene.update', sceneId: 's1', patch: { widthCells: 10, heightCells: 5 } });
+    const fog = host.state.scenes.s1!.fog!;
+    expect(fog.revealed).toHaveLength(50);
+    expect(fog.revealed.slice(0, 3)).toBe('110');
+    expect(fog.revealed.slice(10, 13)).toBe('110');
+  });
+
+  it('lets everyone draw areas and only authors or the GM delete them', () => {
+    const { host, lastState } = setup();
+    expect(host.dispatch('p1', { type: 'template.create', template: { shape: 'cone', x: 3, y: 3, size: 3, angle: 0, color: '#f00' } }).ok).toBe(true);
+    const id = Object.keys(host.state.templates!)[0]!;
+    expect(lastState('p2').templates?.[id]?.shape).toBe('cone');
+    expect(host.dispatch('p2', { type: 'template.delete', templateId: id }).ok).toBe(false);
+    expect(host.dispatch('p1', { type: 'template.delete', templateId: id }).ok).toBe(true);
+    host.dispatch('p2', { type: 'template.create', template: { shape: 'circle', x: 1, y: 1, size: 4, angle: 0, color: '#0f0' } });
+    host.dispatch('gm', { type: 'template.clear' });
+    expect(Object.keys(host.state.templates!)).toHaveLength(0);
+  });
+});

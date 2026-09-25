@@ -7,6 +7,15 @@ import { useApp } from '../store/app';
 import { useTable } from '../store/table';
 import { getSystemUi } from '../systems';
 
+/** Initiative bonus of a token: from its character sheet or its bestiary entry. */
+export function initiativeModifier(state: NonNullable<ReturnType<typeof useTable.getState>['state']>, t: Token): number {
+  const system = getSystem(state.systemId);
+  const character = t.characterId ? state.characters[t.characterId] : undefined;
+  if (character && system) return system.tokenDefaults(character.data).initiativeModifier;
+  if (t.monsterId) return getSystemUi(state.systemId)?.monsterInitiative?.(t.monsterId) ?? 0;
+  return 0;
+}
+
 const time = (ts: number) => new Date(ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 
 // ---------- chat & dice log ----------
@@ -150,6 +159,18 @@ export function InitiativePanel() {
       </div>
       {isGm && (
         <>
+          <button
+            className="btn sm"
+            onClick={() => {
+              const already = new Set(ini.entries.map((e) => e.tokenId));
+              for (const t of Object.values(state.tokens)) {
+                if (t.sceneId !== state.activeSceneId || already.has(t.id)) continue;
+                dispatch({ type: 'initiative.add', name: t.name, tokenId: t.id, modifier: initiativeModifier(state, t) });
+              }
+            }}
+          >
+            <Swords size={14} /> Tira per tutti i token
+          </button>
           <div className="row">
             <input className="input grow" placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} />
             <input className="input" style={{ width: 64 }} placeholder="Val" type="number" value={value} onChange={(e) => setValue(e.target.value)} />
@@ -243,6 +264,23 @@ export function SheetPanel({ placeAt }: { placeAt: () => { x: number; y: number 
   );
 }
 
+// ---------- bestiary (GM) ----------
+
+export function BestiaryPanel({ placeAt }: { placeAt: () => { x: number; y: number } }) {
+  const { state, dispatch } = useTable();
+  if (!state) return null;
+  const ui = getSystemUi(state.systemId);
+  if (!ui?.Bestiary) return <div className="panel-body muted small">Nessun bestiario per questo sistema.</div>;
+  return (
+    <div className="panel-body">
+      <ui.Bestiary
+        onAdd={(token) => dispatch({ type: 'token.create', token: { ...token, ...placeAt(), color: '#8b8b93' } })}
+        onRoll={(formula, label) => dispatch({ type: 'roll', formula, label, private: true })}
+      />
+    </div>
+  );
+}
+
 // ---------- scenes (GM) ----------
 
 export function ScenePanel() {
@@ -310,6 +348,10 @@ export function ScenePanel() {
         </Field>
       </div>
       <div className="row between">
+        <span className="small">Nebbia di guerra</span>
+        <Switch on={!!active.fog?.enabled} onChange={(enabled) => dispatch({ type: 'fog.enable', sceneId: active.id, enabled })} />
+      </div>
+      <div className="row between">
         <span className="small">Griglia visibile</span>
         <Switch on={active.showGrid} onChange={(showGrid) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { showGrid } })} />
       </div>
@@ -361,8 +403,8 @@ export function TokenInspector({ token }: { token: Token }) {
   const system = getSystem(state.systemId);
   const upd = (patch: TokenPatch) =>
     dispatch({ type: 'token.update', tokenId: token.id, patch });
-  const character = token.characterId ? state.characters[token.characterId] : undefined;
-  const iniMod = character && system ? system.tokenDefaults(character.data).initiativeModifier : 0;
+  const iniMod = initiativeModifier(state, token);
+  const ui = getSystemUi(state.systemId);
   const inInitiative = state.initiative.entries.some((e) => e.tokenId === token.id);
 
   return (
@@ -453,6 +495,16 @@ export function TokenInspector({ token }: { token: Token }) {
                 </label>
               </div>
             </>
+          )}
+          {isGm && token.monsterId && ui?.StatBlock && (
+            <details>
+              <summary className="small muted" style={{ cursor: 'pointer' }}>
+                Scheda del mostro
+              </summary>
+              <div style={{ paddingTop: 8 }}>
+                <ui.StatBlock monsterId={token.monsterId} onRoll={(formula, label) => dispatch({ type: 'roll', formula, label, private: true })} />
+              </div>
+            </details>
           )}
           <div className="row">
             <button

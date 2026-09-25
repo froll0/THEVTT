@@ -1,4 +1,5 @@
 import type { RollResult } from '../dice';
+import { tokenVisible, type Fog } from './fog';
 
 /**
  * Table state. It is owned and persisted by the GM's client (the host);
@@ -19,6 +20,24 @@ export interface Scene {
   /** unit of cellDistance; scenes saved before it existed are in feet */
   unit?: 'm' | 'ft';
   showGrid: boolean;
+  fog?: Fog;
+}
+
+export type TemplateShape = 'circle' | 'cone' | 'line' | 'square';
+
+/** An area of effect drawn on the map. Coordinates and size in cells. */
+export interface AreaTemplate {
+  id: string;
+  sceneId: string;
+  shape: TemplateShape;
+  x: number;
+  y: number;
+  /** radius (circle), length (cone, line) or side (square) */
+  size: number;
+  /** radians, direction for cones and lines */
+  angle: number;
+  color: string;
+  authorId: string;
 }
 
 export interface Token {
@@ -35,6 +54,8 @@ export interface Token {
   image: string | null;
   ownerIds: string[];
   characterId: string | null;
+  /** bestiary entry, for the GM's stat block */
+  monsterId?: string | null;
   hp: { current: number; max: number } | null;
   ac: number | null;
   hidden: boolean;
@@ -93,6 +114,7 @@ export interface GameState {
   activeSceneId: string;
   scenes: Record<string, Scene>;
   tokens: Record<string, Token>;
+  templates?: Record<string, AreaTemplate>;
   initiative: Initiative;
   log: LogEntry[];
   players: Record<string, TablePlayer>;
@@ -124,6 +146,7 @@ export function createInitialState(opts: {
     activeSceneId: scene.id,
     scenes: { [scene.id]: scene },
     tokens: {},
+    templates: {},
     initiative: { round: 0, turn: 0, entries: [] },
     log: [],
     players: {},
@@ -140,7 +163,10 @@ export function viewFor(state: GameState, userId: string): GameState {
   const tokens: Record<string, Token> = {};
   for (const t of Object.values(state.tokens)) {
     if (t.sceneId !== state.activeSceneId) continue;
-    if (t.hidden && !t.ownerIds.includes(userId)) continue;
+    const owned = t.ownerIds.includes(userId);
+    if (t.hidden && !owned) continue;
+    // under the fog of war only your own tokens reach you
+    if (!owned && active && !tokenVisible(active.fog, active.widthCells, t)) continue;
     tokens[t.id] = t;
   }
   const visibleTokenIds = new Set(Object.keys(tokens));
@@ -148,6 +174,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     ...state,
     scenes: active ? { [active.id]: active } : {},
     tokens,
+    templates: Object.fromEntries(Object.entries(state.templates ?? {}).filter(([, t]) => t.sceneId === state.activeSceneId)),
     initiative: {
       ...state.initiative,
       // hidden combatants stay hidden in the tracker too

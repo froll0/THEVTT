@@ -6,7 +6,8 @@
    azioni, tiri di dado, stato del tavolo, mappe — gira sul computer del master
    (`GameHost` in `packages/shared`). Lo stato viene salvato in locale
    (`<userData>/data/table-<campaignId>.json`) e ripreso alla sessione successiva.
-2. **Il server è social + signaling (+ relay di riserva).** Conserva account, amicizie, campagne,
+2. **Il server è social + signaling (+ relay di riserva)** e gira dentro l'app di chi lo ospita
+   (`apps/desktop/src/main/hosted-server.ts`), oppure in modo autonomo (`thevtt-server.mjs`). Conserva account, amicizie, campagne,
    inviti e schede dei personaggi; durante la sessione mette in contatto master e giocatori per la
    connessione diretta e, solo se questa non è possibile, inoltra messaggi opachi senza leggerli.
 3. **Il regolamento è un plugin.** Il core (tavolo, dadi, iniziativa, social) non conosce regole
@@ -48,8 +49,9 @@ Giocatore                     Server                              Master (host)
 - **ICE**: il client chiede i server STUN/TURN a `GET /rtc/config` (configurabili con
   `THEVTT_ICE_SERVERS`).
 
-- Ogni giocatore riceve una **vista filtrata** (`viewFor`): niente token nascosti, niente tiri
-  privati altrui, niente note del master, solo la scena attiva.
+- Ogni giocatore riceve una **vista filtrata** (`viewFor`): niente token nascosti o sotto la
+  nebbia di guerra (tranne i propri), niente tiri privati altrui, niente note del master, solo
+  la scena attiva.
 - Le immagini (mappe, ritratti) sono **asset** separati dallo stato: il master li invia una sola
   volta per giocatore, poi lo stato li referenzia per id.
 - Se il master si disconnette, il server chiude la sessione; i giocatori restano "in attesa" e si
@@ -75,9 +77,17 @@ Giocatore                     Server                              Master (host)
    validazione, riepilogo, tiri rapidi, valori di default del token, condizioni.
 2. Registralo in `packages/systems/src/index.ts` con `registerSystem`.
 3. In `apps/desktop/src/renderer/src/systems/<id>/` crea `Builder` (creazione guidata) e `Sheet`
-   (scheda al tavolo) e aggiungili a `systems/index.ts`.
+   (scheda) e, se serve, `Bestiary`/`StatBlock`; registrali in `systems/index.ts`.
 
 Il server non ha bisogno di modifiche: memorizza solo `systemId` e i dati della scheda in JSON.
+
+## Server ospitato nell'app
+
+- Il processo principale di Electron esegue lo stesso server Fastify (Node 24 include
+  `node:sqlite`), con i dati nella cartella utente e la configurazione in `server-config.json`.
+- UPnP (`apps/server/src/upnp.ts`): scoperta SSDP del router, `AddPortMapping` (con ripiego su
+  lease a tempo e rinnovo), IP esterno, rimozione alla chiusura; rilevamento CGNAT.
+- Alla chiusura dell'app il server e la mappatura della porta si chiudono entro 3 secondi.
 
 ## Server
 
@@ -91,3 +101,12 @@ Il server non ha bisogno di modifiche: memorizza solo `systemId` e i dati della 
   (controlli finestra, archivio JSON locale, info app).
 - Il renderer funziona anche in un normale browser (`pnpm dev:web`), usando `localStorage` al
   posto dell'archivio locale: comodo per sviluppo e test.
+
+## Test
+
+- `pnpm test`: unità (dadi, `GameHost`, nebbia e aree, regole D&D, UPnP contro un router finto,
+  server REST + WebSocket).
+- `pnpm e2e`: Playwright guida due istanze Electron reali (profili separati con
+  `THEVTT_USER_DATA`): server ospitato, amicizia, invito, sessione con collegamento diretto,
+  tiri dalla scheda, bestiario, nebbia, aree; più il percorso di creazione del personaggio.
+  Gira anche nel CI con Xvfb.

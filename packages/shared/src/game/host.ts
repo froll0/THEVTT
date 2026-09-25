@@ -1,6 +1,7 @@
 import { cryptoRng, DiceError, roll, type Rng } from '../dice';
 import { newId } from '../id';
 import type { GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
+import { emptyMask, paintRect, resizeMask } from './fog';
 import {
   createScene,
   LOG_LIMIT,
@@ -147,8 +148,13 @@ export class GameHost {
         if (!scene) return { ok: false, reason: 'Scena inesistente' };
         const p = action.patch;
         if (p.name !== undefined) scene.name = String(p.name).slice(0, 80);
+        const oldW = scene.widthCells;
+        const oldH = scene.heightCells;
         if (p.widthCells !== undefined) scene.widthCells = clampInt(p.widthCells, 1, 200);
         if (p.heightCells !== undefined) scene.heightCells = clampInt(p.heightCells, 1, 200);
+        if (scene.fog && (oldW !== scene.widthCells || oldH !== scene.heightCells)) {
+          scene.fog.revealed = resizeMask(scene.fog.revealed, oldW, oldH, scene.widthCells, scene.heightCells);
+        }
         if (p.cellDistance !== undefined) scene.cellDistance = Math.min(1000, Math.max(0.1, Math.round(Number(p.cellDistance) * 10) / 10 || 1));
         if (p.unit !== undefined) scene.unit = p.unit === 'ft' ? 'ft' : 'm';
         if (p.showGrid !== undefined) scene.showGrid = !!p.showGrid;
@@ -172,6 +178,7 @@ export class GameHost {
         if (!s.scenes[action.sceneId]) return { ok: false, reason: 'Scena inesistente' };
         delete s.scenes[action.sceneId];
         for (const t of Object.values(s.tokens)) if (t.sceneId === action.sceneId) delete s.tokens[t.id];
+        for (const t of Object.values(s.templates ?? {})) if (t.sceneId === action.sceneId) delete s.templates![t.id];
         if (s.activeSceneId === action.sceneId) s.activeSceneId = Object.keys(s.scenes)[0]!;
         break;
       }
@@ -199,6 +206,7 @@ export class GameHost {
           image: isGm && t.image && this.assets[t.image] ? t.image : null,
           ownerIds: isGm ? (t.ownerIds ?? []) : [from],
           characterId: t.characterId ?? null,
+          monsterId: isGm && typeof t.monsterId === 'string' ? t.monsterId : null,
           hp: t.hp ? { current: clampInt(t.hp.current, -999, 9999), max: clampInt(t.hp.max, 0, 9999) } : null,
           ac: t.ac != null ? clampInt(t.ac, 0, 99) : null,
           hidden: isGm ? !!t.hidden : false,
@@ -363,6 +371,59 @@ export class GameHost {
           this.opts.send(id, { k: 'ping', x: Number(action.x) || 0, y: Number(action.y) || 0, sceneId: s.activeSceneId, color, from });
         }
         return { ok: true };
+      }
+      case 'fog.enable': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const scene = s.scenes[action.sceneId];
+        if (!scene) return { ok: false, reason: 'Scena inesistente' };
+        const mask = scene.fog?.revealed.length === scene.widthCells * scene.heightCells ? scene.fog.revealed : emptyMask(scene.widthCells, scene.heightCells);
+        scene.fog = { enabled: !!action.enabled, revealed: mask };
+        break;
+      }
+      case 'fog.paint':
+      case 'fog.fill': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const scene = s.scenes[action.sceneId];
+        if (!scene?.fog) return { ok: false, reason: 'La nebbia non è attiva' };
+        const { widthCells: w, heightCells: h } = scene;
+        scene.fog.revealed =
+          action.type === 'fog.fill'
+            ? emptyMask(w, h, action.reveal)
+            : paintRect(scene.fog.revealed, w, h, { x: action.x, y: action.y, w: action.w, h: action.h }, action.reveal);
+        break;
+      }
+      case 'template.create': {
+        const t = action.template;
+        if (!['circle', 'cone', 'line', 'square'].includes(t.shape)) return { ok: false, reason: 'Forma non valida' };
+        s.templates ??= {};
+        const id = newId();
+        s.templates[id] = {
+          id,
+          sceneId: s.activeSceneId,
+          shape: t.shape,
+          x: Number(t.x) || 0,
+          y: Number(t.y) || 0,
+          size: Math.min(60, Math.max(0.5, Number(t.size) || 1)),
+          angle: Number(t.angle) || 0,
+          color: typeof t.color === 'string' ? t.color : player?.color ?? '#c9a227',
+          authorId: from,
+        };
+        break;
+      }
+      case 'template.delete': {
+        const t = s.templates?.[action.templateId];
+        if (!t) return { ok: false, reason: 'Area inesistente' };
+        if (!isGm && t.authorId !== from) return { ok: false, reason: 'Puoi cancellare solo le tue aree' };
+        delete s.templates![t.id];
+        break;
+      }
+      case 'template.clear': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        for (const t of Object.values(s.templates ?? {})) if (t.sceneId === s.activeSceneId) delete s.templates![t.id];
+        break;
       }
       case 'notes.update': {
         const denied = gmOnly();

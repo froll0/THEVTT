@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { ArrowLeft, ArrowLeftRight, Crosshair, Dices, Map as MapIcon, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Swords, UserRoundPlus, Users } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -7,10 +7,10 @@ import { Avatar } from '../components/ui';
 import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
-import { Board, CELL, type Tool } from './Board';
-import { ChatPanel, DiceBar, InitiativePanel, NotesPanel, ScenePanel, SheetPanel, TokenInspector } from './Panels';
+import { Board, CELL, type Tool, type ToolOptions } from './Board';
+import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, ScenePanel, SheetPanel, TokenInspector } from './Panels';
 
-type DockTab = 'chat' | 'initiative' | 'sheet' | 'scene' | 'notes';
+type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'scene' | 'notes';
 
 export function TableView({ campaignId }: { campaignId: string }) {
   const { campaigns, user, go } = useApp();
@@ -18,6 +18,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const table = useTable();
   const dockPosition = useSettings((s) => s.dockPosition);
   const [tool, setTool] = useState<Tool>('select');
+  const [options, setOptions] = useState<ToolOptions>({ fogReveal: true, shape: 'circle' });
   const [tab, setTab] = useState<DockTab>('chat');
   const [dockOpen, setDockOpen] = useState(true);
   const cameraRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
@@ -36,6 +37,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
       if (e.key === 'v') setTool('select');
       if (e.key === 'm') setTool('measure');
       if (e.key === 'p') setTool('ping');
+      if (e.key === 'a') setTool('template');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -63,6 +65,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     { id: 'chat', label: 'Chat e tiri', icon: ScrollText },
     { id: 'initiative', label: 'Iniziativa', icon: Swords },
     { id: 'sheet', label: 'Scheda', icon: Users },
+    { id: 'bestiary', label: 'Bestiario', icon: BookOpen, gm: true },
     { id: 'scene', label: 'Scene', icon: MapIcon, gm: true },
     { id: 'notes', label: 'Note', icon: NotebookPen, gm: true },
   ];
@@ -99,7 +102,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
       <div className={`table-body dock-${dockPosition}`}>
         <div className="stage">
           {state && scene ? (
-            <Board tool={tool} cameraRef={cameraRef} />
+            <Board tool={tool} options={options} cameraRef={cameraRef} />
           ) : (
             <div className="stage-message">
               {phase === 'waiting' ? (
@@ -124,6 +127,8 @@ export function TableView({ campaignId }: { campaignId: string }) {
                   { id: 'select', icon: MousePointer2, label: 'Seleziona e sposta (V)' },
                   { id: 'measure', icon: Ruler, label: 'Righello (M)' },
                   { id: 'ping', icon: Crosshair, label: 'Ping (P · o Alt+clic)' },
+                  { id: 'template', icon: Shapes, label: 'Aree d’effetto (A)' },
+                  ...(isGm ? ([{ id: 'fog', icon: CloudFog, label: 'Nebbia di guerra' }] as const) : []),
                 ] as const
               ).map((t) => (
                 <button key={t.id} className={`tool ${tool === t.id ? 'active' : ''}`} onClick={() => setTool(t.id)} title={t.label}>
@@ -141,6 +146,54 @@ export function TableView({ campaignId }: { campaignId: string }) {
                     <UserRoundPlus size={16} />
                   </button>
                 </>
+              )}
+            </div>
+          )}
+
+          {state && scene && tool === 'template' && (
+            <div className="float tool-options glass">
+              {(
+                [
+                  ['circle', Circle, 'Sfera'],
+                  ['cone', Triangle, 'Cono'],
+                  ['line', Minus, 'Linea'],
+                  ['square', Square, 'Cubo'],
+                ] as const
+              ).map(([shape, Icon, label]) => (
+                <button key={shape} className={`tool wide ${options.shape === shape ? 'active' : ''}`} onClick={() => setOptions({ ...options, shape })}>
+                  <Icon size={14} /> {label}
+                </button>
+              ))}
+              {isGm && Object.values(state.templates ?? {}).some((t) => t.sceneId === scene.id) && (
+                <>
+                  <span className="vsep" />
+                  <button className="tool wide" onClick={() => table.dispatch({ type: 'template.clear' })}>
+                    Cancella tutte
+                  </button>
+                </>
+              )}
+              <span className="faint tiny" style={{ padding: '0 6px' }}>trascina dall’origine</span>
+            </div>
+          )}
+          {state && scene && tool === 'fog' && isGm && (
+            <div className="float tool-options glass">
+              <button className={`tool wide ${options.fogReveal ? 'active' : ''}`} onClick={() => setOptions({ ...options, fogReveal: true })}>
+                Rivela
+              </button>
+              <button className={`tool wide ${!options.fogReveal ? 'active' : ''}`} onClick={() => setOptions({ ...options, fogReveal: false })}>
+                Copri
+              </button>
+              <span className="vsep" />
+              <button className="tool wide" onClick={() => { if (!scene.fog?.enabled) table.dispatch({ type: 'fog.enable', sceneId: scene.id, enabled: true }); table.dispatch({ type: 'fog.fill', sceneId: scene.id, reveal: true }); }}>
+                Rivela tutto
+              </button>
+              <button className="tool wide" onClick={() => { if (!scene.fog?.enabled) table.dispatch({ type: 'fog.enable', sceneId: scene.id, enabled: true }); table.dispatch({ type: 'fog.fill', sceneId: scene.id, reveal: false }); }}>
+                Copri tutto
+              </button>
+              {scene.fog?.enabled && (
+                <button className="tool wide" onClick={() => table.dispatch({ type: 'fog.enable', sceneId: scene.id, enabled: false })}>
+                  Disattiva
+                </button>
               )}
             </div>
           )}
@@ -177,6 +230,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 {tab === 'chat' && <ChatPanel />}
                 {tab === 'initiative' && <InitiativePanel />}
                 {tab === 'sheet' && <SheetPanel placeAt={viewCenter} />}
+                {tab === 'bestiary' && isGm && <BestiaryPanel placeAt={viewCenter} />}
                 {tab === 'scene' && isGm && <ScenePanel />}
                 {tab === 'notes' && isGm && <NotesPanel />}
               </ErrorBoundary>

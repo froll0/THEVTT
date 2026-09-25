@@ -98,6 +98,31 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await P.getByTitle('Danno').click();
   await expect.poll(async () => (await apiCall<{ data: { hp?: { current: number | null } } }[]>(P, 'GET', '/characters'))[0]?.data.hp?.current, { timeout: 10_000 }).toBe(12);
 
+  // bestiary + fog of war: covered monsters never reach players
+  await G.getByTitle('Bestiario').click();
+  await G.locator('.rows .r', { hasText: 'Guerriero goblin' }).getByTitle('Aggiungi al tavolo').click();
+  await G.getByTitle('Nebbia di guerra').click();
+  await G.getByRole('button', { name: 'Copri tutto' }).click();
+  await G.getByTitle('Iniziativa').click();
+  await G.getByRole('button', { name: 'Tira per tutti i token' }).click();
+  await expect(G.locator('.ini-row', { hasText: 'Guerriero goblin' })).toBeVisible();
+  await P.getByTitle('Iniziativa').click();
+  await expect(P.locator('.ini-row', { hasText: 'Brunhild' })).toBeVisible();
+  await expect(P.locator('.ini-row', { hasText: 'Guerriero goblin' })).toHaveCount(0);
+  await G.getByRole('button', { name: 'Rivela tutto' }).click();
+  await expect(P.locator('.ini-row', { hasText: 'Guerriero goblin' })).toBeVisible();
+
+  // area templates drawn by a player reach the GM
+  await P.getByTitle('Aree d\u2019effetto (A)').click();
+  await P.getByRole('button', { name: 'Cono' }).click();
+  const box = (await P.locator('.board canvas').boundingBox())!;
+  await P.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await P.mouse.down();
+  await P.mouse.move(box.x + box.width / 2 + 150, box.y + box.height / 2 + 20, { steps: 5 });
+  await P.mouse.up();
+  await G.getByTitle('Aree d\u2019effetto (A)').click();
+  await expect(G.getByRole('button', { name: 'Cancella tutte' })).toBeVisible();
+
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   expect(player.errors, player.errors.join('\n')).toEqual([]);
 });

@@ -1,7 +1,7 @@
-import type { GameState, Scene, Token } from './state';
+import type { AreaTemplate, GameState, Scene, Token } from './state';
 
 export type TokenPatch = Partial<Omit<Token, 'id' | 'sceneId'>>;
-export type ScenePatch = Partial<Omit<Scene, 'id'>>;
+export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog'>>;
 
 export type GameAction =
   | { type: 'scene.create'; name: string }
@@ -22,6 +22,12 @@ export type GameAction =
   | { type: 'initiative.clear' }
   | { type: 'character.update'; characterId: string; name?: string; data: unknown }
   | { type: 'ping'; x: number; y: number }
+  | { type: 'fog.enable'; sceneId: string; enabled: boolean }
+  | { type: 'fog.paint'; sceneId: string; x: number; y: number; w: number; h: number; reveal: boolean }
+  | { type: 'fog.fill'; sceneId: string; reveal: boolean }
+  | { type: 'template.create'; template: Omit<AreaTemplate, 'id' | 'authorId' | 'sceneId'> }
+  | { type: 'template.delete'; templateId: string }
+  | { type: 'template.clear' }
   | { type: 'notes.update'; text: string }
   /** host only: register an image and get back its id through the state */
   | { type: 'asset.add'; dataUrl: string; attachTo?: { sceneId: string } | { tokenId: string } };

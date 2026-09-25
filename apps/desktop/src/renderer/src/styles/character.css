@@ -362,7 +362,7 @@ button.stat:hover {
   display: flex;
   flex-direction: column;
 }
-.rows > .r {
+.rows .r {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -376,10 +376,10 @@ button.stat:hover {
   color: inherit;
   min-height: 30px;
 }
-.rows > button.r {
+.rows button.r {
   cursor: pointer;
 }
-.rows > button.r:hover {
+.rows button.r:hover {
   background: var(--bg-elev-2);
 }
 .rows .dot {

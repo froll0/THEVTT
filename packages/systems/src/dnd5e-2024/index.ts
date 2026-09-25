@@ -30,6 +30,7 @@ export * from './classes';
 export * from './data';
 export * from './equipment';
 export * from './feats';
+export * from './monsters';
 export * from './rules';
 export * from './species';
 export * from './spells';

@@ -340,3 +340,34 @@
   transform: translateX(-50%);
   background: var(--success);
 }
+
+.float.tool-options {
+  top: var(--s3);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.tool.wide {
+  width: auto;
+  padding: 0 10px;
+  gap: 6px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+.float .vsep {
+  width: 1px;
+  height: 16px;
+  background: var(--border-strong);
+  margin: 0 3px;
+}
+.board-hint {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  z-index: 5;
+}
