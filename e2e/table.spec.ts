@@ -161,6 +161,17 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await P.locator('.note-row', { hasText: 'Lettera del sindaco' }).click();
   await expect(P.getByText('Venite subito alla miniera.')).toBeVisible();
 
+  // homebrew creature: made in the editor, put on the table, stat block for the GM
+  await G.getByTitle('Bestiario').click();
+  await G.getByRole('button', { name: 'Nuova' }).click();
+  const editor = G.locator('.modal');
+  await editor.getByLabel('Nome').fill('Gnomo furioso');
+  await editor.getByLabel('Dadi vita').fill('3d6+3');
+  await editor.getByRole('button', { name: 'Salva creatura' }).click();
+  const row = G.locator('.rows .r', { hasText: 'Gnomo furioso' });
+  await expect(row).toBeVisible();
+  await row.getByTitle('Aggiungi al tavolo').click();
+
   // music: the GM plays a track, it plays for the player too
   await G.getByTitle('Musica').click();
   await G.locator('.panel-body input[type=file]').setInputFiles(fileURLToPath(new URL('./fixtures/taverna.wav', import.meta.url)));

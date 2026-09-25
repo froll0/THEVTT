@@ -4,6 +4,7 @@
  */
 
 import type { Ability } from './data';
+import { MORE_MONSTERS } from './monsters-more';
 
 export interface MonsterAction {
   name: string;
@@ -35,7 +36,7 @@ export interface MonsterDef {
 
 const A = (str: number, dex: number, con: number, int: number, wis: number, cha: number): Record<Ability, number> => ({ str, dex, con, int, wis, cha });
 
-export const MONSTERS: MonsterDef[] = [
+const BASE_MONSTERS: MonsterDef[] = [
   {
     id: 'commoner', name: 'Popolano', size: 'Media', type: 'Umanoide', ac: 10, hp: { average: 4, dice: '1d8' }, speed: '9 m',
     abilities: A(10, 10, 10, 10, 10, 10), cr: '0', xp: 10,
@@ -326,7 +327,53 @@ export const MONSTERS: MonsterDef[] = [
   },
 ];
 
+export const MONSTERS: MonsterDef[] = [...BASE_MONSTERS, ...MORE_MONSTERS];
+
 export const monsterById = (id: string) => MONSTERS.find((m) => m.id === id);
+
+export const MONSTER_SIZES: MonsterDef['size'][] = ['Minuscola', 'Piccola', 'Media', 'Grande', 'Enorme', 'Mastodontica'];
+
+/** Squares a creature of this size occupies on the grid (per side). */
+export const sizeCells = (size: MonsterDef['size']) => ({ Minuscola: 1, Piccola: 1, Media: 1, Grande: 2, Enorme: 3, Mastodontica: 4 })[size] ?? 1;
+
+export const CHALLENGE_RATINGS = ['0', '1/8', '1/4', '1/2', ...Array.from({ length: 30 }, (_, i) => String(i + 1))];
+
+const XP: Record<string, number> = {
+  '0': 10, '1/8': 25, '1/4': 50, '1/2': 100, '1': 200, '2': 450, '3': 700, '4': 1100, '5': 1800, '6': 2300, '7': 2900, '8': 3900, '9': 5000,
+  '10': 5900, '11': 7200, '12': 8400, '13': 10000, '14': 11500, '15': 13000, '16': 15000, '17': 18000, '18': 20000, '19': 22000, '20': 25000,
+  '21': 33000, '22': 41000, '23': 50000, '24': 62000, '25': 75000, '26': 90000, '27': 105000, '28': 120000, '29': 135000, '30': 155000,
+};
+export const xpForCr = (cr: string) => XP[cr] ?? 0;
+
+/** Proficiency bonus by challenge rating (2 up to CR 4, then +1 every 4). */
+export const crProficiency = (cr: string) => Math.max(2, Math.floor((Math.max(1, crValue(cr)) - 1) / 4) + 2);
+
+/** A blank creature to start the homebrew editor from. */
+export function blankMonster(): MonsterDef {
+  return {
+    id: '',
+    name: 'Nuova creatura',
+    size: 'Media',
+    type: 'Umanoide',
+    ac: 12,
+    hp: { average: 11, dice: '2d8+2' },
+    speed: '9 m',
+    abilities: A(10, 10, 10, 10, 10, 10),
+    cr: '1/2',
+    xp: 100,
+    actions: [{ name: 'Attacco', attack: 3, damage: '1d6+1', damageType: 'contundenti', reach: '1,5 m' }],
+  };
+}
+
+/** Average of a dice expression like 4d8+12 (for the HP helper). */
+export function averageOf(dice: string): number | null {
+  const m = /^\s*(\d+)d(\d+)\s*([+-]\s*\d+)?\s*$/i.exec(dice);
+  if (!m) return null;
+  const n = Number(m[1]);
+  const sides = Number(m[2]);
+  const mod = m[3] ? Number(m[3].replace(/\s/g, '')) : 0;
+  return Math.floor((n * (sides + 1)) / 2) + mod;
+}
 
 export function crValue(cr: string): number {
   return cr.includes('/') ? Number(cr.split('/')[0]) / Number(cr.split('/')[1]) : Number(cr);

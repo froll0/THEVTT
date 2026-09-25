@@ -21,7 +21,8 @@ export interface SheetProps<T = any> {
 }
 
 export interface BestiaryProps {
-  onAdd: (token: Partial<Omit<Token, 'id'>> & { name: string }) => void;
+  /** at the table: put the creature on the map. Absent in the compendium. */
+  onAdd?: (token: Partial<Omit<Token, 'id'>> & { name: string }) => void;
   onRoll: (formula: string, label: string) => void;
 }
 

@@ -208,3 +208,19 @@ describe('D&D 5.5 (2024) rules', () => {
     expect(weaponById('greataxe')?.mastery).toBe('cleave');
   });
 });
+
+describe('bestiary data', () => {
+  it('has unique ids and stat blocks consistent with their dice and challenge rating', () => {
+    const { MONSTERS, averageOf, xpForCr, CHALLENGE_RATINGS } = dnd5e;
+    expect(MONSTERS.length).toBeGreaterThan(100);
+    expect(new Set(MONSTERS.map((m) => m.id)).size).toBe(MONSTERS.length);
+    const problems: string[] = [];
+    for (const m of MONSTERS) {
+      if (!CHALLENGE_RATINGS.includes(m.cr)) problems.push(`${m.id}: GS ${m.cr}`);
+      if (xpForCr(m.cr) !== m.xp) problems.push(`${m.id}: PE ${m.xp} ≠ ${xpForCr(m.cr)}`);
+      if (averageOf(m.hp.dice) !== m.hp.average) problems.push(`${m.id}: PF ${m.hp.average} ≠ ${averageOf(m.hp.dice)} (${m.hp.dice})`);
+      for (const a of m.actions) if (a.damage && !/^\d+(d\d+)?([+-]\d+)?$/.test(a.damage)) problems.push(`${m.id}: danni «${a.damage}»`);
+    }
+    expect(problems).toEqual([]);
+  });
+});
