@@ -729,3 +729,37 @@ body.dragging-window * {
   flex-wrap: wrap;
   max-width: min(760px, calc(100% - 120px));
 }
+.windows-tray {
+  position: absolute;
+  left: 70px;
+  bottom: 12px;
+  display: flex;
+  gap: 6px;
+  max-width: calc(50% - 250px);
+  min-width: 160px;
+  flex-wrap: wrap-reverse;
+  pointer-events: auto;
+}
+.fwin-pill {
+  display: flex;
+  align-items: center;
+  max-width: 200px;
+  border: 1px solid var(--border-strong);
+  border-radius: 99px;
+  background: var(--bg);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+  padding-left: 4px;
+}
+.pill-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 5px 4px 5px 8px;
+  cursor: pointer;
+}

@@ -5,7 +5,22 @@ import { useWindows, type FloatWin } from '../store/windows';
 const MIN_W = 320;
 const MIN_H = 200;
 
-/** A window over the table: drag by the title, resize from the corner, minimise to its title bar. */
+/** A minimised window: a pill in the tray at the bottom of the board. */
+export function MinimizedWindow({ win }: { win: FloatWin }) {
+  const { close, toggleMinimized } = useWindows();
+  return (
+    <div className="fwin-pill" role="dialog" aria-label={win.title}>
+      <button className="pill-title ellipsis" onClick={() => toggleMinimized(win.id)} title="Espandi" aria-label="Espandi">
+        <Square size={11} /> <span className="ellipsis">{win.title}</span>
+      </button>
+      <button className="btn ghost sm icon" onClick={() => close(win.id)} aria-label="Chiudi finestra" title="Chiudi">
+        <X size={13} />
+      </button>
+    </div>
+  );
+}
+
+/** A window over the table: drag by the title, resize from the corner, minimise to the tray. */
 export function FloatingWindow({ win, children }: { win: FloatWin; children: ReactNode }) {
   const { update, close, focus, toggleMinimized } = useWindows();
   const ref = useRef<HTMLDivElement>(null);

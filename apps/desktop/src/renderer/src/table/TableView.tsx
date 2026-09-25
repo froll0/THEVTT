@@ -13,7 +13,7 @@ import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { PROP_KINDS } from './props';
 import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, PropInspector, ScenePanel, SheetPanel, SheetWindow, TokenInspector } from './Panels';
-import { FloatingWindow } from '../components/FloatingWindow';
+import { FloatingWindow, MinimizedWindow } from '../components/FloatingWindow';
 import { useWindows } from '../store/windows';
 
 const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
@@ -377,7 +377,16 @@ export function TableView({ campaignId }: { campaignId: string }) {
         </aside>
         {state && (
           <div className="windows-layer">
-            {windows.map((w) => (
+            {windows.some((w) => w.minimized) && (
+              <div className="windows-tray">
+                {windows
+                  .filter((w) => w.minimized)
+                  .map((w) => (
+                    <MinimizedWindow key={w.id} win={w} />
+                  ))}
+              </div>
+            )}
+            {windows.filter((w) => !w.minimized).map((w) => (
               <FloatingWindow key={w.id} win={w}>
                 <ErrorBoundary area="La finestra">
                   {w.kind === 'sheet' ? (
