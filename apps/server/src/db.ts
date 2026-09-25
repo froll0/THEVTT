@@ -63,6 +63,30 @@ const MIGRATIONS: string[] = [
   CREATE INDEX idx_invites_to ON invites(to_id);
   CREATE INDEX idx_characters_owner ON characters(owner_id);
   `,
+  `
+  -- chat outside the table: "c:<campaignId>" or "d:<userA>:<userB>" (userA < userB)
+  CREATE TABLE messages (
+    id TEXT PRIMARY KEY,
+    channel TEXT NOT NULL,
+    author_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX idx_messages_channel ON messages(channel, created_at);
+  CREATE TABLE channel_reads (
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    channel TEXT NOT NULL,
+    read_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, channel)
+  );
+  ALTER TABLE campaigns ADD COLUMN next_session TEXT;
+  CREATE TABLE session_rsvps (
+    campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    answer TEXT NOT NULL CHECK (answer IN ('yes', 'no', 'maybe')),
+    PRIMARY KEY (campaign_id, user_id)
+  );
+  `,
 ];
 
 export type Db = DatabaseSync;

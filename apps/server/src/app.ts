@@ -9,6 +9,7 @@ import { Repo } from './repo';
 import { authRoutes } from './routes/auth';
 import { campaignRoutes } from './routes/campaigns';
 import { characterRoutes } from './routes/characters';
+import { chatRoutes } from './routes/chat';
 import { socialRoutes } from './routes/social';
 
 declare module 'fastify' {
@@ -71,6 +72,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   socialRoutes(app, ctx);
   campaignRoutes(app, ctx);
   characterRoutes(app, ctx);
+  chatRoutes(app, ctx);
 
   // WebSocket: /ws?token=...
   app.server.on('upgrade', (req, socket, head) => {

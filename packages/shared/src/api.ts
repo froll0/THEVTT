@@ -61,6 +61,24 @@ export interface Campaign {
   members: CampaignMember[];
   pendingInvites: { id: string; user: UserPublic }[];
   session: SessionInfo | null;
+  /** next scheduled session (ISO date), set by the GM */
+  nextSession: string | null;
+  /** answers to the next session, by user id */
+  rsvps: Record<string, RsvpAnswer>;
+}
+
+export type RsvpAnswer = 'yes' | 'no' | 'maybe';
+
+/**
+ * Chat outside the table. Channels as seen by the client:
+ * "campaign:<campaignId>" or "dm:<otherUserId>".
+ */
+export interface ChatMessage {
+  id: string;
+  channel: string;
+  authorId: string;
+  text: string;
+  createdAt: string;
 }
 
 export interface CreateCampaignRequest {

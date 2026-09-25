@@ -20,6 +20,9 @@ sul System Reference Document 5.2 (CC-BY-4.0).
 
 **Launcher**
 - Account, amici con presenza online, notifiche (campanella), campagne, inviti
+- **Chat** fuori dal tavolo: messaggi privati tra amici e chat di ogni campagna, con non letti
+- **Prossima sessione**: il master fissa data e ora, i giocatori rispondono (ci sono / forse / non
+  posso), promemoria in Home
 - Interfaccia minimal: navigazione nella barra del titolo, elenchi senza riquadri, temi
 - **Compendio** consultabile e ricercabile: regole (SRD 5.2 riassunto in italiano), condizioni,
   incantesimi, mostri, classi, specie, background, talenti, equipaggiamento
@@ -52,6 +55,7 @@ sul System Reference Document 5.2 (CC-BY-4.0).
   cieca per i giocatori), chat con comandi e **schede** di incantesimi, attacchi, privilegi e
   oggetti inviate dalla scheda con i pulsanti per tirare
 - Iniziativa con round e turni, tiro per tutti i token con i modificatori giusti
+- Danni, metà danni o cure di un tiro applicati al token selezionato con un clic
 - Scheda del personaggio al tavolo: ogni giocatore riceve solo la propria, il master l'elenco
 
 **Personalizzazione**

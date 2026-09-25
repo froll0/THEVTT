@@ -3,8 +3,10 @@ import type {
   Campaign,
   CampaignInvite,
   CharacterRecord,
+  ChatMessage,
   CreateCampaignRequest,
   FriendEntry,
+  RsvpAnswer,
   RtcConfig,
   SaveCharacterRequest,
   UserPublic,
@@ -85,10 +87,17 @@ export class Api {
   removeMember = (campaignId: string, userId: string) => this.req('DELETE', `/campaigns/${campaignId}/members/${userId}`);
   assignCharacter = (campaignId: string, characterId: string | null) =>
     this.req<Campaign>('PUT', `/campaigns/${campaignId}/character`, { characterId });
+  scheduleSession = (campaignId: string, at: string | null) => this.req<Campaign>('PUT', `/campaigns/${campaignId}/schedule`, { at });
+  rsvp = (campaignId: string, answer: RsvpAnswer) => this.req<Campaign>('PUT', `/campaigns/${campaignId}/rsvp`, { answer });
   campaignCharacters = (campaignId: string) => this.req<CharacterRecord[]>('GET', `/campaigns/${campaignId}/characters`);
 
   characters = () => this.req<CharacterRecord[]>('GET', '/characters');
   createCharacter = (body: SaveCharacterRequest) => this.req<CharacterRecord>('POST', '/characters', body);
   updateCharacter = (id: string, body: SaveCharacterRequest) => this.req<CharacterRecord>('PUT', `/characters/${id}`, body);
   deleteCharacter = (id: string) => this.req('DELETE', `/characters/${id}`);
+
+  unread = () => this.req<Record<string, number>>('GET', '/chat/unread');
+  messages = (channel: string) => this.req<ChatMessage[]>('GET', `/chat/${encodeURIComponent(channel)}`);
+  sendMessage = (channel: string, text: string) => this.req<ChatMessage>('POST', `/chat/${encodeURIComponent(channel)}`, { text });
+  markRead = (channel: string) => this.req('POST', `/chat/${encodeURIComponent(channel)}/read`);
 }

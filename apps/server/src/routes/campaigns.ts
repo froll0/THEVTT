@@ -30,6 +30,34 @@ export function campaignRoutes(app: FastifyInstance, { repo, hub }: Ctx): void {
     return c;
   });
 
+  /** GM: date of the next session (ISO) or null. */
+  app.put<IdParams>('/campaigns/:id/schedule', async (req) => {
+    repo.requireRole(req.params.id, req.userId, 'gm');
+    const raw = (req.body as { at?: unknown } | null)?.at;
+    let at: string | null = null;
+    if (raw !== null && raw !== undefined) {
+      const d = new Date(String(raw));
+      if (Number.isNaN(d.getTime())) throw badRequest('Data non valida');
+      at = d.toISOString();
+    }
+    repo.scheduleSession(req.params.id, at);
+    const c = repo.campaign(req.params.id);
+    hub.notifyCampaign(c.id, { kind: 'session.scheduled', campaignId: c.id, campaignName: c.name, at }, req.userId);
+    hub.notifyCampaign(c.id, { kind: 'campaign.updated', campaignId: c.id }, req.userId);
+    return c;
+  });
+
+  /** A member answers whether they'll be at the next session. */
+  app.put<IdParams>('/campaigns/:id/rsvp', async (req) => {
+    repo.requireRole(req.params.id, req.userId);
+    const answer = (req.body as { answer?: unknown } | null)?.answer;
+    if (answer !== 'yes' && answer !== 'no' && answer !== 'maybe') throw badRequest('Risposta non valida');
+    if (!repo.campaign(req.params.id).nextSession) throw badRequest('Nessuna sessione in programma');
+    repo.setRsvp(req.params.id, req.userId, answer);
+    hub.notifyCampaign(req.params.id, { kind: 'campaign.updated', campaignId: req.params.id }, req.userId);
+    return repo.campaign(req.params.id);
+  });
+
   app.delete<IdParams>('/campaigns/:id', async (req) => {
     repo.requireRole(req.params.id, req.userId, 'gm');
     const members = repo.memberIds(req.params.id);

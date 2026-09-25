@@ -1006,3 +1006,85 @@ input[type='color']::-webkit-color-swatch {
 .meta-list dd {
   margin: 0;
 }
+
+/* ---------- chat outside the table ---------- */
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-height: 0;
+}
+.modal .thread {
+  height: min(60vh, 520px);
+}
+.campaign-chat .thread {
+  height: 340px;
+}
+.thread-log {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 4px;
+}
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
+}
+.msg.grouped {
+  padding-top: 0;
+}
+.msg-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.msg-text {
+  padding-left: 24px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+}
+.thread-input {
+  display: flex;
+  gap: var(--s2);
+}
+.next-session {
+  font-size: 1.05rem;
+}
+.rsvps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rsvp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.rsvp small {
+  color: var(--fg-faint);
+}
+.rsvp.yes {
+  border-color: color-mix(in oklab, var(--success) 50%, transparent);
+}
+.rsvp.yes small {
+  color: var(--success);
+}
+.rsvp.no {
+  opacity: 0.6;
+}
+.nav .count {
+  position: absolute;
+  top: calc(50% - 16px);
+  right: -2px;
+}

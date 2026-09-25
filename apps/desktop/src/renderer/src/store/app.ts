@@ -105,6 +105,7 @@ export const useApp = create<AppState>((set, get) => {
         case 'hello':
           set({ user: msg.user });
           void get().refresh();
+          void import('./chat').then(({ useChat }) => useChat.getState().loadUnread());
           break;
         case 'presence':
           set((s) => ({
@@ -143,6 +144,22 @@ export const useApp = create<AppState>((set, get) => {
         break;
       case 'friend.removed':
         void refresh(['friends']);
+        break;
+      case 'chat.message':
+        void import('./chat').then(({ useChat }) => {
+          useChat.getState().receive(n.message);
+          // a toast only when the conversation isn't already on screen
+          if (useChat.getState().open !== n.message.channel) {
+            const author = get().friends.find((f) => f.user.id === n.message.authorId)?.user.displayName
+              ?? get().campaigns.flatMap((c) => c.members).find((m) => m.user.id === n.message.authorId)?.user.displayName
+              ?? 'Nuovo messaggio';
+            toast(`${author}: ${n.message.text.slice(0, 80)}`);
+          }
+        });
+        break;
+      case 'session.scheduled':
+        toast(n.at ? `«${n.campaignName}»: prossima sessione ${new Date(n.at).toLocaleString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}` : `«${n.campaignName}»: sessione annullata`);
+        void refresh(['campaigns']);
         break;
       case 'invite.received':
         toast(`${n.from.displayName} ti ha invitato in «${n.campaignName}»`);
@@ -219,6 +236,7 @@ export const useApp = create<AppState>((set, get) => {
     async logout() {
       const { api, rt } = get();
       rt?.close();
+      void import('./chat').then(({ useChat }) => useChat.getState().reset());
       await api.logout().catch(() => undefined);
       localStorage.removeItem(TOKEN_KEY);
       api.setToken(null);

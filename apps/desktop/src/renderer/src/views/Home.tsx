@@ -3,6 +3,7 @@ import { getSystem } from '@thevtt/systems';
 import { Check, ChevronRight, X } from 'lucide-react';
 import { Avatar, Empty, Section } from '../components/ui';
 import { useApp } from '../store/app';
+import { formatSession, relativeDay } from './Campaign';
 
 export function CampaignRow({ c }: { c: Campaign }) {
   const { go, user } = useApp();
@@ -32,6 +33,9 @@ export function CampaignRow({ c }: { c: Campaign }) {
 export function HomeView() {
   const { user, campaigns, invites, friends, api, run, refresh, go, upsertCampaign } = useApp();
   const live = campaigns.filter((c) => c.session);
+  const upcoming = campaigns
+    .filter((c) => c.nextSession && new Date(c.nextSession).getTime() > Date.now() - 6 * 3600_000 && !c.session)
+    .sort((a, b) => a.nextSession!.localeCompare(b.nextSession!));
   const requests = friends.filter((f) => f.status === 'pending_in');
   const onlineFriends = friends.filter((f) => f.status === 'accepted' && f.user.online);
   const hour = new Date().getHours();
@@ -73,6 +77,29 @@ export function HomeView() {
                 </button>
               </div>
             ))}
+          </div>
+        </Section>
+      )}
+
+      {upcoming.length > 0 && (
+        <Section title="Prossime sessioni">
+          <div className="list">
+            {upcoming.map((c) => {
+              const answer = user ? c.rsvps[user.id] : undefined;
+              const coming = Object.values(c.rsvps).filter((a) => a === 'yes').length;
+              return (
+                <div className="list-item clickable" key={c.id} onClick={() => go({ name: 'campaign', id: c.id })}>
+                  <div className="grow">
+                    <div className="title">{c.name}</div>
+                    <div className="meta">
+                      {formatSession(c.nextSession!)} · {relativeDay(c.nextSession!)} · {coming} {coming === 1 ? 'conferma' : 'conferme'}
+                      {c.gmId !== user?.id && !answer ? ' · rispondi!' : ''}
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="faint" />
+                </div>
+              );
+            })}
           </div>
         </Section>
       )}

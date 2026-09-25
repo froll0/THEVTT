@@ -1,7 +1,8 @@
-import type { CharacterRecord } from '@thevtt/shared';
+import type { Campaign, CharacterRecord, RsvpAnswer } from '@thevtt/shared';
 import { getSystem } from '@thevtt/systems';
-import { ArrowLeft, Crown, MoreHorizontal, Plus, X } from 'lucide-react';
+import { ArrowLeft, CalendarClock, Crown, MoreHorizontal, Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { ChatThread } from '../components/ChatThread';
 import { Avatar, Empty, Field, Modal, Popover, Section } from '../components/ui';
 import { useApp } from '../store/app';
 
@@ -100,6 +101,8 @@ export function CampaignView({ id }: { id: string }) {
           )}
         </div>
       </div>
+
+      <NextSession campaign={campaign} isGm={isGm} />
 
       {!isGm && (
         <Section title="Il tuo personaggio">
@@ -228,6 +231,8 @@ export function CampaignView({ id }: { id: string }) {
         </Section>
       )}
 
+      <CampaignChat campaign={campaign} />
+
       {editing && (
         <Modal
           title="Modifica campagna"
@@ -278,5 +283,125 @@ export function CampaignView({ id }: { id: string }) {
         </Modal>
       )}
     </div>
+  );
+}
+
+/** "in 3 giorni", "domani", "tra 2 ore"… */
+export function relativeDay(iso: string): string {
+  const d = new Date(iso);
+  const diff = d.getTime() - Date.now();
+  if (diff < 0) return 'passata';
+  const hours = Math.round(diff / 3600_000);
+  if (hours < 1) return 'tra poco';
+  if (hours < 24 && d.getDate() === new Date().getDate()) return `oggi, tra ${hours} ${hours === 1 ? 'ora' : 'ore'}`;
+  const days = Math.round((new Date(d.toDateString()).getTime() - new Date(new Date().toDateString()).getTime()) / 86400_000);
+  return days === 1 ? 'domani' : `tra ${days} giorni`;
+}
+
+export const formatSession = (iso: string) =>
+  new Date(iso).toLocaleString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+
+/** datetime-local value in local time */
+const toLocalInput = (iso: string) => {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const ANSWERS: { id: RsvpAnswer; label: string }[] = [
+  { id: 'yes', label: 'Ci sono' },
+  { id: 'maybe', label: 'Forse' },
+  { id: 'no', label: 'Non posso' },
+];
+
+function NextSession({ campaign, isGm }: { campaign: Campaign; isGm: boolean }) {
+  const { user, api, run, upsertCampaign } = useApp();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState('');
+  const at = campaign.nextSession;
+  const players = campaign.members.filter((m) => m.role === 'player');
+  const mine = user ? campaign.rsvps[user.id] : undefined;
+
+  const schedule = (iso: string | null) =>
+    run(async () => {
+      upsertCampaign(await api.scheduleSession(campaign.id, iso));
+      setEditing(false);
+    }, iso ? 'Sessione fissata: i giocatori ricevono un avviso' : 'Sessione annullata');
+
+  return (
+    <Section
+      title="Prossima sessione"
+      action={
+        isGm &&
+        !editing && (
+          <button
+            className="btn ghost sm"
+            onClick={() => {
+              setValue(at ? toLocalInput(at) : toLocalInput(new Date(Date.now() + 7 * 86400_000).toISOString()).slice(0, 11) + '21:00');
+              setEditing(true);
+            }}
+          >
+            <CalendarClock size={14} /> {at ? 'Cambia' : 'Fissa una data'}
+          </button>
+        )
+      }
+    >
+      {editing ? (
+        <div className="row">
+          <input className="input" type="datetime-local" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Data e ora" />
+          <button className="btn primary sm" disabled={!value} onClick={() => void schedule(new Date(value).toISOString())}>
+            Salva
+          </button>
+          {at && (
+            <button className="btn ghost sm danger" onClick={() => void schedule(null)}>
+              Annulla la sessione
+            </button>
+          )}
+          <button className="btn ghost sm" onClick={() => setEditing(false)}>
+            Chiudi
+          </button>
+        </div>
+      ) : at ? (
+        <div className="col" style={{ gap: 'var(--s3)' }}>
+          <div className="next-session">
+            <b>{formatSession(at)}</b> <span className="muted">· {relativeDay(at)}</span>
+          </div>
+          {!isGm && (
+            <div className="seg">
+              {ANSWERS.map((a) => (
+                <button key={a.id} className={mine === a.id ? 'on' : ''} onClick={() => run(async () => upsertCampaign(await api.rsvp(campaign.id, a.id)))}>
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {players.length > 0 && (
+            <div className="rsvps">
+              {players.map((p) => {
+                const a = campaign.rsvps[p.user.id];
+                return (
+                  <span key={p.user.id} className={`rsvp ${a ?? 'none'}`} title={a ? ANSWERS.find((x) => x.id === a)?.label : 'Non ha ancora risposto'}>
+                    <Avatar user={p.user} size={20} /> {p.user.displayName}
+                    <small>{a ? ANSWERS.find((x) => x.id === a)?.label : '—'}</small>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="muted small">{isGm ? 'Nessuna data in programma. Fissala: i giocatori ricevono un avviso e possono rispondere.' : 'Il master non ha ancora fissato la prossima sessione.'}</p>
+      )}
+    </Section>
+  );
+}
+
+export function CampaignChat({ campaign }: { campaign: Campaign }) {
+  return (
+    <Section title="Chat del gruppo">
+      <div className="campaign-chat">
+        <ChatThread channel={`campaign:${campaign.id}`} people={campaign.members.map((m) => m.user)} placeholder="Scrivi al gruppo" />
+      </div>
+    </Section>
   );
 }

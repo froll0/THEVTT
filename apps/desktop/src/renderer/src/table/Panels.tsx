@@ -20,7 +20,18 @@ const time = (ts: number) => new Date(ts).toLocaleTimeString('it-IT', { hour: '2
 
 // ---------- chat & dice log ----------
 
-function LogLine({ e, meId, onRoll }: { e: LogEntry; meId: string; onRoll: (formula: string, label: string) => void }) {
+function LogLine({
+  e,
+  meId,
+  onRoll,
+  target,
+}: {
+  e: LogEntry;
+  meId: string;
+  onRoll: (formula: string, label: string) => void;
+  /** selected token that this roll can be applied to */
+  target?: { name: string; apply: (delta: number) => void };
+}) {
   if (e.kind === 'system') return <div className="log-system">{e.text}</div>;
   const mine = e.authorId === meId;
   if (e.kind === 'card' && e.card) {
@@ -97,6 +108,20 @@ function LogLine({ e, meId, onRoll }: { e: LogEntry; meId: string; onRoll: (form
           </span>
           <span className="roll-total">{e.roll.total}</span>
         </div>
+        {target && e.roll.total > 0 && (
+          <div className="roll-apply">
+            <span className="faint tiny ellipsis">a {target.name}:</span>
+            <button className="btn ghost sm" title="Infliggi come danni" onClick={() => target.apply(-e.roll!.total)}>
+              −{e.roll.total}
+            </button>
+            <button className="btn ghost sm" title="Metà danni (tiro salvezza riuscito)" onClick={() => target.apply(-Math.floor(e.roll!.total / 2))}>
+              −½
+            </button>
+            <button className="btn ghost sm" title="Cura" onClick={() => target.apply(e.roll!.total)}>
+              +{e.roll.total}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -111,11 +136,23 @@ function LogLine({ e, meId, onRoll }: { e: LogEntry; meId: string; onRoll: (form
 }
 
 export function ChatPanel() {
-  const { state, dispatch, role } = useTable();
+  const { state, dispatch, role, selectedTokenId } = useTable();
   const meId = useApp((s) => s.user?.id ?? '');
   const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const log = state?.log ?? [];
+  const sel = selectedTokenId ? state?.tokens[selectedTokenId] : undefined;
+  // damage or heal the selected token straight from a roll (GM, or the token's owner)
+  const target =
+    sel?.hp && (role === 'gm' || sel.ownerIds.includes(meId))
+      ? {
+          name: sel.name,
+          apply: (delta: number) => {
+            const hp = sel.hp!;
+            dispatch({ type: 'token.update', tokenId: sel.id, patch: { hp: { ...hp, current: Math.min(hp.max, Math.max(0, hp.current + delta)) } } });
+          },
+        }
+      : undefined;
 
   useEffect(() => {
     // braces matter: recent Chromium returns a Promise from scrollIntoView, which React would take for a cleanup
@@ -138,7 +175,7 @@ export function ChatPanel() {
       <div className="log">
         {log.length === 0 && <p className="faint small center">Nessun messaggio. Prova /r 1d20+5</p>}
         {log.map((e) => (
-          <LogLine key={e.id} e={e} meId={meId} onRoll={(formula, label) => dispatch({ type: 'roll', formula, label })} />
+          <LogLine key={e.id} e={e} meId={meId} onRoll={(formula, label) => dispatch({ type: 'roll', formula, label })} target={target} />
         ))}
         <div ref={endRef} />
       </div>

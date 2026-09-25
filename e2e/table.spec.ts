@@ -68,9 +68,20 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await P.getByRole('main').locator('select').selectOption({ label: 'Brunhild' });
   await expect(P.getByText('Apri scheda')).toBeVisible();
 
-  // session: GM hosts, player sits, direct link comes up
+  // next session and group chat, outside the table
   await nav(G, 'Campagne');
   await G.getByText('La Miniera Perduta').click();
+  await G.getByRole('button', { name: 'Fissa una data' }).click();
+  await G.getByLabel('Data e ora').fill('2031-05-17T21:00');
+  await G.getByRole('button', { name: 'Salva', exact: true }).click();
+  await expect(P.getByText(/prossima sessione sabato 17 maggio/i)).toBeVisible();
+  await P.getByRole('button', { name: 'Ci sono' }).click();
+  await expect(G.locator('.rsvp.yes', { hasText: 'Giulia' })).toBeVisible();
+  await P.getByLabel('Messaggio').fill('Porto io le patatine');
+  await P.getByLabel('Messaggio').press('Enter');
+  await expect(G.locator('.msg', { hasText: 'Porto io le patatine' })).toBeVisible();
+
+  // session: GM hosts, player sits, direct link comes up
   await G.getByRole('button', { name: 'Avvia sessione' }).click();
   await expect(G.getByTitle('Aggiungi token')).toBeVisible();
   await P.getByRole('button', { name: 'Siediti al tavolo' }).click();

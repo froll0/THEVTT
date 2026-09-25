@@ -132,3 +132,68 @@ describe('lobby server', () => {
     expect(err.message).toMatch(/401/);
   });
 });
+
+describe('chat and scheduling', () => {
+  it('keeps campaign and direct chats private, with unread counts and live notifications', async () => {
+    const gm = await register('chatgm');
+    const pl = await register('chatpl');
+    const stranger = await register('chatx');
+    await api('POST', '/friends/requests', gm.token, { username: 'chatpl' });
+    await api('POST', `/friends/${gm.user.id}/accept`, pl.token);
+    const camp = (await api('POST', '/campaigns', gm.token, { name: 'Chiacchiere', systemId: 'dnd5e-2024' })).body;
+    await api('POST', `/campaigns/${camp.id}/invites`, gm.token, { userId: pl.user.id });
+    const [inv] = (await api('GET', '/invites', pl.token)).body;
+    await api('POST', `/invites/${inv.id}/accept`, pl.token);
+
+    const peer = connect(pl.token);
+    await peer.open;
+    const sent = await api('POST', `/chat/campaign:${camp.id}`, gm.token, { text: 'Sabato si gioca?' });
+    expect(sent.body).toMatchObject({ channel: `campaign:${camp.id}`, authorId: gm.user.id, text: 'Sabato si gioca?' });
+    const live = await peer.next((m) => m.t === 'notify' && m.notification.kind === 'chat.message');
+    expect(live).toMatchObject({ notification: { message: { channel: `campaign:${camp.id}`, text: 'Sabato si gioca?' } } });
+
+    // direct messages: the channel is named after the other person on each side
+    await api('POST', `/chat/dm:${pl.user.id}`, gm.token, { text: 'Ciao!' });
+    const dm = await peer.next((m) => m.t === 'notify' && m.notification.kind === 'chat.message' && m.notification.message.channel.startsWith('dm:'));
+    expect(dm).toMatchObject({ notification: { message: { channel: `dm:${gm.user.id}` } } });
+    expect((await api('GET', `/chat/dm:${gm.user.id}`, pl.token)).body.map((m: { text: string }) => m.text)).toEqual(['Ciao!']);
+
+    expect((await api('GET', '/chat/unread', pl.token)).body).toEqual({ [`campaign:${camp.id}`]: 1, [`dm:${gm.user.id}`]: 1 });
+    await api('POST', `/chat/campaign:${camp.id}/read`, pl.token);
+    expect((await api('GET', '/chat/unread', pl.token)).body).toEqual({ [`dm:${gm.user.id}`]: 1 });
+    expect((await api('GET', '/chat/unread', gm.token)).body).toEqual({});
+
+    // outsiders can't read or write
+    expect((await api('GET', `/chat/campaign:${camp.id}`, stranger.token)).status).toBe(404);
+    expect((await api('POST', `/chat/dm:${gm.user.id}`, stranger.token, { text: 'spam' })).status).toBe(403);
+    expect((await api('POST', `/chat/nonsense`, gm.token, { text: 'x' })).status).toBe(400);
+    peer.ws.close();
+  });
+
+  it('schedules the next session and collects answers', async () => {
+    const gm = await register('schedgm');
+    const pl = await register('schedpl');
+    await api('POST', '/friends/requests', gm.token, { username: 'schedpl' });
+    await api('POST', `/friends/${gm.user.id}/accept`, pl.token);
+    const camp = (await api('POST', '/campaigns', gm.token, { name: 'Calendario', systemId: 'dnd5e-2024' })).body;
+    expect(camp.nextSession).toBeNull();
+    await api('POST', `/campaigns/${camp.id}/invites`, gm.token, { userId: pl.user.id });
+    const [inv] = (await api('GET', '/invites', pl.token)).body;
+    await api('POST', `/invites/${inv.id}/accept`, pl.token);
+
+    expect((await api('PUT', `/campaigns/${camp.id}/rsvp`, pl.token, { answer: 'yes' })).status).toBe(400);
+    expect((await api('PUT', `/campaigns/${camp.id}/schedule`, pl.token, { at: '2026-10-03T19:00:00Z' })).status).toBe(403);
+    const peer = connect(pl.token);
+    await peer.open;
+    const c = (await api('PUT', `/campaigns/${camp.id}/schedule`, gm.token, { at: '2026-10-03T19:00:00Z' })).body;
+    expect(c.nextSession).toBe('2026-10-03T19:00:00.000Z');
+    expect(await peer.next((m) => m.t === 'notify' && m.notification.kind === 'session.scheduled')).toMatchObject({ notification: { campaignName: 'Calendario' } });
+    expect((await api('PUT', `/campaigns/${camp.id}/rsvp`, pl.token, { answer: 'maybe' })).body.rsvps).toEqual({ [pl.user.id]: 'maybe' });
+    expect((await api('PUT', `/campaigns/${camp.id}/rsvp`, pl.token, { answer: 'yes' })).body.rsvps).toEqual({ [pl.user.id]: 'yes' });
+    // a new date resets the answers
+    expect((await api('PUT', `/campaigns/${camp.id}/schedule`, gm.token, { at: '2026-10-10T19:00:00Z' })).body.rsvps).toEqual({});
+    expect((await api('PUT', `/campaigns/${camp.id}/schedule`, gm.token, { at: 'domani' })).status).toBe(400);
+    expect((await api('PUT', `/campaigns/${camp.id}/schedule`, gm.token, { at: null })).body.nextSession).toBeNull();
+    peer.ws.close();
+  });
+});

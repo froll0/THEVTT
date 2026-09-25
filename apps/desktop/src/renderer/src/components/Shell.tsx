@@ -1,6 +1,7 @@
 import { Bell, Check, LogOut, Maximize2, Minus, Radio, Settings, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { bridge } from '../lib/platform';
+import { unreadOf, useChat } from '../store/chat';
 import { useApp, type Route } from '../store/app';
 import { useHosting } from '../store/hosting';
 import { Avatar, Popover } from './ui';
@@ -147,6 +148,9 @@ export function TopBar({ children, nav = true }: { children?: ReactNode; nav?: b
   const { route, go, user, status, sessions } = useApp();
   const mac = bridge?.platform === 'darwin';
   const live = Object.keys(sessions).length > 0;
+  const unread = useChat((s) => s.unread);
+  const unreadCampaigns = unreadOf(unread, 'campaign:');
+  const unreadDms = unreadOf(unread, 'dm:');
   return (
     <header className={`topbar ${mac ? 'mac' : ''}`}>
       <div className="brand">
@@ -157,7 +161,9 @@ export function TopBar({ children, nav = true }: { children?: ReactNode; nav?: b
           {NAV.map((n) => (
             <button key={n.label} className={n.match.includes(route.name) ? 'active' : ''} onClick={() => go(n.route)}>
               {n.label}
-              {n.route.name === 'campaigns' && live && <span className="dot" aria-hidden title="Un tavolo è aperto" />}
+              {n.route.name === 'campaigns' && live && !unreadCampaigns && <span className="dot" aria-hidden title="Un tavolo è aperto" />}
+              {n.route.name === 'campaigns' && unreadCampaigns > 0 && <span className="count" aria-hidden>{unreadCampaigns}</span>}
+              {n.route.name === 'friends' && unreadDms > 0 && <span className="count" aria-hidden>{unreadDms}</span>}
             </button>
           ))}
         </nav>

@@ -1,4 +1,4 @@
-import type { UserPublic, SessionInfo } from './api';
+import type { ChatMessage, SessionInfo, UserPublic } from './api';
 
 /**
  * WebSocket protocol with the lobby server (`/ws?token=...`).
@@ -36,7 +36,9 @@ export type Notification =
   | { kind: 'friend.removed'; userId: string }
   | { kind: 'invite.received'; campaignName: string; from: UserPublic }
   | { kind: 'campaign.updated'; campaignId: string }
-  | { kind: 'campaign.deleted'; campaignId: string };
+  | { kind: 'campaign.deleted'; campaignId: string }
+  | { kind: 'chat.message'; message: ChatMessage }
+  | { kind: 'session.scheduled'; campaignId: string; campaignName: string; at: string | null };
 
 export type ServerToClient =
   | { t: 'hello'; user: UserPublic }

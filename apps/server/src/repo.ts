@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Campaign, CampaignInvite, CampaignRole, CharacterRecord, FriendEntry, FriendStatus, UserPublic } from '@thevtt/shared';
+import type { Campaign, CampaignInvite, CampaignRole, CharacterRecord, ChatMessage, FriendEntry, FriendStatus, RsvpAnswer, UserPublic } from '@thevtt/shared';
 import { tx, type Db } from './db';
 import { badRequest, conflict, forbidden, notFound } from './errors';
 
@@ -163,7 +163,23 @@ export class Repo {
       })),
       pendingInvites: invites.map((i) => ({ id: i.invite_id as string, user: this.toUser(i) })),
       session: this.presence.session(id),
+      nextSession: (c.next_session as string | null) ?? null,
+      rsvps: Object.fromEntries(
+        (this.db.prepare('SELECT user_id, answer FROM session_rsvps WHERE campaign_id = ?').all(id) as Row[]).map((r) => [r.user_id as string, r.answer as RsvpAnswer]),
+      ),
     };
+  }
+
+  /** A new date clears the old answers: people answer for the new one. */
+  scheduleSession(campaignId: string, at: string | null): void {
+    tx(this.db, () => {
+      this.db.prepare('UPDATE campaigns SET next_session = ? WHERE id = ?').run(at, campaignId);
+      this.db.prepare('DELETE FROM session_rsvps WHERE campaign_id = ?').run(campaignId);
+    });
+  }
+
+  setRsvp(campaignId: string, userId: string, answer: RsvpAnswer): void {
+    this.db.prepare('INSERT INTO session_rsvps (campaign_id, user_id, answer) VALUES (?, ?, ?) ON CONFLICT (campaign_id, user_id) DO UPDATE SET answer = excluded.answer').run(campaignId, userId, answer);
   }
 
   role(campaignId: string, userId: string): CampaignRole | null {
@@ -210,6 +226,73 @@ export class Repo {
 
   removeMember(campaignId: string, userId: string): void {
     this.db.prepare('DELETE FROM campaign_members WHERE campaign_id = ? AND user_id = ?').run(campaignId, userId);
+  }
+
+  // ---------- chat ----------
+
+  /** Server-side channel key for a client channel, checking the user may use it. */
+  chatChannel(userId: string, channel: string): { key: string; members: string[] } {
+    const [kind, id] = channel.split(':', 2) as [string, string | undefined];
+    if (kind === 'campaign' && id) {
+      this.requireRole(id, userId);
+      return { key: `c:${id}`, members: this.memberIds(id) };
+    }
+    if (kind === 'dm' && id && id !== userId) {
+      if (!this.areFriends(userId, id)) throw forbidden('Puoi scrivere solo ai tuoi amici');
+      const [a, b] = pair(userId, id);
+      return { key: `d:${a}:${b}`, members: [userId, id] };
+    }
+    throw badRequest('Canale non valido');
+  }
+
+  /** Client channel name of a stored message, from the point of view of `viewerId`. */
+  private clientChannel(key: string, viewerId: string): string {
+    if (key.startsWith('c:')) return `campaign:${key.slice(2)}`;
+    const [, a, b] = key.split(':');
+    return `dm:${a === viewerId ? b : a}`;
+  }
+
+  private toMessage(r: Row, viewerId: string): ChatMessage {
+    return { id: r.id as string, channel: this.clientChannel(r.channel as string, viewerId), authorId: r.author_id as string, text: r.text as string, createdAt: r.created_at as string };
+  }
+
+  messages(key: string, viewerId: string, before?: string, limit = 100): ChatMessage[] {
+    const rows = (
+      before
+        ? this.db.prepare('SELECT * FROM messages WHERE channel = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?').all(key, before, limit)
+        : this.db.prepare('SELECT * FROM messages WHERE channel = ? ORDER BY created_at DESC LIMIT ?').all(key, limit)
+    ) as Row[];
+    return rows.reverse().map((r) => this.toMessage(r, viewerId));
+  }
+
+  postMessage(key: string, authorId: string, text: string): { id: string; createdAt: string } {
+    const id = randomUUID();
+    const createdAt = now();
+    this.db.prepare('INSERT INTO messages (id, channel, author_id, text, created_at) VALUES (?, ?, ?, ?, ?)').run(id, key, authorId, text, createdAt);
+    this.markRead(authorId, key, createdAt);
+    return { id, createdAt };
+  }
+
+  messageFor(id: string, viewerId: string): ChatMessage {
+    return this.toMessage(this.db.prepare('SELECT * FROM messages WHERE id = ?').get(id) as Row, viewerId);
+  }
+
+  markRead(userId: string, key: string, at = now()): void {
+    this.db.prepare('INSERT INTO channel_reads (user_id, channel, read_at) VALUES (?, ?, ?) ON CONFLICT (user_id, channel) DO UPDATE SET read_at = excluded.read_at').run(userId, key, at);
+  }
+
+  /** Unread messages per client channel (campaigns I'm in, DMs with anyone). */
+  unread(userId: string): Record<string, number> {
+    const rows = this.db
+      .prepare(
+        `SELECT m.channel, COUNT(*) AS n FROM messages m
+         LEFT JOIN channel_reads r ON r.user_id = ? AND r.channel = m.channel
+         WHERE m.author_id != ? AND (r.read_at IS NULL OR m.created_at > r.read_at)
+           AND (m.channel LIKE ? OR m.channel LIKE ? OR m.channel IN (SELECT 'c:' || campaign_id FROM campaign_members WHERE user_id = ?))
+         GROUP BY m.channel`,
+      )
+      .all(userId, userId, `d:${userId}:%`, `d:%:${userId}`, userId) as Row[];
+    return Object.fromEntries(rows.map((r) => [this.clientChannel(r.channel as string, userId), Number(r.n)]));
   }
 
   // ---------- invites ----------
