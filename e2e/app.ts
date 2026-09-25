@@ -20,10 +20,9 @@ export interface RunningApp {
  */
 export async function launchApp(opts: { hostPort?: number } = {}): Promise<RunningApp> {
   const profile = mkdtempSync(join(tmpdir(), 'thevtt-e2e-'));
-  if (opts.hostPort) {
-    mkdirSync(join(profile, 'data'), { recursive: true });
-    writeFileSync(join(profile, 'data', 'server-config.json'), JSON.stringify({ enabled: true, port: opts.hostPort, upnp: false }));
-  }
+  // tests never reach out to the router, Cloudflare or the code relay
+  mkdirSync(join(profile, 'data'), { recursive: true });
+  writeFileSync(join(profile, 'data', 'server-config.json'), JSON.stringify({ enabled: !!opts.hostPort, port: opts.hostPort ?? 4477, upnp: false, tunnel: false }));
   const app = await _electron.launch({
     executablePath: electronPath,
     args: ['--no-sandbox', desktopDir],
@@ -45,7 +44,7 @@ export async function register(page: Page, opts: { where: 'host' | { join: strin
     await expect(page.getByText('Server attivo')).toBeVisible();
   } else {
     await page.getByRole('button', { name: /Mi unisco/ }).click();
-    await page.getByLabel('Indirizzo del gruppo').fill(opts.where.join);
+    await page.getByLabel('Codice o indirizzo del gruppo').fill(opts.where.join);
   }
   await page.getByLabel('Nome utente').fill(opts.username);
   await page.getByLabel('Nome visualizzato (facoltativo)').fill(opts.displayName);

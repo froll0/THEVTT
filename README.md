@@ -13,14 +13,16 @@ sul System Reference Document 5.2 (CC-BY-4.0).
 
 **Tutto in uno**
 - Un solo programma: chi ospita attiva il server dentro l'app con un clic ("Ospito io"), gli
-  amici si uniscono incollando l'indirizzo ("Mi unisco"). Niente terminale
-- Apertura automatica della porta sul router (UPnP), indirizzo da copiare, avvisi chiari se il
-  router non collabora o il provider usa CGNAT
+  amici si uniscono con il **codice del gruppo** ("Mi unisco"). Niente terminale, niente router
+- Collegamento automatico senza aprire porte (tunnel Cloudflare) e codice del gruppo permanente;
+  in alternativa apertura della porta via UPnP o rete di casa
 - Connessione diretta master ↔ giocatori (WebRTC) con ripiego automatico sul server
 
 **Launcher**
 - Account, amici con presenza online, notifiche (campanella), campagne, inviti
 - Interfaccia minimal: navigazione nella barra del titolo, elenchi senza riquadri, temi
+- **Compendio** consultabile e ricercabile: regole (SRD 5.2 riassunto in italiano), condizioni,
+  incantesimi, mostri, classi, specie, background, talenti, equipaggiamento
 
 **Personaggi D&D 5.5 (2024)** — dati SRD 5.2, in italiano, distanze in metri
 - Creazione guidata: classe, specie (con lignaggi e ascendenze), background (o personalizzato),
@@ -40,10 +42,17 @@ sul System Reference Document 5.2 (CC-BY-4.0).
 - **Nebbia di guerra**: il master scopre e copre a pennellate; i giocatori non ricevono nemmeno
   i token sotto la nebbia
 - **Aree d'effetto**: sfera, cono, linea, cubo, con misura in metri
-- **Bestiario** SRD per il master: statistiche, attacchi tirabili, PF medi o tirati
-- Righello, ping, dadi autoritativi (vantaggio/svantaggio, tiri nascosti), chat con comandi
+- **Bestiario**: 140 creature SRD dal GS 0 al 30, più un editor di creature personalizzate
+  (da zero o duplicando un mostro), import/export
+- **Dadi 3D** che rotolano sul tavolo (il risultato lo decide sempre l'host), disattivabili
+- **Musica** condivisa: il master carica una scaletta, suona per tutti in sincrono, volume a testa
+- **Note e dispense**: private, per tutti o per alcuni giocatori, con immagini; avviso a chi le riceve
+- **Disegno a mano libera** con colori, spessori e gomma
+- Righello, ping, dadi autoritativi (vantaggio/svantaggio, tiri nascosti per il master, tiri alla
+  cieca per i giocatori), chat con comandi e **schede** di incantesimi, attacchi, privilegi e
+  oggetti inviate dalla scheda con i pulsanti per tirare
 - Iniziativa con round e turni, tiro per tutti i token con i modificatori giusti
-- Scheda del personaggio al tavolo, note private del master
+- Scheda del personaggio al tavolo: ogni giocatore riceve solo la propria, il master l'elenco
 
 **Personalizzazione**
 - Temi (Ossidiana, Grafite, Carta, Pergamena…), modalità chiara/scura, accento, carattere,
@@ -65,18 +74,32 @@ Gli installer vengono generati automaticamente da GitHub Actions (workflow **Ins
 | macOS   | `TheVTT-x.y.z-mac-arm64.dmg` (Apple Silicon) o `-x64.dmg` (Intel) | App non firmata: dopo averla copiata in Applicazioni, se macOS dice che è danneggiata esegui `xattr -cr /Applications/TheVTT.app` nel Terminale. |
 | Linux   | `.AppImage` (qualsiasi distro) o `.deb` (Debian/Ubuntu) | Per l'AppImage: `chmod +x` e avvio con doppio clic. |
 
-### Il server
+### Giocare con gli amici
 
-Serve **un solo server** per tutto il gruppo (account, amici, campagne). Scarica
-`thevtt-server.mjs` (dalla Release o dagli Artifacts), installa Node.js 22.13+ e avvia:
+Ogni gruppo usa **un solo server** (account, amici, campagne). Ci sono tre modi:
 
-```bash
-node thevtt-server.mjs
-```
+1. **Ospito io** (consigliato). Il master sceglie *Ospito io* alla prima apertura: il server parte
+   dentro l'app e, con il *collegamento automatico*, diventa raggiungibile da internet senza toccare
+   il router (tunnel gratuito di Cloudflare, `cloudflared` viene scaricato al primo uso). L'app
+   mostra un **codice del gruppo** (es. `HKM3-RD4S-P2YL-F3FR`) che non cambia mai: gli amici scelgono
+   *Mi unisco* e lo inseriscono. Il codice pubblica l'indirizzo del momento, firmato, su un servizio
+   di messaggi pubblico (ntfy.sh): nessuno può spacciarsi per il tuo server. Il master deve tenere
+   TheVTT aperto mentre si gioca.
+2. **Stessa rete di casa**: gli amici inseriscono l'indirizzo locale mostrato in *Impostazioni → Server*.
+3. **Server sempre acceso** (per gruppi che vogliono essere indipendenti dal PC del master): un
+   piccolo VPS, un Raspberry Pi o un NAS con Docker.
 
-Ascolta sulla porta 4477 e salva i dati nella cartella `data/` accanto a dove lo lanci. Nell'app,
-alla schermata di accesso, clicca sull'indirizzo del server in basso per impostarlo
-(es. `http://192.168.1.10:4477` in LAN, o l'IP pubblico con la porta 4477 aperta sul router).
+   ```bash
+   docker build -t thevtt-server .
+   docker run -d -p 4477:4477 -v thevtt-data:/data --restart unless-stopped thevtt-server
+   ```
+
+   Oppure senza Docker: scarica `thevtt-server.mjs` dalla Release, installa Node.js 22.13+ e
+   `node thevtt-server.mjs`. Serve un indirizzo raggiungibile (porta 4477 aperta o un proxy https).
+
+Note sul collegamento automatico: i tunnel Cloudflare senza account sono gratuiti ma senza garanzia
+di disponibilità; se non funziona, l'app riprova da sola e restano UPnP e la rete di casa. Il
+servizio dei codici si cambia con la variabile `THEVTT_RENDEZVOUS` (un server ntfy proprio).
 
 Per preimpostare l'indirizzo negli installer, crea la variabile di repository
 `THEVTT_SERVER_URL` (*Settings → Secrets and variables → Actions → Variables*).
@@ -140,9 +163,8 @@ con `VITE_THEVTT_SERVER` in build.
 
 ## Prossimi passi
 
-- Hosting senza server per partite in LAN (scoperta locale del master)
-- Linee di vista e luci dinamiche
+- Scoperta automatica del master in LAN
+- Linee di vista e luci dinamiche, muri
 - Sottoclassi e opzioni oltre l'SRD (contenuti con licenza o creati dal gruppo)
-- Musica e suoni d'ambiente condivisi, dispense per i giocatori
 - Secondo sistema di gioco per validare l'astrazione dei plugin
 - Aggiornamenti automatici dell'app e firma degli installer (Windows e macOS)

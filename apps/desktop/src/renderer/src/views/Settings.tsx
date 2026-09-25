@@ -4,7 +4,7 @@ import { Avatar, PageHeader, Section, Setting, Switch, Tabs } from '../component
 import { displayServerAddress } from '../lib/address';
 import { bridge } from '../lib/platform';
 import { useApp, type SettingsSection } from '../store/app';
-import { localServerUrl, useHosting } from '../store/hosting';
+import { DEFAULT_HOSTING, localServerUrl, useHosting } from '../store/hosting';
 import { exportSettings, PRESETS, useSettings, type Settings } from '../store/settings';
 
 const ACCENTS = ['#c9a227', '#e6e6e8', '#e4572e', '#ef476f', '#8b7cf6', '#2f6fed', '#06b6d4', '#4fa37e', '#39d353'];
@@ -231,7 +231,7 @@ function ServerSettings() {
     if (hosting.config) setPort(String(hosting.config.port));
   }, [hosting.config?.port]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cfg = hosting.config ?? { enabled: false, port: 4477, upnp: true };
+  const cfg = hosting.config ?? DEFAULT_HOSTING;
   const st = hosting.status;
   const connectedHere = serverUrl === localServerUrl(cfg.port);
 
@@ -252,6 +252,9 @@ function ServerSettings() {
           <div className="list">
             <Setting title="Ospita il server su questo PC" hint="Resta attivo finché TheVTT è aperto e riparte da solo all'avvio.">
               <Switch on={cfg.enabled} onChange={(enabled) => void hosting.apply({ ...cfg, enabled })} />
+            </Setting>
+            <Setting title="Collegamento automatico (consigliato)" hint="Gli amici ti raggiungono da qualunque rete con il codice del gruppo, senza toccare il router. Usa un tunnel gratuito di Cloudflare.">
+              <Switch on={cfg.tunnel} onChange={(tunnel) => void hosting.apply({ ...cfg, tunnel })} />
             </Setting>
             <Setting title="Apri la porta sul router automaticamente" hint="Usa UPnP, supportato dalla maggior parte dei router di casa.">
               <Switch on={cfg.upnp} onChange={(upnp) => void hosting.apply({ ...cfg, upnp })} />
@@ -274,6 +277,29 @@ function ServerSettings() {
 
                 {st.state === 'running' && (
                   <>
+                    {cfg.tunnel && (
+                      <div className="col" style={{ gap: 4 }}>
+                        <span className="small muted">Codice del gruppo · da dare agli amici, non cambia mai</span>
+                        <CopyAddress value={st.code} />
+                        <span className="faint tiny">
+                          {st.published === 'yes'
+                            ? 'Attivo: chi usa il codice trova il tuo server ovunque sia.'
+                            : st.published === 'error'
+                              ? 'Non riesco a pubblicare l’indirizzo: controlla la connessione. Riprovo da solo.'
+                              : st.tunnel.state === 'downloading'
+                                ? `Scarico il componente per il collegamento (una volta sola)… ${Math.round(st.tunnel.progress * 100)}%`
+                                : st.tunnel.state === 'error'
+                                  ? `Collegamento automatico non riuscito: ${st.tunnel.message}. Riprovo da solo.`
+                                  : 'Preparo il collegamento…'}
+                        </span>
+                      </div>
+                    )}
+                    {st.tunnel.state === 'ready' && (
+                      <div className="col" style={{ gap: 4 }}>
+                        <span className="small muted">Indirizzo pubblico di questa sessione (cambia a ogni avvio)</span>
+                        <CopyAddress value={st.tunnel.url} />
+                      </div>
+                    )}
                     {st.upnp.state === 'mapped' && st.upnp.externalIp && (
                       <div className="col" style={{ gap: 4 }}>
                         <span className="small muted">Amici da casa loro</span>
@@ -288,8 +314,8 @@ function ServerSettings() {
                     )}
                     {st.upnp.state === 'working' && <p className="muted small">Sto chiedendo al router di aprire la porta…</p>}
                     {st.upnp.state === 'mapped' && <p className="muted small">Il router ha aperto la porta {st.port}. Gli amici possono raggiungerti da internet.</p>}
-                    {(st.upnp.state === 'unavailable' || st.upnp.state === 'failed' || st.upnp.state === 'off') && <PublicIp port={st.port} />}
-                    {(st.upnp.state === 'unavailable' || st.upnp.state === 'failed' || st.upnp.state === 'off') && (
+                    {!cfg.tunnel && (st.upnp.state === 'unavailable' || st.upnp.state === 'failed' || st.upnp.state === 'off') && <PublicIp port={st.port} />}
+                    {!cfg.tunnel && (st.upnp.state === 'unavailable' || st.upnp.state === 'failed' || st.upnp.state === 'off') && (
                       <div className="callout warn">
                         <div>
                           {st.upnp.message ?? 'Apertura automatica della porta disattivata.'}
@@ -299,11 +325,10 @@ function ServerSettings() {
                         </div>
                       </div>
                     )}
-                    {st.upnp.state === 'cgnat' && (
+                    {!cfg.tunnel && st.upnp.state === 'cgnat' && (
                       <div className="callout warn">
                         <div>
-                          {st.upnp.message}. Puoi giocare con chi è sulla tua rete. Per gli amici fuori casa, uno di loro con una connessione diversa può
-                          ospitare il server, oppure potete usare un server su internet.
+                          {st.upnp.message}. Attiva il collegamento automatico qui sopra: funziona anche in questo caso.
                         </div>
                       </div>
                     )}

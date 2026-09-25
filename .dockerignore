@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+**/out
+**/release
+.git
+.scratch
+test-results
+apps/server/data

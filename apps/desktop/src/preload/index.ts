@@ -28,6 +28,7 @@ const bridge: DesktopBridge = {
       return () => ipcRenderer.removeListener('server:status', listener);
     },
   },
+  resolveGroupCode: (code) => ipcRenderer.invoke('group:resolve', code),
 };
 
 contextBridge.exposeInMainWorld('thevtt', bridge);

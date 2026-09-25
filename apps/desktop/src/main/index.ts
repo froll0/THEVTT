@@ -1,7 +1,8 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, net, shell } from 'electron';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { HostedServerConfig } from '../preload/api';
+import type { HostedServerConfig, HostedServerStatus } from '../preload/api';
+import { DEFAULT_RENDEZVOUS, newIdentity, normalizeCode, resolve as resolveCode, type GroupIdentity } from './group-code';
 import { DEFAULT_SERVER_CONFIG, HostedServer } from './hosted-server';
 
 const isMac = process.platform === 'darwin';
@@ -81,8 +82,31 @@ ipcMain.handle('app:info', () => ({ version: app.getVersion(), dataDir: dataDir(
 
 const serverConfigFile = () => join(dataDir(), 'server-config.json');
 let serverConfig: HostedServerConfig = DEFAULT_SERVER_CONFIG;
-const hosted = new HostedServer(app.getPath('userData'), (status) => {
+let hosted: HostedServer;
+const onServerStatus = (status: HostedServerStatus) => {
   for (const w of BrowserWindow.getAllWindows()) w.webContents.send('server:status', status);
+};
+const rendezvous = (process.env.THEVTT_RENDEZVOUS || DEFAULT_RENDEZVOUS).replace(/\/$/, '');
+
+/** The key behind this PC's group code: created once, kept with the app data. */
+async function groupIdentity(): Promise<GroupIdentity> {
+  const file = join(dataDir(), 'group-identity.json');
+  const saved = (await readJson(file)) as GroupIdentity | null;
+  if (saved?.publicKey && saved.privateKey) return saved;
+  const id = newIdentity();
+  await writeJson(file, id);
+  return id;
+}
+
+ipcMain.handle('group:resolve', async (_e, input: string) => {
+  const code = normalizeCode(String(input));
+  if (!code) return { error: 'Codice non valido' };
+  try {
+    const url = await resolveCode(rendezvous, code, (u, init) => net.fetch(u, init));
+    return url ? { url } : { error: 'Il master non è online in questo momento (o il codice è sbagliato)' };
+  } catch {
+    return { error: 'Non riesco a raggiungere il servizio per i codici: controlla la connessione' };
+  }
 });
 
 function sanitize(cfg: Partial<HostedServerConfig>): HostedServerConfig {
@@ -91,6 +115,7 @@ function sanitize(cfg: Partial<HostedServerConfig>): HostedServerConfig {
     enabled: !!cfg.enabled,
     port: Number.isInteger(port) && port >= 1024 && port <= 65535 ? port : DEFAULT_SERVER_CONFIG.port,
     upnp: cfg.upnp !== false,
+    tunnel: cfg.tunnel !== false,
   };
 }
 
@@ -98,7 +123,7 @@ ipcMain.handle('server:get-config', () => serverConfig);
 ipcMain.handle('server:status', () => hosted.status);
 ipcMain.handle('server:set-config', async (_e, cfg: Partial<HostedServerConfig>) => {
   const next = sanitize(cfg);
-  const changed = next.port !== serverConfig.port || next.upnp !== serverConfig.upnp;
+  const changed = next.port !== serverConfig.port || next.upnp !== serverConfig.upnp || next.tunnel !== serverConfig.tunnel;
   serverConfig = next;
   await writeJson(serverConfigFile(), serverConfig);
   if (!next.enabled) await hosted.stop();
@@ -112,7 +137,7 @@ app.on('before-quit', (e) => {
   // close the server and the router port mapping before exiting
   e.preventDefault();
   quitting = true;
-  void hosted.dispose().finally(() => app.quit());
+  void (hosted ? hosted.dispose() : Promise.resolve()).finally(() => app.quit());
 });
 
 app.on('second-instance', () => {
@@ -124,6 +149,13 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(async () => {
+  hosted = new HostedServer({
+    dataDir: app.getPath('userData'),
+    identity: await groupIdentity(),
+    rendezvous,
+    fetch: (u, init) => net.fetch(u, init),
+    onStatus: onServerStatus,
+  });
   serverConfig = sanitize({ ...DEFAULT_SERVER_CONFIG, ...((await readJson(serverConfigFile())) as Partial<HostedServerConfig> | null) });
   if (serverConfig.enabled) void hosted.start(serverConfig);
   createWindow();

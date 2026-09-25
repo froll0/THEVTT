@@ -33,10 +33,17 @@ bridge?.server.onStatus((status) => useHosting.setState({ status }));
 
 export const localServerUrl = (port: number) => `http://localhost:${port}`;
 
-/** Address to give friends: the public one when the router opened the port, else the LAN one. */
-export function inviteAddress(s: HostedServerStatus): { address: string; scope: 'internet' | 'lan' } | null {
+/**
+ * What to give friends: the group code once the public address is published
+ * (it never changes), else a public address, else the LAN one.
+ */
+export function inviteAddress(s: HostedServerStatus): { address: string; scope: 'code' | 'internet' | 'lan' } | null {
   if (s.state !== 'running') return null;
+  if (s.published === 'yes' && s.code) return { address: s.code, scope: 'code' };
+  if (s.tunnel?.state === 'ready') return { address: s.tunnel.url, scope: 'internet' };
   if (s.upnp.state === 'mapped' && s.upnp.externalIp) return { address: `${s.upnp.externalIp}:${s.port}`, scope: 'internet' };
   const lan = s.lanAddresses[0];
   return lan ? { address: `${lan}:${s.port}`, scope: 'lan' } : null;
 }
+
+export const DEFAULT_HOSTING: HostedServerConfig = { enabled: false, port: 4477, upnp: true, tunnel: true };

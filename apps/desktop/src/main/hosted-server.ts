@@ -3,10 +3,25 @@ import { findGateway, isPrivateIp, mapPort, unmapPort, type PortMapping } from '
 import { networkInterfaces } from 'node:os';
 import { join } from 'node:path';
 import type { HostedServerConfig, HostedServerStatus } from '../preload/api';
+import { codeFor, publish, type GroupIdentity } from './group-code';
+import { Tunnel } from './tunnel';
+
+type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
+
+export interface HostedServerOptions {
+  dataDir: string;
+  identity: GroupIdentity;
+  rendezvous: string;
+  fetch: Fetch;
+  onStatus: (s: HostedServerStatus) => void;
+}
+
+/** the relay keeps messages 12 hours: republish well before */
+const REPUBLISH_MS = 3 * 3600_000;
 
 type LobbyApp = Awaited<ReturnType<typeof buildApp>>['app'];
 
-export const DEFAULT_SERVER_CONFIG: HostedServerConfig = { enabled: false, port: 4477, upnp: true };
+export const DEFAULT_SERVER_CONFIG: HostedServerConfig = { enabled: false, port: 4477, upnp: true, tunnel: true };
 
 /**
  * The lobby server, run inside the desktop app so a group can play without
@@ -17,16 +32,54 @@ export class HostedServer {
   private mapping: PortMapping | null = null;
   private renewTimer: ReturnType<typeof setInterval> | null = null;
   private busy: Promise<void> = Promise.resolve();
-  status: HostedServerStatus = { state: 'stopped', port: DEFAULT_SERVER_CONFIG.port, lanAddresses: [], upnp: { state: 'off' } };
+  private readonly tunnel: Tunnel;
+  private publishTimer: ReturnType<typeof setInterval> | null = null;
+  private publishedUrl: string | null = null;
+  status: HostedServerStatus;
 
-  constructor(
-    private readonly dataDir: string,
-    private readonly onStatus: (s: HostedServerStatus) => void,
-  ) {}
+  constructor(private readonly o: HostedServerOptions) {
+    this.status = {
+      state: 'stopped',
+      port: DEFAULT_SERVER_CONFIG.port,
+      lanAddresses: [],
+      upnp: { state: 'off' },
+      tunnel: { state: 'off' },
+      code: codeFor(o.identity.publicKey),
+      published: 'no',
+    };
+    this.tunnel = new Tunnel(join(o.dataDir, 'bin'), (tunnel) => {
+      this.update({ tunnel });
+      this.announce();
+    }, o.fetch);
+  }
 
   private update(patch: Partial<HostedServerStatus>) {
     this.status = { ...this.status, ...patch };
-    this.onStatus(this.status);
+    this.o.onStatus(this.status);
+  }
+
+  /** The address friends should use from the internet, if any. */
+  private publicUrl(): string | null {
+    const s = this.status;
+    if (s.state !== 'running') return null;
+    if (s.tunnel.state === 'ready') return s.tunnel.url;
+    if (s.upnp.state === 'mapped' && s.upnp.externalIp) return `http://${s.upnp.externalIp}:${s.port}`;
+    return null;
+  }
+
+  /** Publishes the public address under the group code when it changes. */
+  private announce(force = false) {
+    const url = this.publicUrl();
+    if (!url || (!force && url === this.publishedUrl)) return;
+    this.publishedUrl = url;
+    publish(this.o.rendezvous, this.o.identity, url, this.o.fetch).then(
+      () => this.publishedUrl === url && this.update({ published: 'yes' }),
+      () => {
+        if (this.publishedUrl !== url) return;
+        this.publishedUrl = null; // try again on the next change or timer
+        this.update({ published: 'error' });
+      },
+    );
   }
 
   /** Serializes start/stop so rapid toggles can't overlap. */
@@ -40,10 +93,10 @@ export class HostedServer {
       if (this.app) await this.shutdown();
       this.update({ state: 'starting', port: cfg.port, error: undefined, upnp: { state: cfg.upnp ? 'working' : 'off' } });
       try {
-        const { app } = await buildApp({ dbPath: join(this.dataDir, 'server', 'thevtt.sqlite') });
+        const { app } = await buildApp({ dbPath: join(this.o.dataDir, 'server', 'thevtt.sqlite') });
         await app.listen({ port: cfg.port, host: '0.0.0.0' });
         this.app = app;
-        this.update({ state: 'running', lanAddresses: lanAddresses() });
+        this.update({ state: 'running', lanAddresses: lanAddresses(), published: 'no' });
       } catch (e) {
         const code = (e as NodeJS.ErrnoException).code;
         this.update({
@@ -54,19 +107,25 @@ export class HostedServer {
         return;
       }
       if (cfg.upnp) void this.openRouterPort(cfg.port);
+      if (cfg.tunnel) this.tunnel.start(cfg.port);
+      this.publishTimer = setInterval(() => this.announce(true), REPUBLISH_MS);
     });
   }
 
   stop(): Promise<void> {
     return this.queue(async () => {
       await this.shutdown();
-      this.update({ state: 'stopped', error: undefined, upnp: { state: 'off' } });
+      this.update({ state: 'stopped', error: undefined, upnp: { state: 'off' }, tunnel: { state: 'off' }, published: 'no' });
     });
   }
 
   private async shutdown() {
     if (this.renewTimer) clearInterval(this.renewTimer);
     this.renewTimer = null;
+    if (this.publishTimer) clearInterval(this.publishTimer);
+    this.publishTimer = null;
+    this.publishedUrl = null;
+    this.tunnel.stop();
     const closing = (async () => {
       if (this.mapping) await unmapPort(this.mapping);
       await this.app?.close();
@@ -101,6 +160,7 @@ export class HostedServer {
         });
       } else {
         this.update({ upnp: { state: 'mapped', externalIp: ip ?? undefined } });
+        this.announce();
       }
       // timed leases must be renewed before they expire
       if (mapping.leaseSeconds > 0) {

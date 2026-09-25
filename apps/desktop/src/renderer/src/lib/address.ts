@@ -22,3 +22,10 @@ export function normalizeServerAddress(input: string): string | null {
 export function displayServerAddress(url: string): string {
   return url.replace(/^http:\/\//, '').replace(/\/$/, '');
 }
+
+/** A group code like ABCD-EFGH-JKLM-NPQR (typed loosely), rather than an address. */
+export function asGroupCode(input: string): string | null {
+  if (/[.:/]/.test(input)) return null;
+  const s = input.toUpperCase().replace(/0/g, 'O').replace(/1/g, 'I').replace(/8/g, 'B').replace(/[^A-Z2-7]/g, '');
+  return s.length === 16 && /^[\sA-Za-z0-9-]+$/.test(input.trim()) ? s.match(/.{4}/g)!.join('-') : null;
+}

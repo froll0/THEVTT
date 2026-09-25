@@ -4,6 +4,8 @@ export interface HostedServerConfig {
   port: number;
   /** ask the router to open the port (UPnP) */
   upnp: boolean;
+  /** public address through a Cloudflare tunnel, no router setup needed */
+  tunnel: boolean;
 }
 
 export interface HostedServerStatus {
@@ -16,6 +18,16 @@ export interface HostedServerStatus {
     externalIp?: string;
     message?: string;
   };
+  tunnel:
+    | { state: 'off' }
+    | { state: 'downloading'; progress: number }
+    | { state: 'starting' }
+    | { state: 'ready'; url: string }
+    | { state: 'error'; message: string };
+  /** permanent code friends type to find this server, e.g. ABCD-EFGH-JKLM-NPQR */
+  code: string;
+  /** whether the current address is published under the code */
+  published: 'no' | 'yes' | 'error';
 }
 
 /** API exposed by the preload script as `window.thevtt`. Absent when running in a browser. */
@@ -41,6 +53,8 @@ export interface DesktopBridge {
     status(): Promise<HostedServerStatus>;
     onStatus(cb: (s: HostedServerStatus) => void): () => void;
   };
+  /** finds the current address of a friend's server from their group code */
+  resolveGroupCode(code: string): Promise<{ url: string } | { error: string }>;
 }
 
 declare global {
