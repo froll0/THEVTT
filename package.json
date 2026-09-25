@@ -2,7 +2,7 @@
   "name": "thevtt",
   "private": true,
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TheVTT \u2014 virtual tabletop desktop con launcher social, hosting affidato al master",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
