@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useApp } from '../store/app';
 
-export function Avatar({ user, size = 32, presence }: { user: Pick<UserPublic, 'displayName' | 'avatarColor' | 'online'>; size?: number; presence?: boolean }) {
+export function Avatar({ user, size = 32, presence }: { user: Pick<UserPublic, 'displayName' | 'avatarColor' | 'online' | 'avatar'>; size?: number; presence?: boolean }) {
   const initials = user.displayName
     .split(/\s+/)
     .map((p) => p[0])
@@ -11,8 +11,12 @@ export function Avatar({ user, size = 32, presence }: { user: Pick<UserPublic, '
     .slice(0, 2)
     .toUpperCase();
   return (
-    <div className="avatar" style={{ width: size, height: size, background: user.avatarColor, fontSize: size * 0.38 }} title={user.displayName}>
-      {initials}
+    <div
+      className="avatar"
+      style={{ width: size, height: size, backgroundColor: user.avatarColor, backgroundImage: user.avatar ? `url(${user.avatar})` : undefined, fontSize: size * 0.38 }}
+      title={user.displayName}
+    >
+      {!user.avatar && initials}
       {presence && <span className={`presence ${user.online ? 'on' : ''}`} />}
     </div>
   );
@@ -172,8 +176,25 @@ export function PageHeader({ title, subtitle, children }: { title: string; subti
   );
 }
 
+/** A square crop from the middle of a picture, for profile pictures. */
+export async function squareImage(file: File, side = 160): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const s = Math.min(img.width, img.height);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = side;
+    canvas.getContext('2d')!.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, side, side);
+    return canvas.toDataURL('image/webp', 0.85);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /** Reads an image file as a data URL, downscaling very large maps. */
-export async function readImage(file: File, maxSide = 4096): Promise<string> {
+export async function readImage(file: File, maxSide = 4096, { opaque = false, quality = 0.9 } = {}): Promise<string> {
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
@@ -184,7 +205,7 @@ export async function readImage(file: File, maxSide = 4096): Promise<string> {
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
     canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/webp', 0.9);
+    return canvas.toDataURL(file.type === 'image/png' && !opaque ? 'image/png' : 'image/webp', quality);
   } finally {
     URL.revokeObjectURL(url);
   }

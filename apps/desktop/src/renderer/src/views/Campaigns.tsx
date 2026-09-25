@@ -2,7 +2,7 @@ import { listSystems } from '@thevtt/systems';
 import { useState } from 'react';
 import { Empty, Field, Modal, PageHeader, Section } from '../components/ui';
 import { useApp } from '../store/app';
-import { CampaignRow } from './Home';
+import { CampaignCard, NewCard } from '../components/Cards';
 
 export function CampaignsView() {
   const { campaigns, user, api, run, upsertCampaign, go } = useApp();
@@ -26,7 +26,7 @@ export function CampaignsView() {
     });
 
   return (
-    <div className="page">
+    <div className="page wide">
       <PageHeader title="Campagne" subtitle="Quelle che guidi e quelle a cui partecipi.">
         <button className="btn primary" onClick={() => setCreating(true)}>
           Nuova campagna
@@ -34,10 +34,23 @@ export function CampaignsView() {
       </PageHeader>
 
       <Section title="Come master">
-        {mine.length ? <div className="list">{mine.map((c) => <CampaignRow key={c.id} c={c} />)}</div> : <Empty>Non guidi ancora nessuna campagna.</Empty>}
+        <div className="tile-grid">
+          {mine.map((c) => (
+            <CampaignCard key={c.id} c={c} />
+          ))}
+          {mine.length === 0 && <NewCard label="La tua prima campagna" onClick={() => setCreating(true)} />}
+        </div>
       </Section>
       <Section title="Come giocatore">
-        {joined.length ? <div className="list">{joined.map((c) => <CampaignRow key={c.id} c={c} />)}</div> : <Empty>Quando un amico ti invita, la campagna comparirà qui.</Empty>}
+        {joined.length ? (
+          <div className="tile-grid">
+            {joined.map((c) => (
+              <CampaignCard key={c.id} c={c} />
+            ))}
+          </div>
+        ) : (
+          <Empty>Quando un amico ti invita, la campagna comparirà qui.</Empty>
+        )}
       </Section>
 
       {creating && (
@@ -59,7 +72,12 @@ export function CampaignsView() {
             <input className="input" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="La maledizione di…" />
           </Field>
           <Field label="Descrizione">
-            <textarea className="textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Due righe per i giocatori: tono, ambientazione, orari." />
+            <textarea
+              className="textarea"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Due righe per i giocatori: tono, ambientazione, orari."
+            />
           </Field>
           <Field label="Sistema di gioco">
             <select className="select" value={systemId} onChange={(e) => setSystemId(e.target.value)}>

@@ -778,3 +778,12 @@ body.dragging-window * {
   padding: 0 6px;
   font-size: 0.8rem;
 }
+.log-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  vertical-align: middle;
+}
+.log-who .avatar {
+  font-size: 8px !important;
+}

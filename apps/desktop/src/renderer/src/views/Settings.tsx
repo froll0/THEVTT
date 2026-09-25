@@ -1,6 +1,6 @@
-import { Copy } from 'lucide-react';
+import { Copy, ImagePlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Avatar, PageHeader, Section, Setting, Switch, Tabs } from '../components/ui';
+import { Avatar, PageHeader, Section, Setting, squareImage, Switch, Tabs } from '../components/ui';
 import { displayServerAddress } from '../lib/address';
 import { bridge } from '../lib/platform';
 import { useApp, type SettingsSection } from '../store/app';
@@ -346,6 +346,13 @@ function ServerSettings() {
 function Account() {
   const { user, api, run, setUser, logout } = useApp();
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
+  const [picked, setPicked] = useState<string | null>(null);
+  // the picker fires while dragging: save once it settles
+  useEffect(() => {
+    if (!picked || picked === useApp.getState().user?.avatarColor) return;
+    const t = setTimeout(() => void run(async () => setUser(await api.updateMe({ avatarColor: picked }))), 500);
+    return () => clearTimeout(t);
+  }, [picked, api, run, setUser]);
   if (!user) return null;
   return (
     <div className="list">
@@ -355,11 +362,40 @@ function Account() {
           Salva
         </button>
       </Setting>
-      <Setting title="Colore" hint="Avatar, token e ping">
-        <Avatar user={user} size={24} />
+      <Setting title="Immagine del profilo" hint="La vedono amici e compagni di gioco, anche in chat">
+        <Avatar user={user} size={40} />
+        <label className="btn sm">
+          <ImagePlus size={14} /> {user.avatar ? 'Cambia' : 'Carica'}
+          <input
+            type="file"
+            accept="image/*"
+            hidden
+            aria-label="Immagine del profilo"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (f) void run(async () => setUser(await api.updateMe({ avatar: await squareImage(f) })), 'Immagine aggiornata');
+            }}
+          />
+        </label>
+        {user.avatar && (
+          <button className="btn ghost sm" onClick={() => run(async () => setUser(await api.updateMe({ avatar: null })))}>
+            Rimuovi
+          </button>
+        )}
+      </Setting>
+      <Setting title="Colore" hint="Il tuo nome in chat, i tuoi token, disegni e ping">
         {AVATAR_COLORS.map((c) => (
           <button key={c} className={`swatch ${user.avatarColor === c ? 'on' : ''}`} style={{ background: c }} onClick={() => run(async () => setUser(await api.updateMe({ avatarColor: c })))} aria-label={c} />
         ))}
+        <input
+          type="color"
+          className="color-input"
+          value={picked ?? user.avatarColor}
+          title="Scegli un colore qualsiasi"
+          aria-label="Colore personalizzato"
+          onChange={(e) => setPicked(e.target.value)}
+        />
       </Setting>
       <Setting title="Esci" hint={`@${user.username}`}>
         <button className="btn sm danger" onClick={() => void logout()}>

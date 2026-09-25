@@ -217,4 +217,20 @@ describe('journal', () => {
     expect((await api('DELETE', `/journal/${e.id}`, a.token)).status).toBe(200);
     expect((await api('GET', '/journal', a.token)).body).toEqual([]);
   });
+
+  it('stores profile pictures and campaign covers', async () => {
+    const a = await register('ritratto');
+    const b = await register('altro');
+    const png = 'data:image/png;base64,iVBORw0KGgo=';
+    const me = (await api('PATCH', '/me', a.token, { avatar: png, avatarColor: '#123456' })).body;
+    expect(me).toMatchObject({ avatar: png, avatarColor: '#123456' });
+    expect((await api('PATCH', '/me', a.token, { avatar: 'data:image/svg+xml;base64,PHN2Zz4=' })).status).toBe(400);
+    expect((await api('PATCH', '/me', a.token, { avatar: null })).body.avatar).toBeNull();
+    const camp = (await api('POST', '/campaigns', a.token, { name: 'Copertina', systemId: 'dnd5e-2024' })).body;
+    expect(camp.cover).toBeNull();
+    expect((await api('PATCH', `/campaigns/${camp.id}`, a.token, { cover: png })).body.cover).toBe(png);
+    // only the GM changes it
+    expect((await api('PATCH', `/campaigns/${camp.id}`, b.token, { cover: null })).status).not.toBe(200);
+    expect((await api('GET', `/campaigns/${camp.id}`, a.token)).body.cover).toBe(png);
+  });
 });

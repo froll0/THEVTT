@@ -9,6 +9,8 @@ export interface UserPublic {
   username: string;
   displayName: string;
   avatarColor: string;
+  /** profile picture (small image data URL), if set */
+  avatar?: string | null;
   online?: boolean;
 }
 
@@ -55,6 +57,8 @@ export interface Campaign {
   id: string;
   name: string;
   description: string;
+  /** cover image (data URL), if set */
+  cover: string | null;
   systemId: string;
   gmId: string;
   createdAt: string;

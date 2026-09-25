@@ -1,10 +1,10 @@
-import { describeRoll, isNat, type Ambient, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type Wall } from '@thevtt/shared';
+import { describeRoll, isNat, type Ambient, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
 import { ChevronLeft, Copy, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Field, readImage, Switch } from '../components/ui';
+import { Avatar, Field, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
 import { useWindows } from '../store/windows';
@@ -23,13 +23,24 @@ const time = (ts: number) => new Date(ts).toLocaleTimeString('it-IT', { hour: '2
 
 // ---------- chat & dice log ----------
 
+function Who({ e, author }: { e: LogEntry; author?: UserPublic }) {
+  return (
+    <span className="log-who">
+      {author && <Avatar user={author} size={16} />}
+      <b style={author ? { color: author.avatarColor } : undefined}>{e.authorName}</b>
+    </span>
+  );
+}
+
 function LogLine({
   e,
   meId,
   onRoll,
   target,
+  author,
 }: {
   e: LogEntry;
+  author?: UserPublic;
   meId: string;
   onRoll: (formula: string, label: string) => void;
   /** selected token that this roll can be applied to */
@@ -81,7 +92,7 @@ function LogLine({
       <div className="log-roll">
         <div className="row between small">
           <span>
-            <b>{e.authorName}</b> {e.label && <span className="muted">· {e.label}</span>}
+            <Who e={e} author={author} /> {e.label && <span className="muted">· {e.label}</span>}
           </span>
           <span className="faint">{time(e.ts)}</span>
         </div>
@@ -99,7 +110,7 @@ function LogLine({
       <div className={`log-roll ${crit ? 'crit' : ''} ${fumble ? 'fumble' : ''}`}>
         <div className="row between small">
           <span>
-            <b>{e.authorName}</b> {e.label && <span className="muted">· {e.label}</span>}
+            <Who e={e} author={author} /> {e.label && <span className="muted">· {e.label}</span>}
           </span>
           <span className="faint">
             {e.blind ? <span className="badge">alla cieca</span> : e.private && <Lock size={10} />} {time(e.ts)}
@@ -131,7 +142,7 @@ function LogLine({
   return (
     <div className={`log-chat ${mine ? 'mine' : ''}`}>
       <div className="small">
-        <b className="who">{e.authorName}</b> <span className="faint tiny">{time(e.ts)}</span> {e.private && <span className="badge">privato</span>}
+        <Who e={e} author={author} /> <span className="faint tiny">{time(e.ts)}</span> {e.private && <span className="badge">privato</span>}
       </div>
       <div className="log-text">{e.text}</div>
     </div>
@@ -139,8 +150,9 @@ function LogLine({
 }
 
 export function ChatPanel() {
-  const { state, dispatch, role, selectedTokenId } = useTable();
+  const { state, dispatch, role, selectedTokenId, campaignId } = useTable();
   const meId = useApp((s) => s.user?.id ?? '');
+  const members = useApp((s) => s.campaigns.find((c) => c.id === campaignId)?.members);
   const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const log = state?.log ?? [];
@@ -178,7 +190,7 @@ export function ChatPanel() {
       <div className="log">
         {log.length === 0 && <p className="faint small center">Nessun messaggio. Prova /r 1d20+5</p>}
         {log.map((e) => (
-          <LogLine key={e.id} e={e} meId={meId} onRoll={(formula, label) => dispatch({ type: 'roll', formula, label })} target={target} />
+          <LogLine key={e.id} e={e} meId={meId} author={members?.find((m) => m.user.id === e.authorId)?.user} onRoll={(formula, label) => dispatch({ type: 'roll', formula, label })} target={target} />
         ))}
         <div ref={endRef} />
       </div>

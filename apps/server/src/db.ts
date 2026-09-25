@@ -100,6 +100,11 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX idx_journal_user ON journal_entries(user_id, updated_at);
   `,
+  // 4: profile pictures and campaign covers (small data URLs)
+  `
+  ALTER TABLE users ADD COLUMN avatar TEXT;
+  ALTER TABLE campaigns ADD COLUMN cover TEXT;
+  `,
 ];
 
 export type Db = DatabaseSync;

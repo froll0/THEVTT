@@ -31,8 +31,8 @@ export function Journal({ campaignId, narrow }: { campaignId?: string | null; na
       .then((list) => {
         if (!alive) return;
         setEntries(list);
-        // at the table, open straight onto the latest page of this campaign
-        if (campaignId && !narrow) setOpenId(list.find((e) => e.campaignId === campaignId)?.id ?? null);
+        // open straight onto the latest page (of this campaign, at the table)
+        if (!narrow) setOpenId((campaignId ? list.find((e) => e.campaignId === campaignId) : list[0])?.id ?? null);
       })
       .catch(() => alive && setEntries([]));
     return () => {

@@ -131,7 +131,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                   data-route={p.online ? (table.routes[p.id] ?? 'relay') : undefined}
                   title={`${p.displayName}${p.online ? (table.routes[p.id] === 'p2p' ? ' · connessione diretta' : ' · via server') : ' · offline'}`}
                 >
-                  <Avatar user={{ displayName: p.displayName, avatarColor: p.color, online: p.online }} size={20} presence />
+                  <Avatar user={{ displayName: p.displayName, avatarColor: p.color, online: p.online, avatar: campaign.members.find((m) => m.user.id === p.id)?.user.avatar }} size={20} presence />
                 </span>
               ))}
             </div>

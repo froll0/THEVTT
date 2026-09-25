@@ -28,3 +28,15 @@ export function str(body: unknown, key: string, opts: { min?: number; max?: numb
   if (opts.pattern && !opts.pattern.test(s)) throw badRequest(`${key}: formato non valido`);
   return s;
 }
+
+const RASTER_DATA_URL = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/;
+
+/** An optional picture as a data URL: undefined when absent, null to clear it. */
+export function image(body: unknown, key: string, maxBytes: number): string | null | undefined {
+  const v = (body as Record<string, unknown> | null)?.[key];
+  if (v === undefined) return undefined;
+  if (v === null || v === '') return null;
+  if (typeof v !== 'string' || !RASTER_DATA_URL.test(v)) throw badRequest(`${key}: immagine non valida`);
+  if (v.length > maxBytes) throw badRequest(`${key}: immagine troppo grande`);
+  return v;
+}

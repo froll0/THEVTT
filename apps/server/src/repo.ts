@@ -28,6 +28,7 @@ export class Repo {
       username: r.username as string,
       displayName: r.display_name as string,
       avatarColor: r.avatar_color as string,
+      avatar: (r.avatar as string | null) ?? null,
       online: this.presence.isOnline(r.id as string),
     };
   }
@@ -53,7 +54,8 @@ export class Repo {
     return r ? { id: r.id as string, hash: r.password_hash as string } : null;
   }
 
-  updateProfile(id: string, patch: { displayName?: string; avatarColor?: string }): UserPublic {
+  updateProfile(id: string, patch: { displayName?: string; avatarColor?: string; avatar?: string | null }): UserPublic {
+    if (patch.avatar !== undefined) this.db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(patch.avatar, id);
     if (patch.displayName) this.db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(patch.displayName, id);
     if (patch.avatarColor) this.db.prepare('UPDATE users SET avatar_color = ? WHERE id = ?').run(patch.avatarColor, id);
     return this.user(id);
@@ -153,6 +155,7 @@ export class Repo {
       id,
       name: c.name as string,
       description: c.description as string,
+      cover: (c.cover as string | null) ?? null,
       systemId: c.system_id as string,
       gmId: c.gm_id as string,
       createdAt: c.created_at as string,
@@ -214,7 +217,8 @@ export class Repo {
     return this.campaign(id);
   }
 
-  updateCampaign(id: string, patch: { name?: string; description?: string }): Campaign {
+  updateCampaign(id: string, patch: { name?: string; description?: string; cover?: string | null }): Campaign {
+    if (patch.cover !== undefined) this.db.prepare('UPDATE campaigns SET cover = ? WHERE id = ?').run(patch.cover, id);
     if (patch.name) this.db.prepare('UPDATE campaigns SET name = ? WHERE id = ?').run(patch.name, id);
     if (patch.description !== undefined) this.db.prepare('UPDATE campaigns SET description = ? WHERE id = ?').run(patch.description, id);
     return this.campaign(id);

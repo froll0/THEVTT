@@ -2,7 +2,7 @@ import type { AuthResponse } from '@thevtt/shared';
 import type { FastifyInstance } from 'fastify';
 import { bearer, type Ctx } from '../app';
 import { hashPassword, issueToken, revokeToken, verifyPassword } from '../auth';
-import { str, unauthorized } from '../errors';
+import { image, str, unauthorized } from '../errors';
 
 const USERNAME = /^[a-zA-Z0-9_.-]+$/;
 const COLOR = /^#[0-9a-fA-F]{6}$/;
@@ -35,6 +35,7 @@ export function authRoutes(app: FastifyInstance, { db, repo }: Ctx): void {
   app.patch('/me', async (req) => {
     const displayName = str(req.body, 'displayName', { min: 1, max: 40, optional: true });
     const avatarColor = str(req.body, 'avatarColor', { pattern: COLOR, optional: true });
-    return repo.updateProfile(req.userId, { displayName: displayName || undefined, avatarColor: avatarColor || undefined });
+    const avatar = image(req.body, 'avatar', 80_000);
+    return repo.updateProfile(req.userId, { displayName: displayName || undefined, avatarColor: avatarColor || undefined, avatar });
   });
 }

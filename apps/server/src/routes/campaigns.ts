@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app';
-import { badRequest, forbidden, notFound, str } from '../errors';
+import { badRequest, forbidden, image, notFound, str } from '../errors';
 
 type IdParams = { Params: { id: string } };
 const SYSTEM_ID = /^[a-z0-9][a-z0-9.-]*$/;
@@ -25,7 +25,8 @@ export function campaignRoutes(app: FastifyInstance, { repo, hub }: Ctx): void {
     const name = str(req.body, 'name', { max: 80, optional: true });
     const body = req.body as { description?: unknown } | null;
     const description = body?.description !== undefined ? str(req.body, 'description', { max: 2000, optional: true }) : undefined;
-    const c = repo.updateCampaign(req.params.id, { name: name || undefined, description });
+    const cover = image(req.body, 'cover', 1_500_000);
+    const c = repo.updateCampaign(req.params.id, { name: name || undefined, description, cover });
     hub.notifyCampaign(c.id, { kind: 'campaign.updated', campaignId: c.id }, req.userId);
     return c;
   });
