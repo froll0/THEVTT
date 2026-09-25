@@ -41,6 +41,8 @@ interface TableStore {
   assets: Record<string, string>;
   pings: Ping[];
   selectedTokenId: string | null;
+  /** GM: scenery object being edited */
+  selectedPropId: string | null;
   /** host: route per player · player: route to the host */
   routes: Record<string, Route>;
   /** host clock minus local clock (ms), to follow the shared music */
@@ -51,6 +53,9 @@ interface TableStore {
   leave(): void;
   dispatch(action: GameAction): void;
   select(tokenId: string | null): void;
+  /** the next token to appear (one we just asked for) gets selected */
+  selectNextToken(): void;
+  selectProp(propId: string | null): void;
 }
 
 // Session plumbing lives outside React state.
@@ -60,6 +65,8 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 /** direct links: host → one per player, player → one to the host */
 const links = new Map<string, PeerLink>();
 let lastRev = 0;
+/** token ids known when we asked for a new token */
+let awaitingToken: Set<string> | null = null;
 const charTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const saveKey = (campaignId: string) => `table-${campaignId}`;
@@ -83,6 +90,14 @@ export const useTable = create<TableStore>((set, get) => {
         lastRev = msg.rev;
         announceNotes(get().state, msg.state);
         set({ state: msg.state, phase: 'live', ...(msg.now ? { clockOffset: msg.now - Date.now() } : {}) });
+        if (awaitingToken) {
+          const known = awaitingToken;
+          const created = Object.keys(msg.state.tokens).find((id) => !known.has(id));
+          if (created) {
+            awaitingToken = null;
+            get().select(created);
+          }
+        }
         break;
       case 'asset':
         set((s) => ({ assets: { ...s.assets, [msg.id]: msg.dataUrl } }));
@@ -208,6 +223,7 @@ export const useTable = create<TableStore>((set, get) => {
     assets: {},
     pings: [],
     selectedTokenId: null,
+    selectedPropId: null,
     routes: {},
     clockOffset: 0,
 
@@ -215,7 +231,7 @@ export const useTable = create<TableStore>((set, get) => {
       teardown();
       const { rt, user } = useApp.getState();
       if (!rt || !user) return;
-      set({ campaignId: campaign.id, role: 'gm', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, routes: {} });
+      set({ campaignId: campaign.id, role: 'gm', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, routes: {} });
 
       const saved = await localStore.read<SavedTable>(saveKey(campaign.id));
       const state =
@@ -279,7 +295,7 @@ export const useTable = create<TableStore>((set, get) => {
       teardown();
       const { rt } = useApp.getState();
       if (!rt) return;
-      set({ campaignId: campaign.id, role: 'player', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, routes: {} });
+      set({ campaignId: campaign.id, role: 'player', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, routes: {} });
       let hostId = campaign.session?.hostId ?? campaign.gmId;
       let retries = 0;
       let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -343,7 +359,7 @@ export const useTable = create<TableStore>((set, get) => {
 
     leave() {
       teardown();
-      set({ campaignId: null, role: null, phase: 'idle', state: null, assets: {}, pings: [], selectedTokenId: null, routes: {} });
+      set({ campaignId: null, role: null, phase: 'idle', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, routes: {} });
     },
 
     dispatch(action) {
@@ -361,6 +377,10 @@ export const useTable = create<TableStore>((set, get) => {
       if (!direct?.send(payload)) useApp.getState().rt?.send({ t: 'relay.host', campaignId, payload });
     },
 
-    select: (selectedTokenId) => set({ selectedTokenId }),
+    select: (selectedTokenId) => set(selectedTokenId ? { selectedTokenId, selectedPropId: null } : { selectedTokenId }),
+    selectNextToken: () => {
+      awaitingToken = new Set(Object.keys(get().state?.tokens ?? {}));
+    },
+    selectProp: (selectedPropId) => set(selectedPropId ? { selectedPropId, selectedTokenId: null } : { selectedPropId }),
   };
 });

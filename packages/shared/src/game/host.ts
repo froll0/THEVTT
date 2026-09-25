@@ -2,6 +2,7 @@ import { cryptoRng, DiceError, roll, type Rng } from '../dice';
 import { newId } from '../id';
 import type { GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
 import { emptyMask, paintRect, resizeMask } from './fog';
+import { lineOfSight } from './vision';
 import {
   createScene,
   emptyMusic,
@@ -9,7 +10,9 @@ import {
   referencedAssets,
   viewFor,
   type GameState,
+  type Light,
   type LogEntry,
+  type Prop,
   type TableCharacter,
   type TablePlayer,
   type Token,
@@ -30,7 +33,21 @@ export interface GameHostOptions {
   onCharacterChange?: (character: TableCharacter) => void;
 }
 
-const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'color', 'name'];
+const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'color', 'name', 'light'];
+const MAX_WALLS = 3000;
+const MAX_PROPS = 500;
+
+/** A light from untrusted input: radii in cells, dim never below bright. */
+function cleanLight(l: unknown): Light | null {
+  const v = l as Partial<Light> | null;
+  if (!v || typeof v !== 'object') return null;
+  const bright = Math.min(60, Math.max(0, Number(v.bright) || 0));
+  const dim = Math.min(120, Math.max(bright, Number(v.dim) || 0));
+  if (dim <= 0) return null;
+  return { bright, dim, ...(typeof v.color === 'string' ? { color: v.color.slice(0, 20) } : {}) };
+}
+
+const coord = (v: unknown, max: number) => Math.min(max, Math.max(0, Math.round((Number(v) || 0) * 2) / 2));
 const MAX_ASSET_BYTES = 12 * 1024 * 1024;
 /** audio travels to every player, through the relay too (16MB per message): ~11MB files */
 const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
@@ -70,6 +87,8 @@ export class GameHost {
       this._state.gmNotes = '';
     }
     this._state.drawings ??= {};
+    this._state.walls ??= {};
+    this._state.props ??= {};
     this._state.music ??= emptyMusic();
     this.assets = { ...(opts.assets ?? {}) };
     this.rng = opts.rng ?? cryptoRng;
@@ -178,6 +197,8 @@ export class GameHost {
         if (p.cellDistance !== undefined) scene.cellDistance = Math.min(1000, Math.max(0.1, Math.round(Number(p.cellDistance) * 10) / 10 || 1));
         if (p.unit !== undefined) scene.unit = p.unit === 'ft' ? 'ft' : 'm';
         if (p.showGrid !== undefined) scene.showGrid = !!p.showGrid;
+        if (p.vision !== undefined) scene.vision = !!p.vision;
+        if (p.ambient !== undefined) scene.ambient = p.ambient === 'dark' || p.ambient === 'dim' ? p.ambient : 'bright';
         if (p.background !== undefined) {
           if (p.background !== null && !this.assets[p.background]) return { ok: false, reason: 'Immagine sconosciuta' };
           scene.background = p.background;
@@ -199,6 +220,8 @@ export class GameHost {
         delete s.scenes[action.sceneId];
         for (const t of Object.values(s.tokens)) if (t.sceneId === action.sceneId) delete s.tokens[t.id];
         for (const t of Object.values(s.templates ?? {})) if (t.sceneId === action.sceneId) delete s.templates![t.id];
+        for (const w of Object.values(s.walls ?? {})) if (w.sceneId === action.sceneId) delete s.walls![w.id];
+        for (const p of Object.values(s.props ?? {})) if (p.sceneId === action.sceneId) delete s.props![p.id];
         if (s.activeSceneId === action.sceneId) s.activeSceneId = Object.keys(s.scenes)[0]!;
         break;
       }
@@ -231,6 +254,8 @@ export class GameHost {
           ac: t.ac != null ? clampInt(t.ac, 0, 99) : null,
           hidden: isGm ? !!t.hidden : false,
           conditions: Array.isArray(t.conditions) ? t.conditions.slice(0, 20).map(String) : [],
+          light: cleanLight(t.light),
+          darkvision: Math.min(60, Math.max(0, Number(t.darkvision) || 0)),
         };
         s.tokens[token.id] = token;
         break;
@@ -240,8 +265,18 @@ export class GameHost {
         if (!t) return { ok: false, reason: 'Token inesistente' };
         if (!isGm && !t.ownerIds.includes(from)) return { ok: false, reason: 'Non controlli questo token' };
         const scene = s.scenes[t.sceneId]!;
-        t.x = clampInt(action.x, 0, scene.widthCells - t.size);
-        t.y = clampInt(action.y, 0, scene.heightCells - t.size);
+        const nx = clampInt(action.x, 0, scene.widthCells - t.size);
+        const ny = clampInt(action.y, 0, scene.heightCells - t.size);
+        if (!isGm) {
+          // walls, windows and closed doors stop players (the GM can move anything anywhere)
+          const blocking = Object.values(s.walls ?? {})
+            .filter((w) => w.sceneId === scene.id && !(w.kind === 'door' && w.open))
+            .map((w) => ({ a: { x: w.x1, y: w.y1 }, b: { x: w.x2, y: w.y2 } }));
+          const half = t.size / 2;
+          if (blocking.length && !lineOfSight({ x: t.x + half, y: t.y + half }, { x: nx + half, y: ny + half }, blocking)) return { ok: false, reason: 'C’è un muro in mezzo' };
+        }
+        t.x = nx;
+        t.y = ny;
         break;
       }
       case 'token.update': {
@@ -259,6 +294,8 @@ export class GameHost {
         if (patch.ownerIds !== undefined) t.ownerIds = patch.ownerIds.filter((id) => !!s.players[id]);
         if (patch.ac !== undefined) t.ac = patch.ac === null ? null : clampInt(patch.ac, 0, 99);
         if (patch.conditions !== undefined) t.conditions = patch.conditions.slice(0, 20).map(String);
+        if (patch.light !== undefined) t.light = cleanLight(patch.light);
+        if (patch.darkvision !== undefined) t.darkvision = Math.min(60, Math.max(0, Number(patch.darkvision) || 0));
         if (patch.image !== undefined) {
           if (patch.image !== null && !this.assets[patch.image]) return { ok: false, reason: 'Immagine sconosciuta' };
           t.image = patch.image;
@@ -505,6 +542,95 @@ export class GameHost {
         delete s.notes![note.id];
         break;
       }
+      case 'wall.create': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const scene = s.scenes[s.activeSceneId]!;
+        const count = Object.values(s.walls!).filter((w) => w.sceneId === scene.id).length;
+        const list = Array.isArray(action.walls) ? action.walls.slice(0, 500) : [];
+        if (count + list.length > MAX_WALLS) return { ok: false, reason: 'Troppi muri in questa scena' };
+        for (const w of list) {
+          const wall = {
+            id: newId(),
+            sceneId: scene.id,
+            x1: coord(w.x1, scene.widthCells),
+            y1: coord(w.y1, scene.heightCells),
+            x2: coord(w.x2, scene.widthCells),
+            y2: coord(w.y2, scene.heightCells),
+            kind: w.kind === 'door' || w.kind === 'window' ? w.kind : ('wall' as const),
+          };
+          if (wall.x1 === wall.x2 && wall.y1 === wall.y2) continue;
+          s.walls![wall.id] = wall;
+        }
+        break;
+      }
+      case 'wall.update': {
+        const w = s.walls![action.wallId];
+        if (!w) return { ok: false, reason: 'Muro inesistente' };
+        if (!isGm) {
+          // players may only open and close doors next to one of their tokens
+          if (w.kind !== 'door' || Object.keys(action.patch).some((k) => k !== 'open')) return { ok: false, reason: 'Solo il master può farlo' };
+          const mid = { x: (w.x1 + w.x2) / 2, y: (w.y1 + w.y2) / 2 };
+          const near = Object.values(s.tokens).some((t) => t.sceneId === w.sceneId && t.ownerIds.includes(from) && Math.hypot(t.x + t.size / 2 - mid.x, t.y + t.size / 2 - mid.y) <= 2.5 + t.size / 2);
+          if (!near) return { ok: false, reason: 'Devi essere vicino alla porta' };
+        }
+        if (action.patch.kind !== undefined) w.kind = action.patch.kind === 'door' || action.patch.kind === 'window' ? action.patch.kind : 'wall';
+        if (action.patch.open !== undefined) w.open = !!action.patch.open;
+        break;
+      }
+      case 'wall.delete': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!s.walls![action.wallId]) return { ok: false, reason: 'Muro inesistente' };
+        delete s.walls![action.wallId];
+        break;
+      }
+      case 'wall.clear': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        for (const w of Object.values(s.walls!)) if (w.sceneId === s.activeSceneId) delete s.walls![w.id];
+        break;
+      }
+      case 'prop.create':
+      case 'prop.update': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const scene = s.scenes[s.activeSceneId]!;
+        let p: Prop;
+        if (action.type === 'prop.create') {
+          if (Object.values(s.props!).filter((x) => x.sceneId === scene.id).length >= MAX_PROPS) return { ok: false, reason: 'Troppi oggetti in questa scena' };
+          p = { id: newId(), sceneId: scene.id, kind: 'crate', image: null, x: 0, y: 0, w: 1, h: 1, rotation: 0, light: null, blocksVision: false, hidden: false };
+        } else {
+          const found = s.props![action.propId];
+          if (!found) return { ok: false, reason: 'Oggetto inesistente' };
+          p = found;
+        }
+        const patch = action.type === 'prop.create' ? action.prop : action.patch;
+        const sc = s.scenes[p.sceneId] ?? scene;
+        if (patch.kind !== undefined) p.kind = String(patch.kind).slice(0, 30);
+        if (patch.label !== undefined) p.label = String(patch.label).slice(0, 60) || undefined;
+        if (patch.w !== undefined) p.w = Math.min(40, Math.max(0.25, Math.round(Number(patch.w) * 4) / 4 || 1));
+        if (patch.h !== undefined) p.h = Math.min(40, Math.max(0.25, Math.round(Number(patch.h) * 4) / 4 || 1));
+        if (patch.x !== undefined) p.x = Math.min(sc.widthCells, Math.max(-p.w, Math.round(Number(patch.x) * 4) / 4 || 0));
+        if (patch.y !== undefined) p.y = Math.min(sc.heightCells, Math.max(-p.h, Math.round(Number(patch.y) * 4) / 4 || 0));
+        if (patch.rotation !== undefined) p.rotation = ((Math.round(Number(patch.rotation) || 0) % 360) + 360) % 360;
+        if (patch.light !== undefined) p.light = cleanLight(patch.light);
+        if (patch.blocksVision !== undefined) p.blocksVision = !!patch.blocksVision;
+        if (patch.hidden !== undefined) p.hidden = !!patch.hidden;
+        if (patch.image !== undefined) {
+          if (patch.image !== null && !this.assets[patch.image]) return { ok: false, reason: 'Immagine sconosciuta' };
+          p.image = patch.image;
+        }
+        s.props![p.id] = p;
+        break;
+      }
+      case 'prop.delete': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!s.props![action.propId]) return { ok: false, reason: 'Oggetto inesistente' };
+        delete s.props![action.propId];
+        break;
+      }
       case 'drawing.create': {
         const pts = Array.isArray(action.points) ? action.points.slice(0, 4000).map((v) => Math.round((Number(v) || 0) * 100) / 100) : [];
         if (pts.length < 4 || pts.length % 2) return { ok: false, reason: 'Tratto non valido' };
@@ -595,6 +721,10 @@ export class GameHost {
         if (target && 'noteId' in target && s.notes![target.noteId]) {
           s.notes![target.noteId]!.image = id;
           s.notes![target.noteId]!.updatedAt = this.now();
+        }
+        if (target && 'propId' in target && s.props![target.propId]) {
+          s.props![target.propId]!.image = id;
+          s.props![target.propId]!.kind = 'image';
         }
         if (target && 'track' in target) {
           s.music!.tracks.push({ id: newId(), name: String(target.track).slice(0, 120) || 'Brano', asset: id });

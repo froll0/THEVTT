@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { ArrowLeft, ArrowLeftRight, Eraser, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Armchair, ArrowLeft, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -11,7 +11,8 @@ import { useTable } from '../store/table';
 import { Board, CELL, type Tool, type ToolOptions } from './Board';
 import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
-import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, ScenePanel, SheetPanel, SheetWindow, TokenInspector } from './Panels';
+import { PROP_KINDS } from './props';
+import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, PropInspector, ScenePanel, SheetPanel, SheetWindow, TokenInspector } from './Panels';
 import { FloatingWindow } from '../components/FloatingWindow';
 import { useWindows } from '../store/windows';
 
@@ -25,7 +26,18 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const table = useTable();
   const dockPosition = useSettings((s) => s.dockPosition);
   const [tool, setTool] = useState<Tool>('select');
-  const [options, setOptions] = useState<ToolOptions>({ fogReveal: true, shape: 'circle', drawColor: '', drawWidth: 0.08, erase: false });
+  const [options, setOptions] = useState<ToolOptions>({
+    fogReveal: true,
+    shape: 'circle',
+    drawColor: '',
+    drawWidth: 0.08,
+    erase: false,
+    wallKind: 'wall',
+    wallMode: 'line',
+    wallErase: false,
+    propKind: 'crate',
+    lightPreview: false,
+  });
   const [tab, setTab] = useState<DockTab>('chat');
   const [dockOpen, setDockOpen] = useState(true);
   const cameraRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
@@ -49,6 +61,8 @@ export function TableView({ campaignId }: { campaignId: string }) {
       if (e.key === 'p') setTool('ping');
       if (e.key === 'a') setTool('template');
       if (e.key === 'd') setTool('draw');
+      if (e.key === 'w' && useTable.getState().role === 'gm') setTool('walls');
+      if (e.key === 'o' && useTable.getState().role === 'gm') setTool('props');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -154,7 +168,13 @@ export function TableView({ campaignId }: { campaignId: string }) {
                   { id: 'ping', icon: Crosshair, label: 'Ping (P · o Alt+clic)' },
                   { id: 'template', icon: Shapes, label: 'Aree d’effetto (A)' },
                   { id: 'draw', icon: Pencil, label: 'Disegna (D)' },
-                  ...(isGm ? ([{ id: 'fog', icon: CloudFog, label: 'Nebbia di guerra' }] as const) : []),
+                  ...(isGm
+                    ? ([
+                        { id: 'fog', icon: CloudFog, label: 'Nebbia di guerra' },
+                        { id: 'walls', icon: BrickWall, label: 'Muri e porte (W)' },
+                        { id: 'props', icon: Armchair, label: 'Oggetti di scena (O)' },
+                      ] as const)
+                    : []),
                 ] as const
               ).map((t) => (
                 <button key={t.id} className={`tool ${tool === t.id ? 'active' : ''}`} onClick={() => setTool(t.id)} title={t.label}>
@@ -167,7 +187,10 @@ export function TableView({ campaignId }: { campaignId: string }) {
                   <button
                     className="tool"
                     title="Aggiungi token"
-                    onClick={() => table.dispatch({ type: 'token.create', token: { name: 'PNG', ...viewCenter(), color: '#9a9ba3', hp: { current: 10, max: 10 }, ac: 12 } })}
+                    onClick={() => {
+                      table.selectNextToken();
+                      table.dispatch({ type: 'token.create', token: { name: 'PNG', ...viewCenter(), color: '#9a9ba3', hp: { current: 10, max: 10 }, ac: 12 } });
+                    }}
                   >
                     <UserRoundPlus size={16} />
                   </button>
@@ -229,6 +252,46 @@ export function TableView({ campaignId }: { campaignId: string }) {
               )}
             </div>
           )}
+          {state && scene && tool === 'walls' && isGm && (
+            <div className="float tool-options glass">
+              {(
+                [
+                  ['wall', BrickWall, 'Muro'],
+                  ['door', DoorOpen, 'Porta'],
+                  ['window', RectangleHorizontal, 'Finestra'],
+                ] as const
+              ).map(([kind, Icon, label]) => (
+                <button key={kind} className={`tool wide ${!options.wallErase && options.wallKind === kind ? 'active' : ''}`} onClick={() => setOptions({ ...options, wallKind: kind, wallErase: false })}>
+                  <Icon size={14} /> {label}
+                </button>
+              ))}
+              <span className="vsep" />
+              <button className={`tool wide ${options.wallMode === 'line' ? 'active' : ''}`} title="Clic dopo clic; Invio, Esc o tasto destro per finire" onClick={() => setOptions({ ...options, wallMode: 'line', wallErase: false })}>
+                <Spline size={14} /> Linea
+              </button>
+              <button className={`tool wide ${options.wallMode === 'rect' ? 'active' : ''}`} title="Trascina per una stanza rettangolare" onClick={() => setOptions({ ...options, wallMode: 'rect', wallErase: false })}>
+                <Square size={14} /> Stanza
+              </button>
+              <button className={`tool ${options.wallErase ? 'active' : ''}`} title="Gomma: clic su un muro per toglierlo" onClick={() => setOptions({ ...options, wallErase: !options.wallErase })}>
+                <Eraser size={15} />
+              </button>
+              {Object.values(state.walls ?? {}).some((w) => w.sceneId === scene.id) && (
+                <button className="tool wide" onClick={() => table.dispatch({ type: 'wall.clear' })}>
+                  Cancella tutti
+                </button>
+              )}
+            </div>
+          )}
+          {state && scene && tool === 'props' && isGm && (
+            <div className="float tool-options glass props-palette">
+              {PROP_KINDS.map((k) => (
+                <button key={k.id} className={`tool wide ${options.propKind === k.id ? 'active' : ''}`} onClick={() => setOptions({ ...options, propKind: k.id })}>
+                  {k.name}
+                </button>
+              ))}
+              <span className="faint tiny" style={{ padding: '0 6px' }}>clic sulla mappa per posarlo</span>
+            </div>
+          )}
           {state && scene && tool === 'fog' && isGm && (
             <div className="float tool-options glass">
               <button className={`tool wide ${options.fogReveal ? 'active' : ''}`} onClick={() => setOptions({ ...options, fogReveal: true })}>
@@ -253,6 +316,15 @@ export function TableView({ campaignId }: { campaignId: string }) {
           )}
 
           {selected && <TokenInspector token={selected} />}
+          {isGm && table.selectedPropId && state?.props?.[table.selectedPropId] && <PropInspector prop={state.props[table.selectedPropId]!} />}
+          {state && scene?.vision && !isGm && !Object.values(state.tokens).some((t) => t.sceneId === scene.id && t.ownerIds.includes(user.id)) && (
+            <div className="float board-hint glass">Visione dinamica: vedi solo quello che vedono i tuoi token. Metti il tuo personaggio sulla mappa.</div>
+          )}
+          {isGm && scene?.vision && (
+            <button className={`float light-preview glass ${options.lightPreview ? 'on' : ''}`} onClick={() => setOptions({ ...options, lightPreview: !options.lightPreview })} title="Mostra luci e ombre come le vedono i giocatori">
+              <Eye size={14} /> {options.lightPreview ? 'Vista giocatori' : 'Vista master'}
+            </button>
+          )}
           {state && <DiceBar />}
         </div>
 

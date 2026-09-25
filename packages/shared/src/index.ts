@@ -3,6 +3,8 @@ export * from './realtime';
 export * from './dice';
 export * from './game/state';
 export * from './game/fog';
+export * from './game/vision';
+export * from './game/sight';
 export * from './game/actions';
 export * from './game/host';
 export * from './id';

@@ -1,4 +1,4 @@
-import type { AreaTemplate, ChatCard, GameState, Note, Scene, Token } from './state';
+import type { AreaTemplate, ChatCard, GameState, Note, Prop, Scene, Token, Wall } from './state';
 
 export type TokenPatch = Partial<Omit<Token, 'id' | 'sceneId'>>;
 export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog'>>;
@@ -34,6 +34,13 @@ export type GameAction =
   | { type: 'note.create'; note?: Partial<Pick<Note, 'title' | 'body' | 'shared'>> }
   | { type: 'note.update'; noteId: string; patch: Partial<Pick<Note, 'title' | 'body' | 'shared' | 'image'>> }
   | { type: 'note.delete'; noteId: string }
+  | { type: 'wall.create'; walls: Pick<Wall, 'x1' | 'y1' | 'x2' | 'y2' | 'kind'>[] }
+  | { type: 'wall.update'; wallId: string; patch: Partial<Pick<Wall, 'kind' | 'open'>> }
+  | { type: 'wall.delete'; wallId: string }
+  | { type: 'wall.clear' }
+  | { type: 'prop.create'; prop: Partial<Omit<Prop, 'id' | 'sceneId'>> & { kind: string } }
+  | { type: 'prop.update'; propId: string; patch: Partial<Omit<Prop, 'id' | 'sceneId'>> }
+  | { type: 'prop.delete'; propId: string }
   | { type: 'drawing.create'; points: number[]; color: string; width: number }
   | { type: 'drawing.delete'; drawingId: string }
   | { type: 'drawing.clear' }
@@ -47,7 +54,7 @@ export type GameAction =
    * register an image (or, for music, an audio file) and get back its id through the state.
    * Players may only attach images to their own notes.
    */
-  | { type: 'asset.add'; dataUrl: string; attachTo?: { sceneId: string } | { tokenId: string } | { noteId: string } | { track: string } };
+  | { type: 'asset.add'; dataUrl: string; attachTo?: { sceneId: string } | { tokenId: string } | { noteId: string } | { track: string } | { propId: string } };
 
 /** Messages flowing inside relay payloads. */
 export type PlayerToHost = { k: 'hello' } | { k: 'action'; action: GameAction; seq?: number };

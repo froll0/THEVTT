@@ -22,7 +22,7 @@ export interface SheetProps<T = any> {
 }
 
 export interface BestiaryProps {
-  /** at the table: put the creature on the map. Absent in the compendium. */
+  /** at the table: put the creature on the map (darkvision in metres here). Absent in the compendium. */
   onAdd?: (token: Partial<Omit<Token, 'id'>> & { name: string }) => void;
   onRoll: (formula: string, label: string) => void;
 }

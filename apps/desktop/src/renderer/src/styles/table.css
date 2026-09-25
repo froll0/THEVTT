@@ -704,3 +704,28 @@ body.dragging-window * {
 .char-row.active {
   background: var(--accent-soft);
 }
+
+.light-preview {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--fg-muted);
+}
+.light-preview.on {
+  color: var(--fg);
+  outline: 1px solid var(--accent);
+}
+.props-palette {
+  flex-wrap: wrap;
+  max-width: min(760px, calc(100% - 120px));
+}

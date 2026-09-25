@@ -1,6 +1,7 @@
-import { describeRoll, isNat, type LogEntry, type Note, type Token, type TokenPatch } from '@thevtt/shared';
+import { describeRoll, isNat, type Ambient, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch } from '@thevtt/shared';
+import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { getSystem } from '@thevtt/systems';
-import { ChevronLeft, Dices, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
+import { ChevronLeft, Copy, Dices, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Field, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
@@ -368,7 +369,17 @@ export function SheetWindow({ characterId, width, placeAt }: { characterId: stri
     const owner = state.players[selected.ownerId];
     dispatch({
       type: 'token.create',
-      token: { name: selected.name, characterId: selected.id, ...placeAt(), size: d.size, hp: d.hp, ac: d.ac, ownerIds: [selected.ownerId], color: owner?.color },
+      token: {
+        name: selected.name,
+        characterId: selected.id,
+        ...placeAt(),
+        size: d.size,
+        hp: d.hp,
+        ac: d.ac,
+        ownerIds: [selected.ownerId],
+        color: owner?.color,
+        darkvision: d.darkvision && state.scenes[state.activeSceneId] ? metresToCells(state.scenes[state.activeSceneId]!, d.darkvision) : 0,
+      },
     });
   };
   return (
@@ -407,7 +418,12 @@ export function BestiaryPanel({ placeAt }: { placeAt: () => { x: number; y: numb
   return (
     <div className="panel-body">
       <ui.Bestiary
-        onAdd={(token) => dispatch({ type: 'token.create', token: { ...token, ...placeAt(), color: '#8b8b93' } })}
+        onAdd={(token) => {
+          const scene = state.scenes[state.activeSceneId];
+          const darkvision = token.darkvision && scene ? metresToCells(scene, token.darkvision) : 0;
+          useTable.getState().selectNextToken();
+          dispatch({ type: 'token.create', token: { ...token, darkvision, ...placeAt(), color: '#8b8b93' } });
+        }}
         onRoll={(formula, label) => dispatch({ type: 'roll', formula, label, private: true })}
       />
     </div>
@@ -480,6 +496,19 @@ export function ScenePanel() {
           </select>
         </Field>
       </div>
+      <div className="row between">
+        <span className="small" title="Ogni giocatore vede solo ciò che vedono i suoi token: i muri e l'oscurità nascondono il resto">Visione dinamica</span>
+        <Switch on={!!active.vision} onChange={(vision) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { vision } })} />
+      </div>
+      {active.vision && (
+        <Field label="Luce ambientale">
+          <select className="select" value={active.ambient ?? 'bright'} onChange={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { ambient: e.target.value as Ambient } })}>
+            <option value="bright">Giorno: tutto illuminato</option>
+            <option value="dim">Penombra: crepuscolo, luna piena</option>
+            <option value="dark">Buio: solo luci e scurovisione</option>
+          </select>
+        </Field>
+      )}
       <div className="row between">
         <span className="small">Nebbia di guerra</span>
         <Switch on={!!active.fog?.enabled} onChange={(enabled) => dispatch({ type: 'fog.enable', sceneId: active.id, enabled })} />
@@ -689,6 +718,108 @@ function NoteEditor({ note, canEdit, onBack, image }: { note: Note; canEdit: boo
 
 // ---------- selected token ----------
 
+/** Light carried by a token or a prop: presets in metres, stored in cells. */
+function LightFields({ scene, light, onChange }: { scene: Scene; light: Light | null; onChange: (l: Light | null) => void }) {
+  const preset =
+    LIGHT_PRESETS.find((p) => (p.dim === 0 && !light) || (light && Math.abs(metresToCells(scene, p.bright) - light.bright) < 0.05 && Math.abs(metresToCells(scene, p.dim) - light.dim) < 0.05))?.id ??
+    (light ? 'custom' : 'none');
+  return (
+    <Field label="Luce">
+      <select
+        className="select"
+        value={preset}
+        onChange={(e) => {
+          const p = LIGHT_PRESETS.find((x) => x.id === e.target.value);
+          if (!p) return;
+          onChange(p.dim ? { bright: metresToCells(scene, p.bright), dim: metresToCells(scene, p.dim), ...(p.color ? { color: p.color } : {}) } : null);
+        }}
+      >
+        {LIGHT_PRESETS.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+        {preset === 'custom' && <option value="custom">Personalizzata</option>}
+      </select>
+    </Field>
+  );
+}
+
+/** GM: the selected piece of scenery. */
+export function PropInspector({ prop }: { prop: Prop }) {
+  const { state, dispatch, selectProp } = useTable();
+  if (!state) return null;
+  const scene = state.scenes[prop.sceneId];
+  const upd = (patch: Partial<Prop>) => dispatch({ type: 'prop.update', propId: prop.id, patch });
+  const kind = propKind(prop.kind);
+  return (
+    <div className="inspector glass">
+      <div className="row between">
+        <input className="input bare inspector-name" defaultValue={prop.label ?? kind?.name ?? 'Oggetto'} key={prop.id + (prop.label ?? '')} onBlur={(e) => upd({ label: e.target.value })} />
+        <button className="btn ghost sm icon" onClick={() => selectProp(null)} aria-label="Chiudi">
+          <X size={14} />
+        </button>
+      </div>
+      <div className="row">
+        <Field label="Larghezza">
+          <input className="input" type="number" step={0.5} min={0.25} value={prop.w} onChange={(e) => upd({ w: Number(e.target.value) })} />
+        </Field>
+        <Field label="Altezza">
+          <input className="input" type="number" step={0.5} min={0.25} value={prop.h} onChange={(e) => upd({ h: Number(e.target.value) })} />
+        </Field>
+        <Field label="Rotazione">
+          <div className="row" style={{ gap: 2 }}>
+            <button className="btn sm icon" aria-label="Ruota a sinistra" onClick={() => upd({ rotation: prop.rotation - 45 })}>
+              <RotateCcw size={13} />
+            </button>
+            <span className="small num" style={{ width: 34, textAlign: 'center' }}>
+              {prop.rotation}°
+            </span>
+            <button className="btn sm icon" aria-label="Ruota a destra" onClick={() => upd({ rotation: prop.rotation + 45 })}>
+              <RotateCw size={13} />
+            </button>
+          </div>
+        </Field>
+      </div>
+      {scene && <LightFields scene={scene} light={prop.light} onChange={(light) => upd({ light })} />}
+      <div className="row between">
+        <span className="small">Blocca la vista</span>
+        <Switch on={prop.blocksVision} onChange={(blocksVision) => upd({ blocksVision })} />
+      </div>
+      <div className="row between">
+        <span className="small">Nascosto ai giocatori</span>
+        <Switch on={prop.hidden} onChange={(hidden) => upd({ hidden })} />
+      </div>
+      <div className="row wrap">
+        <label className="btn sm">
+          <ImagePlus size={14} /> Immagine
+          <input
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (f) dispatch({ type: 'asset.add', dataUrl: await readImage(f, 1024), attachTo: { propId: prop.id } });
+            }}
+          />
+        </label>
+        <button className="btn sm" onClick={() => dispatch({ type: 'prop.create', prop: { ...prop, x: prop.x + 0.5, y: prop.y + 0.5 } })}>
+          <Copy size={13} /> Duplica
+        </button>
+        <button
+          className="btn ghost sm danger"
+          onClick={() => {
+            dispatch({ type: 'prop.delete', propId: prop.id });
+            selectProp(null);
+          }}
+        >
+          <Trash2 size={13} /> Elimina
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function TokenInspector({ token }: { token: Token }) {
   const { state, dispatch, role, select } = useTable();
   const meId = useApp((s) => s.user?.id ?? '');
@@ -741,6 +872,20 @@ export function TokenInspector({ token }: { token: Token }) {
               </Field>
             )}
           </div>
+          {state.scenes[token.sceneId] && <LightFields scene={state.scenes[token.sceneId]!} light={token.light ?? null} onChange={(light) => upd({ light })} />}
+          {isGm && state.scenes[token.sceneId] && (
+            <Field label={`Scurovisione (${state.scenes[token.sceneId]!.unit ?? 'ft'})`}>
+              <input
+                className="input"
+                type="number"
+                min={0}
+                step={state.scenes[token.sceneId]!.cellDistance}
+                style={{ width: 90 }}
+                value={token.darkvision ? cellsToMetres(state.scenes[token.sceneId]!, token.darkvision) : 0}
+                onChange={(e) => upd({ darkvision: metresToCells(state.scenes[token.sceneId]!, Number(e.target.value) || 0) })}
+              />
+            </Field>
+          )}
           {system && (
             <div className="row wrap" style={{ gap: 4 }}>
               {system.conditions.map((c) => (
@@ -757,7 +902,9 @@ export function TokenInspector({ token }: { token: Token }) {
           )}
           {isGm && (
             <>
-              <Field label="Controllato da">
+              {/* not a <label>: it would give every chip the same accessible name */}
+              <div className="field">
+                <span>Controllato da</span>
                 <div className="row wrap" style={{ gap: 4 }}>
                   {Object.values(state.players).map((p) => (
                     <button
@@ -771,7 +918,7 @@ export function TokenInspector({ token }: { token: Token }) {
                   ))}
                   {!Object.keys(state.players).length && <span className="faint small">Nessun giocatore</span>}
                 </div>
-              </Field>
+              </div>
               <div className="row">
                 <button className="btn sm" onClick={() => upd({ hidden: !token.hidden })}>
                   {token.hidden ? <Eye size={14} /> : <EyeOff size={14} />} {token.hidden ? 'Rivela' : 'Nascondi'}

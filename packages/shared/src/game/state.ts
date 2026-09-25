@@ -1,5 +1,6 @@
 import type { RollResult } from '../dice';
 import { tokenVisible, type Fog } from './fog';
+import { sightFor, tokenPoints } from './sight';
 
 /**
  * Table state. It is owned and persisted by the GM's client (the host);
@@ -21,6 +22,57 @@ export interface Scene {
   unit?: 'm' | 'ft';
   showGrid: boolean;
   fog?: Fog;
+  /** dynamic vision: players only see what their tokens can see */
+  vision?: boolean;
+  /** ambient light when vision is on */
+  ambient?: Ambient;
+}
+
+export type Ambient = 'bright' | 'dim' | 'dark';
+
+export type WallKind = 'wall' | 'door' | 'window';
+
+/** A wall between two grid points (cells). Walls and closed doors block sight and light, windows don't. */
+export interface Wall {
+  id: string;
+  sceneId: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  kind: WallKind;
+  open?: boolean;
+}
+
+/** A light source. Radii in cells: fully lit up to `bright`, dim up to `dim`. */
+export interface Light {
+  bright: number;
+  dim: number;
+  color?: string;
+}
+
+/**
+ * Scenery: furniture, trees, a campfire... Drawn under the tokens. `kind` is a
+ * built-in drawing (crate, barrel...) or 'image' with an uploaded picture.
+ */
+export interface Prop {
+  id: string;
+  sceneId: string;
+  kind: string;
+  image: string | null;
+  /** top-left corner and size, in cells */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** degrees */
+  rotation: number;
+  light: Light | null;
+  /** walls of stone: the footprint blocks sight */
+  blocksVision: boolean;
+  /** GM only */
+  hidden: boolean;
+  label?: string;
 }
 
 export type TemplateShape = 'circle' | 'cone' | 'line' | 'square';
@@ -60,6 +112,10 @@ export interface Token {
   ac: number | null;
   hidden: boolean;
   conditions: string[];
+  /** light carried by the token (torch, lantern…) */
+  light?: Light | null;
+  /** darkvision radius in cells */
+  darkvision?: number;
 }
 
 /** A freehand stroke on the map. Points are in cells, flattened [x0, y0, x1, y1, ...]. */
@@ -184,6 +240,8 @@ export interface GameState {
   notes?: Record<string, Note>;
   drawings?: Record<string, Drawing>;
   music?: MusicState;
+  walls?: Record<string, Wall>;
+  props?: Record<string, Prop>;
 }
 
 export function emptyMusic(): MusicState {
@@ -227,6 +285,8 @@ export function createInitialState(opts: {
     notes: {},
     drawings: {},
     music: emptyMusic(),
+    walls: {},
+    props: {},
   };
 }
 
@@ -235,6 +295,7 @@ export function viewFor(state: GameState, userId: string): GameState {
   // always a copy: the host mutates its state in place, a shared reference would leak later changes
   if (userId === state.gmId) return structuredClone(state);
   const active = state.scenes[state.activeSceneId];
+  const sight = sightFor(state, userId);
   const tokens: Record<string, Token> = {};
   for (const t of Object.values(state.tokens)) {
     if (t.sceneId !== state.activeSceneId) continue;
@@ -242,6 +303,8 @@ export function viewFor(state: GameState, userId: string): GameState {
     if (t.hidden && !owned) continue;
     // under the fog of war only your own tokens reach you
     if (!owned && active && !tokenVisible(active.fog, active.widthCells, t)) continue;
+    // dynamic vision: only what your tokens can see
+    if (!owned && active?.vision && !sight.canSee(tokenPoints(t))) continue;
     tokens[t.id] = t;
   }
   const visibleTokenIds = new Set(Object.keys(tokens));
@@ -263,6 +326,8 @@ export function viewFor(state: GameState, userId: string): GameState {
     characters: Object.fromEntries(Object.entries(state.characters).filter(([, c]) => c.ownerId === userId)),
     notes: Object.fromEntries(Object.entries(state.notes ?? {}).filter(([, n]) => noteVisibleTo(n, userId, state.gmId))),
     drawings: Object.fromEntries(Object.entries(state.drawings ?? {}).filter(([, d]) => d.sceneId === state.activeSceneId)),
+    walls: Object.fromEntries(Object.entries(state.walls ?? {}).filter(([, w]) => w.sceneId === state.activeSceneId)),
+    props: Object.fromEntries(Object.entries(state.props ?? {}).filter(([, p]) => p.sceneId === state.activeSceneId && !p.hidden)),
     gmNotes: '',
   });
 }
@@ -273,6 +338,7 @@ export function referencedAssets(state: GameState): Set<string> {
   for (const s of Object.values(state.scenes)) if (s.background) ids.add(s.background);
   for (const t of Object.values(state.tokens)) if (t.image) ids.add(t.image);
   for (const n of Object.values(state.notes ?? {})) if (n.image) ids.add(n.image);
+  for (const p of Object.values(state.props ?? {})) if (p.image) ids.add(p.image);
   const track = state.music?.tracks.find((t) => t.id === state.music?.current);
   if (track) ids.add(track.asset);
   return ids;

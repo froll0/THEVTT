@@ -53,7 +53,7 @@ export function Dnd5eBestiary({ onAdd, onRoll }: BestiaryProps) {
   }, [query, source, all]);
   const add = (m: dnd5e.MonsterDef) => {
     const hp = rollHp ? Math.max(1, roll(m.hp.dice).total) : m.hp.average;
-    onAdd?.({ name: m.name, monsterId: m.id, hp: { current: hp, max: hp }, ac: m.ac, size: dnd5e.sizeCells(m.size) });
+    onAdd?.({ name: m.name, monsterId: m.id, hp: { current: hp, max: hp }, ac: m.ac, size: dnd5e.sizeCells(m.size), darkvision: dnd5e.monsterDarkvision(m) });
   };
   const save = (m: dnd5e.MonsterDef) => {
     const { id, ...data } = m;

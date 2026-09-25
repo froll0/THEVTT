@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialState, GameHost, type HostToPlayer } from '../src';
+import { createInitialState, GameHost, lineOfSight, pointInPolygon, visibilityPolygon, type HostToPlayer } from '../src';
 
 function setup() {
   const outbox: { to: string; msg: HostToPlayer }[] = [];
@@ -229,5 +229,75 @@ describe('notes, cards, drawings and music', () => {
     expect(host.dispatch('p1', { type: 'music.pause' }).ok).toBe(false);
     const last = [...outbox].reverse().find((o) => o.msg.k === 'state')!.msg;
     expect(last.k === 'state' && last.now).toBe(now);
+  });
+});
+
+describe('walls, vision and props', () => {
+  it('computes what a point can see around walls', () => {
+    const walls = [{ a: { x: 5, y: 0 }, b: { x: 5, y: 8 } }];
+    const poly = visibilityPolygon({ x: 2, y: 4 }, walls, { w: 10, h: 10 });
+    expect(pointInPolygon({ x: 4, y: 4 }, poly)).toBe(true);
+    expect(pointInPolygon({ x: 7, y: 4 }, poly)).toBe(false);
+    // around the end of the wall
+    expect(pointInPolygon({ x: 6, y: 9.8 }, poly)).toBe(true);
+    expect(lineOfSight({ x: 2, y: 4 }, { x: 6, y: 9.8 }, walls)).toBe(true);
+    expect(pointInPolygon({ x: 7, y: 9.5 }, poly)).toBe(false);
+    expect(lineOfSight({ x: 2, y: 4 }, { x: 7, y: 4 }, walls)).toBe(false);
+    expect(lineOfSight({ x: 2, y: 4 }, { x: 4.9, y: 4 }, walls)).toBe(true);
+  });
+
+  it('hides tokens behind walls and in the dark from players', () => {
+    const { host, lastState } = setup();
+    host.dispatch('p1', { type: 'token.create', token: { name: 'Lia', characterId: 'ch1', x: 1, y: 1 } });
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Orco', x: 8, y: 1 } });
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Goblin', x: 1, y: 8 } });
+    expect(Object.keys(lastState('p1').tokens)).toHaveLength(3);
+    const scene = host.state.activeSceneId;
+    host.dispatch('gm', { type: 'scene.update', sceneId: scene, patch: { vision: true } });
+    host.dispatch('gm', { type: 'wall.create', walls: [{ x1: 5, y1: 0, x2: 5, y2: 5, kind: 'wall' }] });
+    let names = Object.values(lastState('p1').tokens).map((t) => t.name).sort();
+    expect(names).toEqual(['Goblin', 'Lia']);
+    // walls travel to players so their client can draw the same shadows
+    expect(Object.keys(lastState('p1').walls!)).toHaveLength(1);
+
+    // darkness: only lit or darkvision areas
+    host.dispatch('gm', { type: 'scene.update', sceneId: scene, patch: { ambient: 'dark' } });
+    names = Object.values(lastState('p1').tokens).map((t) => t.name);
+    expect(names).toEqual(['Lia']);
+    const lia = Object.values(host.state.tokens).find((t) => t.name === 'Lia')!;
+    host.dispatch('p1', { type: 'token.update', tokenId: lia.id, patch: { light: { bright: 4, dim: 8 } } });
+    expect(Object.values(lastState('p1').tokens).map((t) => t.name).sort()).toEqual(['Goblin', 'Lia']);
+    // players can't give themselves darkvision
+    expect(host.dispatch('p1', { type: 'token.update', tokenId: lia.id, patch: { darkvision: 12 } }).ok).toBe(false);
+    // a burning prop behind the wall doesn't help seeing through it
+    host.dispatch('gm', { type: 'prop.create', prop: { kind: 'campfire', x: 8, y: 2, light: { bright: 4, dim: 6 } } });
+    expect(Object.values(lastState('p1').tokens).map((t) => t.name).sort()).toEqual(['Goblin', 'Lia']);
+  });
+
+  it('lets players open doors next to them and stops them at walls', () => {
+    const { host, lastState } = setup();
+    host.dispatch('p1', { type: 'token.create', token: { name: 'Lia', characterId: 'ch1', x: 3, y: 3 } });
+    host.dispatch('gm', { type: 'wall.create', walls: [{ x1: 5, y1: 0, x2: 5, y2: 3, kind: 'wall' }, { x1: 5, y1: 3, x2: 5, y2: 5, kind: 'door' }] });
+    const [wall, door] = Object.values(host.state.walls!);
+    const lia = Object.values(host.state.tokens)[0]!;
+    expect(host.dispatch('p1', { type: 'token.move', tokenId: lia.id, x: 7, y: 3 }).ok).toBe(false);
+    expect(host.dispatch('p1', { type: 'wall.update', wallId: wall!.id, patch: { open: true } }).ok).toBe(false);
+    expect(host.dispatch('p1', { type: 'wall.update', wallId: door!.id, patch: { open: true } }).ok).toBe(true);
+    expect(host.dispatch('p1', { type: 'token.move', tokenId: lia.id, x: 7, y: 3 }).ok).toBe(true);
+    // far from the door now? still 2 cells: fine. Far away: no.
+    expect(host.dispatch('p1', { type: 'token.move', tokenId: lia.id, x: 12, y: 3 }).ok).toBe(true);
+    expect(host.dispatch('p1', { type: 'wall.update', wallId: door!.id, patch: { open: false } }).ok).toBe(false);
+    expect(host.dispatch('p1', { type: 'wall.delete', wallId: wall!.id }).ok).toBe(false);
+    expect(lastState('p1').walls![door!.id]!.open).toBe(true);
+  });
+
+  it('keeps hidden props from players and validates prop fields', () => {
+    const { host, lastState } = setup();
+    expect(host.dispatch('p1', { type: 'prop.create', prop: { kind: 'crate' } }).ok).toBe(false);
+    host.dispatch('gm', { type: 'prop.create', prop: { kind: 'chest', x: 2, y: 2, w: 999, rotation: 450 } });
+    host.dispatch('gm', { type: 'prop.create', prop: { kind: 'statue', hidden: true } });
+    const props = Object.values(host.state.props!);
+    expect(props[0]).toMatchObject({ w: 40, rotation: 90 });
+    expect(Object.values(lastState('p1').props!).map((p) => p.kind)).toEqual(['chest']);
   });
 });

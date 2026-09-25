@@ -380,3 +380,9 @@ export function crValue(cr: string): number {
 }
 
 export const monsterMod = (score: number) => Math.floor((score - 10) / 2);
+
+/** Darkvision in metres read from a stat block's senses ("Scurovisione 18 m"). */
+export function monsterDarkvision(m: Pick<MonsterDef, 'senses'>): number {
+  const match = /scurovisione\s+(\d+(?:[.,]\d+)?)\s*m/i.exec(m.senses ?? '');
+  return match ? Number(match[1]!.replace(',', '.')) : 0;
+}

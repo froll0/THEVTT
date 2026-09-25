@@ -1,4 +1,6 @@
-import type { AreaTemplate, Drawing, Scene, TemplateShape, Token } from '@thevtt/shared';
+import { blockingSegments, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { drawLighting } from './lighting';
+import { animatedProp, drawProp, metresToCells, propKind } from './props';
 import { useEffect, useRef, useState } from 'react';
 import { readImage } from '../components/ui';
 import { useApp } from '../store/app';
@@ -6,7 +8,7 @@ import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
 
 export const CELL = 70;
-export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw';
+export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props';
 
 export interface ToolOptions {
   fogReveal: boolean;
@@ -16,6 +18,74 @@ export interface ToolOptions {
   /** stroke width in cells */
   drawWidth: number;
   erase: boolean;
+  wallKind: WallKind;
+  /** chain of segments, or a rectangular room by dragging */
+  wallMode: 'line' | 'rect';
+  wallErase: boolean;
+  propKind: string;
+  /** GM: see the darkness as players do */
+  lightPreview: boolean;
+}
+
+/** Nearest grid point, corners and edge midpoints (half cells). */
+const snapHalf = (v: number) => Math.round(v * 2) / 2;
+
+function hitProp(p: Prop, x: number, y: number): boolean {
+  // back to the prop's own frame, then a box test
+  const cx = p.x + p.w / 2;
+  const cy = p.y + p.h / 2;
+  const r = (-(p.rotation || 0) * Math.PI) / 180;
+  const dx = x - cx;
+  const dy = y - cy;
+  const lx = dx * Math.cos(r) - dy * Math.sin(r);
+  const ly = dx * Math.sin(r) + dy * Math.cos(r);
+  return Math.abs(lx) <= p.w / 2 && Math.abs(ly) <= p.h / 2;
+}
+
+const WALL_COLORS: Record<WallKind, string> = { wall: '#ffb347', door: '#5ec8ff', window: '#9be7c4' };
+
+/** Walls for the GM; doors for everyone (players click them to open). */
+function drawWalls(ctx: CanvasRenderingContext2D, walls: Wall[], zoom: number, which: 'all' | 'doors', hovered: string | null) {
+  for (const w of walls) {
+    if (which === 'doors' && w.kind !== 'door') continue;
+    const a = { x: w.x1 * CELL, y: w.y1 * CELL };
+    const b = { x: w.x2 * CELL, y: w.y2 * CELL };
+    ctx.save();
+    ctx.lineCap = 'round';
+    if (w.kind === 'door') {
+      // a door: thick bar, hollow when open
+      const width = (w.id === hovered ? 9 : 7) / zoom;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineWidth = width + 3 / zoom;
+      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.stroke();
+      ctx.lineWidth = width;
+      ctx.strokeStyle = WALL_COLORS.door;
+      if (w.open) ctx.setLineDash([6 / zoom, 5 / zoom]);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineWidth = (w.id === hovered ? 6 : 4) / zoom;
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.stroke();
+      ctx.lineWidth = (w.id === hovered ? 4 : 2.5) / zoom;
+      ctx.strokeStyle = WALL_COLORS[w.kind];
+      if (w.kind === 'window') ctx.setLineDash([3 / zoom, 4 / zoom]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = WALL_COLORS[w.kind];
+      for (const p of [a, b]) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3 / zoom, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
 }
 
 /** Distance from point p to segment ab. */
@@ -107,7 +177,11 @@ type Gesture =
   | { kind: 'template'; fx: number; fy: number; tx: number; ty: number }
   /** points in world pixels */
   | { kind: 'draw'; points: number[] }
-  | { kind: 'erase' };
+  | { kind: 'erase' }
+  /** wall chain: points in cells, the pointer in world px */
+  | { kind: 'wall'; points: { x: number; y: number }[]; tx: number; ty: number }
+  | { kind: 'room'; fx: number; fy: number; tx: number; ty: number }
+  | { kind: 'prop'; propId: string; ox: number; oy: number; wx: number; wy: number; moved: boolean };
 
 /**
  * Overlays (ruler, areas, drawings) must read on any map: a dark theme accent on a
@@ -165,14 +239,15 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
   const erased = useRef(new Set<string>());
 
   const me = useApp((s) => s.user?.id ?? '');
-  const { state, assets, pings, role, selectedTokenId, dispatch, select } = useTable();
+  const { state, assets, pings, role, selectedTokenId, selectedPropId, dispatch, select, selectProp } = useTable();
   const board = useSettings((s) => s.board);
   const isGm = role === 'gm';
   const scene = state ? state.scenes[state.activeSceneId] : undefined;
 
   // keep latest values available to the render loop and handlers
-  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, isGm, me, tool, options, selectedTemplate });
-  live.current = { state, assets, pings, scene, board, selectedTokenId, isGm, me, tool, options, selectedTemplate };
+  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, isGm, me, tool, options, selectedTemplate });
+  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, isGm, me, tool, options, selectedTemplate };
+  const hoverWall = useRef<string | null>(null);
   dirty.current = true;
 
   // center camera on first scene load
@@ -214,7 +289,8 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       const canvas = canvasRef.current;
       const cam = cameraRef.current;
       const L = live.current;
-      const animating = L.pings.some((p) => performance.now() - p.at < 2000);
+      const animating =
+        L.pings.some((p) => performance.now() - p.at < 2000) || Object.values(L.state?.props ?? {}).some((p) => p.sceneId === L.scene?.id && animatedProp(p));
       if (!canvas || !cam || !L.state || !L.scene || (!dirty.current && !animating)) return;
       dirty.current = false;
 
@@ -254,6 +330,24 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       ctx.strokeStyle = hexToRgba(L.board.gridColor, 0.25);
       ctx.lineWidth = 2 / cam.zoom;
       ctx.strokeRect(0, 0, W, H);
+
+      // scenery, under everything else
+      const tnow = performance.now() / 1000;
+      for (const p of Object.values(L.state.props ?? {})) {
+        if (p.sceneId !== L.scene.id) continue;
+        const pg = gesture.current;
+        const shown = pg.kind === 'prop' && pg.propId === p.id ? { ...p, x: snapHalf((pg.wx - pg.ox) / CELL), y: snapHalf((pg.wy - pg.oy) / CELL) } : p;
+        drawProp(ctx, shown, CELL, image(p.image), tnow, L.isGm);
+        if (p.id === L.selectedPropId) {
+          const c = propCorners(shown);
+          ctx.beginPath();
+          c.forEach((q, i) => (i ? ctx.lineTo(q.x * CELL, q.y * CELL) : ctx.moveTo(q.x * CELL, q.y * CELL)));
+          ctx.closePath();
+          ctx.setLineDash([6 / cam.zoom, 4 / cam.zoom]);
+          haloStroke(ctx, accentColor(), 2 / cam.zoom, cam.zoom);
+          ctx.setLineDash([]);
+        }
+      }
 
       const fogTex = fogTexture(L.scene, fogCache.current);
       if (fogTex) {
@@ -392,6 +486,51 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         ctx.restore();
       }
 
+      // doors under the darkness (so players only see those in sight), then light and shadow
+      const walls = Object.values(L.state.walls ?? {}).filter((w) => w.sceneId === L.scene!.id);
+      if (!L.isGm) drawWalls(ctx, walls, cam.zoom, 'doors', hoverWall.current);
+      if (L.scene.vision) {
+        const bounds = { w: L.scene.widthCells, h: L.scene.heightCells };
+        if (!L.isGm) {
+          const sight = sightFor(L.state, L.me);
+          drawLighting(ctx, { cell: CELL, bounds, segments: sight.segments, viewers: sight.viewers, lights: sight.lights, ambient: sight.ambient }, ctx.getTransform(), 1);
+        } else if (L.options.lightPreview) {
+          // what the players' tokens see, together
+          const viewers = Object.values(L.state.tokens)
+            .filter((t) => t.sceneId === L.scene!.id && t.ownerIds.length > 0)
+            .map((t) => ({ x: t.x + t.size / 2, y: t.y + t.size / 2, darkvision: t.darkvision ?? 0 }));
+          drawLighting(
+            ctx,
+            { cell: CELL, bounds, segments: blockingSegments(L.state, L.scene.id), viewers, lights: lightSources(L.state, L.scene.id), ambient: L.scene.ambient ?? 'bright' },
+            ctx.getTransform(),
+            0.7,
+          );
+        }
+      }
+      if (L.isGm && (L.tool === 'walls' || L.scene.vision || walls.length)) drawWalls(ctx, walls, cam.zoom, L.tool === 'walls' || L.scene.vision ? 'all' : 'doors', hoverWall.current);
+
+      if (g.kind === 'wall' && g.points.length) {
+        const last = g.points[g.points.length - 1]!;
+        ctx.beginPath();
+        g.points.forEach((q, i) => (i ? ctx.lineTo(q.x * CELL, q.y * CELL) : ctx.moveTo(q.x * CELL, q.y * CELL)));
+        ctx.moveTo(last.x * CELL, last.y * CELL);
+        ctx.lineTo(snapHalf(g.tx / CELL) * CELL, snapHalf(g.ty / CELL) * CELL);
+        ctx.setLineDash([8 / cam.zoom, 5 / cam.zoom]);
+        haloStroke(ctx, WALL_COLORS[L.options.wallKind], 3 / cam.zoom, cam.zoom);
+        ctx.setLineDash([]);
+      }
+      if (g.kind === 'room') {
+        const x0 = snapHalf(Math.min(g.fx, g.tx) / CELL) * CELL;
+        const y0 = snapHalf(Math.min(g.fy, g.ty) / CELL) * CELL;
+        const x1 = snapHalf(Math.max(g.fx, g.tx) / CELL) * CELL;
+        const y1 = snapHalf(Math.max(g.fy, g.ty) / CELL) * CELL;
+        ctx.beginPath();
+        ctx.rect(x0, y0, x1 - x0, y1 - y0);
+        ctx.setLineDash([8 / cam.zoom, 5 / cam.zoom]);
+        haloStroke(ctx, WALL_COLORS.wall, 3 / cam.zoom, cam.zoom);
+        ctx.setLineDash([]);
+      }
+
       if (g.kind === 'fog') {
         const x0 = Math.floor(Math.min(g.fx, g.tx) / CELL);
         const y0 = Math.floor(Math.min(g.fy, g.ty) / CELL);
@@ -514,11 +653,43 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     }
   };
 
+  const wallAt = (wx: number, wy: number, doorsOnly: boolean) => {
+    const L = live.current;
+    const cam = cameraRef.current;
+    if (!L.state || !L.scene || !cam) return undefined;
+    let best: Wall | undefined;
+    let bestD = 10 / cam.zoom;
+    for (const w of Object.values(L.state.walls ?? {})) {
+      if (w.sceneId !== L.scene.id || (doorsOnly && w.kind !== 'door')) continue;
+      const d = distToSegment(wx, wy, w.x1 * CELL, w.y1 * CELL, w.x2 * CELL, w.y2 * CELL);
+      if (d < bestD) [best, bestD] = [w, d];
+    }
+    return best;
+  };
+  const propAt = (wx: number, wy: number) => {
+    const L = live.current;
+    if (!L.state || !L.scene) return undefined;
+    return Object.values(L.state.props ?? {})
+      .reverse()
+      .find((p) => p.sceneId === L.scene!.id && hitProp(p, wx / CELL, wy / CELL));
+  };
+  /** closes the wall chain being drawn */
+  const endWalls = () => {
+    if (gesture.current.kind === 'wall') {
+      gesture.current = { kind: 'none' };
+      dirty.current = true;
+    }
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (!cameraRef.current) return;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const w = toWorld(e.clientX, e.clientY);
     const L = live.current;
+    if (e.button === 2 && gesture.current.kind === 'wall') {
+      endWalls();
+      return;
+    }
     if (e.button === 1 || e.button === 2 || (e.button === 0 && e.shiftKey && L.tool === 'select')) {
       gesture.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, cx: cameraRef.current.x, cy: cameraRef.current.y };
       return;
@@ -533,6 +704,42 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     }
     if (L.tool === 'fog' && L.isGm) {
       gesture.current = { kind: 'fog', fx: w.x, fy: w.y, tx: w.x, ty: w.y };
+      return;
+    }
+    if (L.tool === 'walls' && L.isGm) {
+      if (L.options.wallErase) {
+        const hit = wallAt(w.x, w.y, false);
+        if (hit) dispatch({ type: 'wall.delete', wallId: hit.id });
+        return;
+      }
+      const pt = { x: snapHalf(w.x / CELL), y: snapHalf(w.y / CELL) };
+      if (L.options.wallMode === 'rect') {
+        gesture.current = { kind: 'room', fx: w.x, fy: w.y, tx: w.x, ty: w.y };
+        return;
+      }
+      const g = gesture.current;
+      if (g.kind === 'wall') {
+        const last = g.points[g.points.length - 1]!;
+        if (last.x === pt.x && last.y === pt.y) {
+          endWalls(); // clicking the last point again ends the chain
+          return;
+        }
+        dispatch({ type: 'wall.create', walls: [{ x1: last.x, y1: last.y, x2: pt.x, y2: pt.y, kind: L.options.wallKind }] });
+        g.points.push(pt);
+      } else {
+        gesture.current = { kind: 'wall', points: [pt], tx: w.x, ty: w.y };
+      }
+      dirty.current = true;
+      return;
+    }
+    if (L.tool === 'props' && L.isGm && L.scene) {
+      const kind = propKind(L.options.propKind);
+      if (!kind) return;
+      const light = kind.light ? { bright: metresToCells(L.scene, kind.light.bright), dim: metresToCells(L.scene, kind.light.dim), color: kind.light.color } : null;
+      dispatch({
+        type: 'prop.create',
+        prop: { kind: kind.id, x: snapHalf(w.x / CELL - kind.w / 2), y: snapHalf(w.y / CELL - kind.h / 2), w: kind.w, h: kind.h, light, blocksVision: !!kind.blocksVision },
+      });
       return;
     }
     if (L.tool === 'draw') {
@@ -559,6 +766,21 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       return;
     }
     select(null);
+    // doors open and close with a click (players need a token nearby: the host checks)
+    const door = wallAt(w.x, w.y, true);
+    if (door) {
+      dispatch({ type: 'wall.update', wallId: door.id, patch: { open: !door.open } });
+      return;
+    }
+    if (L.isGm) {
+      const prop = propAt(w.x, w.y);
+      if (prop) {
+        selectProp(prop.id);
+        gesture.current = { kind: 'prop', propId: prop.id, ox: w.x - prop.x * CELL, oy: w.y - prop.y * CELL, wx: w.x, wy: w.y, moved: false };
+        return;
+      }
+    }
+    selectProp(null);
     const ctx = canvasRef.current?.getContext('2d');
     const tpl = ctx && Object.values(L.state?.templates ?? {}).reverse().find((x) => x.sceneId === L.scene?.id && hitTemplate(ctx, x, w.x, w.y));
     if (tpl && (L.isGm || tpl.authorId === L.me)) {
@@ -582,6 +804,15 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       g.wy = w.y;
       g.moved = true;
       dirty.current = true;
+    } else if (g.kind === 'prop') {
+      g.wx = w.x;
+      g.wy = w.y;
+      g.moved = true;
+      dirty.current = true;
+    } else if (g.kind === 'wall' || g.kind === 'room') {
+      g.tx = w.x;
+      g.ty = w.y;
+      dirty.current = true;
     } else if (g.kind === 'draw') {
       const lx = g.points[g.points.length - 2]!;
       const ly = g.points[g.points.length - 1]!;
@@ -597,6 +828,12 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       g.ty = w.y;
       dirty.current = true;
     } else {
+      const L = live.current;
+      const wallHover = L.tool === 'walls' && L.options.wallErase ? wallAt(w.x, w.y, false) : L.tool === 'select' ? wallAt(w.x, w.y, true) : undefined;
+      if ((wallHover?.id ?? null) !== hoverWall.current) {
+        hoverWall.current = wallHover?.id ?? null;
+        dirty.current = true;
+      }
       const t = tokenAt(w.x, w.y);
       const id = t?.id ?? null;
       if (id !== hover.current) {
@@ -623,6 +860,28 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       if (!L.scene.fog?.enabled) dispatch({ type: 'fog.enable', sceneId: L.scene.id, enabled: true });
       dispatch({ type: 'fog.paint', sceneId: L.scene.id, x: x0, y: y0, w: x1 - x0, h: y1 - y0, reveal: L.options.fogReveal });
     }
+    if (g.kind === 'prop' && g.moved) {
+      dispatch({ type: 'prop.update', propId: g.propId, patch: { x: snapHalf((g.wx - g.ox) / CELL), y: snapHalf((g.wy - g.oy) / CELL) } });
+    }
+    if (g.kind === 'room') {
+      const x0 = snapHalf(Math.min(g.fx, g.tx) / CELL);
+      const y0 = snapHalf(Math.min(g.fy, g.ty) / CELL);
+      const x1 = snapHalf(Math.max(g.fx, g.tx) / CELL);
+      const y1 = snapHalf(Math.max(g.fy, g.ty) / CELL);
+      if (x1 > x0 && y1 > y0) {
+        const k = L.options.wallKind;
+        dispatch({
+          type: 'wall.create',
+          walls: [
+            { x1: x0, y1: y0, x2: x1, y2: y0, kind: k },
+            { x1, y1: y0, x2: x1, y2: y1, kind: k },
+            { x1: x1, y1, x2: x0, y2: y1, kind: k },
+            { x1: x0, y1: y1, x2: x0, y2: y0, kind: k },
+          ],
+        });
+      }
+    }
+    if (g.kind === 'wall') return; // the chain continues with the next click
     if (g.kind === 'draw') {
       const pts = g.points.length === 2 ? [...g.points, g.points[0]! + 0.5, g.points[1]! + 0.5] : g.points;
       dispatch({ type: 'drawing.create', points: pts.slice(0, 4000).map((v) => v / CELL), color: drawColor(L), width: L.options.drawWidth });
@@ -666,9 +925,21 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest('input, textarea, select')) return;
       const L = live.current;
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' || e.key === 'Enter') {
+        if (gesture.current.kind === 'wall') {
+          gesture.current = { kind: 'none' };
+          dirty.current = true;
+          return;
+        }
+        if (e.key === 'Enter') return;
         select(null);
+        selectProp(null);
         setSelectedTemplate(null);
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && L.selectedPropId && L.isGm) {
+        dispatch({ type: 'prop.delete', propId: L.selectedPropId });
+        selectProp(null);
+        return;
       }
       if ((e.key === 'Delete' || e.key === 'Backspace') && L.selectedTemplate) {
         dispatch({ type: 'template.delete', templateId: L.selectedTemplate });
@@ -685,9 +956,16 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [dispatch, select]);
+  }, [dispatch, select, selectProp]);
 
-  const toolCursor = tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' ? 'crosshair' : tool === 'ping' ? 'cell' : cursor;
+  const toolCursor =
+    tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' || tool === 'walls' || tool === 'props'
+      ? 'crosshair'
+      : tool === 'ping'
+        ? 'cell'
+        : hoverWall.current
+          ? 'pointer'
+          : cursor;
 
   return (
     <div ref={wrapRef} className="board" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>

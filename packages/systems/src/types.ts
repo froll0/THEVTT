@@ -21,6 +21,8 @@ export interface TokenDefaults {
   size: number;
   /** modifier used by the initiative tracker */
   initiativeModifier: number;
+  /** darkvision range in metres (0 = none) */
+  darkvision?: number;
 }
 
 export interface GameSystem<TCharacter = unknown> {

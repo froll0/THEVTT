@@ -22,6 +22,7 @@ import {
   speed,
   spellcasting,
   validate,
+  darkvision,
   type Dnd5eCharacter,
 } from './rules';
 
@@ -82,6 +83,7 @@ export const dnd5e2024: GameSystem<Dnd5eCharacter> = {
       ac: armorClass(c),
       size: 1,
       initiativeModifier: initiativeBonus(c),
+      darkvision: darkvision(c),
     };
   },
 };
