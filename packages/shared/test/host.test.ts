@@ -301,3 +301,19 @@ describe('walls, vision and props', () => {
     expect(Object.values(lastState('p1').props!).map((p) => p.kind)).toEqual(['chest']);
   });
 });
+
+describe('auras and map alignment', () => {
+  it('lets owners set an aura and the GM line up the map', () => {
+    const { host, lastState } = setup();
+    host.dispatch('p1', { type: 'token.create', token: { name: 'Lia', characterId: 'ch1' } });
+    const lia = Object.values(host.state.tokens)[0]!;
+    expect(host.dispatch('p1', { type: 'token.update', tokenId: lia.id, patch: { aura: { radius: 2, color: '#ffcc00' } } }).ok).toBe(true);
+    expect(lastState('p2').tokens[lia.id]!.aura).toEqual({ radius: 2, color: '#ffcc00' });
+    host.dispatch('p1', { type: 'token.update', tokenId: lia.id, patch: { aura: { radius: 0, color: '#fff' } } });
+    expect(host.state.tokens[lia.id]!.aura).toBeNull();
+    const scene = host.state.activeSceneId;
+    expect(host.dispatch('p1', { type: 'scene.update', sceneId: scene, patch: { bgCellPx: 100 } }).ok).toBe(false);
+    host.dispatch('gm', { type: 'scene.update', sceneId: scene, patch: { bgCellPx: 1, bgOffsetX: 0.333, bgOffsetY: -99 } });
+    expect(host.state.scenes[scene]).toMatchObject({ bgCellPx: 4, bgOffsetX: 0.33, bgOffsetY: -50 });
+  });
+});

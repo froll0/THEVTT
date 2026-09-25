@@ -42,6 +42,14 @@ sul System Reference Document 5.2 (CC-BY-4.0).
 **Tavolo** (ospitato dal master)
 - Mappa con griglia, pan/zoom, mappe caricate o trascinate, più scene
 - Token con PF, CA, taglia, condizioni (con spiegazione), ritratti, token nascosti
+- **Muri, porte e finestre** tracciati sulla griglia (a catena o come stanze); le porte si aprono
+  con un clic, i muri fermano i token dei giocatori
+- **Luci dinamiche e visione**: ogni giocatore vede solo ciò che vedono i suoi token, con luce
+  ambientale (giorno, penombra, buio), torce e lanterne su token e oggetti, scurovisione, ombre
+  sui muri e memoria delle zone già esplorate; anteprima "vista giocatori" per il master
+- **Oggetti di scena**: casse, tavoli, falò, colonne, alberi… o immagini proprie, sotto i token;
+  si spostano, ruotano, illuminano, bloccano la vista o restano nascosti
+- **Aure** attorno ai token; mappe con griglia propria allineabili a quella del tavolo
 - **Nebbia di guerra**: il master scopre e copre a pennellate; i giocatori non ricevono nemmeno
   i token sotto la nebbia
 - **Aree d'effetto**: sfera, cono, linea, cubo, con misura in metri
@@ -56,7 +64,8 @@ sul System Reference Document 5.2 (CC-BY-4.0).
   oggetti inviate dalla scheda con i pulsanti per tirare
 - Iniziativa con round e turni, tiro per tutti i token con i modificatori giusti
 - Danni, metà danni o cure di un tiro applicati al token selezionato con un clic
-- Scheda del personaggio al tavolo: ogni giocatore riceve solo la propria, il master l'elenco
+- Schede e voci del compendio in **finestre** spostabili, ridimensionabili e riducibili; ogni
+  giocatore riceve solo le proprie schede, il master l'elenco
 
 **Personalizzazione**
 - Temi (Ossidiana, Grafite, Carta, Pergamena…), modalità chiara/scura, accento, carattere,
@@ -168,7 +177,6 @@ con `VITE_THEVTT_SERVER` in build.
 ## Prossimi passi
 
 - Scoperta automatica del master in LAN
-- Linee di vista e luci dinamiche, muri
 - Sottoclassi e opzioni oltre l'SRD (contenuti con licenza o creati dal gruppo)
 - Secondo sistema di gioco per validare l'astrazione dei plugin
 - Aggiornamenti automatici dell'app e firma degli installer (Windows e macOS)

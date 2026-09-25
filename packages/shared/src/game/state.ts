@@ -26,6 +26,11 @@ export interface Scene {
   vision?: boolean;
   /** ambient light when vision is on */
   ambient?: Ambient;
+  /** the map's own grid: pixels per square in the image (null = stretch the map over the scene) */
+  bgCellPx?: number | null;
+  /** shift of the map image, in cells, to line its grid up with ours */
+  bgOffsetX?: number;
+  bgOffsetY?: number;
 }
 
 export type Ambient = 'bright' | 'dim' | 'dark';
@@ -116,6 +121,8 @@ export interface Token {
   light?: Light | null;
   /** darkvision radius in cells */
   darkvision?: number;
+  /** a circle around the token (paladin aura, spirit guardians…), radius in cells */
+  aura?: { radius: number; color: string } | null;
 }
 
 /** A freehand stroke on the map. Points are in cells, flattened [x0, y0, x1, y1, ...]. */

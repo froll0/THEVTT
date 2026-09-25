@@ -1,4 +1,5 @@
 import { blockingSegments, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { exploredTexture, updateExplored } from './explored';
 import { drawLighting } from './lighting';
 import { animatedProp, drawProp, metresToCells, propKind } from './props';
 import { useEffect, useRef, useState } from 'react';
@@ -250,6 +251,11 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
   const hoverWall = useRef<string | null>(null);
   dirty.current = true;
 
+  // players remember what they've seen
+  useEffect(() => {
+    if (state && !isGm && scene?.vision) updateExplored(state, me);
+  }, [state, isGm, scene?.vision, me]);
+
   // center camera on first scene load
   useEffect(() => {
     if (!scene || !wrapRef.current) return;
@@ -311,7 +317,12 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       const bg = image(L.scene.background);
       ctx.fillStyle = hexToRgba(L.board.gridColor, 0.03);
       ctx.fillRect(0, 0, W, H);
-      if (bg) ctx.drawImage(bg, 0, 0, W, H);
+      if (bg) {
+        // a map with its own grid is scaled so its squares match ours; otherwise it fills the scene
+        const px = L.scene.bgCellPx;
+        if (px) ctx.drawImage(bg, (L.scene.bgOffsetX ?? 0) * CELL, (L.scene.bgOffsetY ?? 0) * CELL, (bg.naturalWidth / px) * CELL, (bg.naturalHeight / px) * CELL);
+        else ctx.drawImage(bg, 0, 0, W, H);
+      }
 
       if (L.scene.showGrid && L.board.gridOpacity > 0) {
         ctx.strokeStyle = hexToRgba(L.board.gridColor, L.board.gridOpacity);
@@ -413,6 +424,17 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         const cy = py + size / 2;
         ctx.save();
         ctx.globalAlpha = t.hidden ? 0.45 : 1;
+        if (t.aura && t.aura.radius > 0) {
+          const ac = vivid(t.aura.color);
+          const ar = (t.aura.radius + t.size / 2) * CELL;
+          ctx.beginPath();
+          ctx.arc(cx, cy, ar, 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(ac, 0.13);
+          ctx.fill();
+          ctx.lineWidth = 1.5 / cam.zoom;
+          ctx.strokeStyle = hexToRgba(ac, 0.7);
+          ctx.stroke();
+        }
 
         if (t.id === activeTokenId) {
           ctx.shadowColor = acc;
@@ -493,7 +515,8 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         const bounds = { w: L.scene.widthCells, h: L.scene.heightCells };
         if (!L.isGm) {
           const sight = sightFor(L.state, L.me);
-          drawLighting(ctx, { cell: CELL, bounds, segments: sight.segments, viewers: sight.viewers, lights: sight.lights, ambient: sight.ambient }, ctx.getTransform(), 1);
+          const explored = exploredTexture(L.state.campaignId, L.scene.id);
+          drawLighting(ctx, { cell: CELL, bounds, explored, segments: sight.segments, viewers: sight.viewers, lights: sight.lights, ambient: sight.ambient }, ctx.getTransform(), 1);
         } else if (L.options.lightPreview) {
           // what the players' tokens see, together
           const viewers = Object.values(L.state.tokens)

@@ -8,6 +8,8 @@ import { visibilityPolygon, type Ambient, type LightSource, type Pt, type Segmen
 
 interface LightingInput {
   cell: number;
+  /** areas seen before (1 px per cell), shown dim */
+  explored?: HTMLCanvasElement | null;
   bounds: { w: number; h: number };
   segments: Segment[];
   viewers: Viewer[];
@@ -90,7 +92,16 @@ export function drawLighting(main: CanvasRenderingContext2D, input: LightingInpu
   c.setTransform(transform);
   c.globalCompositeOperation = 'destination-out';
 
-  const { cell, bounds, segments, viewers, lights, ambient } = input;
+  const { cell, bounds, segments, viewers, lights, ambient, explored } = input;
+  if (explored) {
+    // remembered places: the map shows through, dark
+    c.save();
+    c.globalAlpha = 0.28;
+    // crisp cells: smoothing would bleed past the walls
+    c.imageSmoothingEnabled = false;
+    c.drawImage(explored, 0, 0, bounds.w * cell, bounds.h * cell);
+    c.restore();
+  }
   const key = wallsKey(segments, bounds);
   const base = AMBIENT_DARKNESS[ambient];
   const litPolys = lights.map((l) => ({ l, poly: polygon(l, segments, bounds, key) }));

@@ -33,7 +33,13 @@ export interface GameHostOptions {
   onCharacterChange?: (character: TableCharacter) => void;
 }
 
-const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'color', 'name', 'light'];
+const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'color', 'name', 'light', 'aura'];
+
+function cleanAura(a: unknown): { radius: number; color: string } | null {
+  const v = a as { radius?: unknown; color?: unknown } | null;
+  const radius = Math.min(60, Math.max(0, Number(v?.radius) || 0));
+  return v && radius > 0 ? { radius, color: typeof v.color === 'string' ? v.color.slice(0, 20) : '#c9a227' } : null;
+}
 const MAX_WALLS = 3000;
 const MAX_PROPS = 500;
 
@@ -198,6 +204,9 @@ export class GameHost {
         if (p.unit !== undefined) scene.unit = p.unit === 'ft' ? 'ft' : 'm';
         if (p.showGrid !== undefined) scene.showGrid = !!p.showGrid;
         if (p.vision !== undefined) scene.vision = !!p.vision;
+        if (p.bgCellPx !== undefined) scene.bgCellPx = p.bgCellPx === null ? null : Math.min(2000, Math.max(4, Number(p.bgCellPx) || 70));
+        if (p.bgOffsetX !== undefined) scene.bgOffsetX = Math.max(-50, Math.min(50, Math.round((Number(p.bgOffsetX) || 0) * 100) / 100));
+        if (p.bgOffsetY !== undefined) scene.bgOffsetY = Math.max(-50, Math.min(50, Math.round((Number(p.bgOffsetY) || 0) * 100) / 100));
         if (p.ambient !== undefined) scene.ambient = p.ambient === 'dark' || p.ambient === 'dim' ? p.ambient : 'bright';
         if (p.background !== undefined) {
           if (p.background !== null && !this.assets[p.background]) return { ok: false, reason: 'Immagine sconosciuta' };
@@ -295,6 +304,7 @@ export class GameHost {
         if (patch.ac !== undefined) t.ac = patch.ac === null ? null : clampInt(patch.ac, 0, 99);
         if (patch.conditions !== undefined) t.conditions = patch.conditions.slice(0, 20).map(String);
         if (patch.light !== undefined) t.light = cleanLight(patch.light);
+        if (patch.aura !== undefined) t.aura = cleanAura(patch.aura);
         if (patch.darkvision !== undefined) t.darkvision = Math.min(60, Math.max(0, Number(patch.darkvision) || 0));
         if (patch.image !== undefined) {
           if (patch.image !== null && !this.assets[patch.image]) return { ok: false, reason: 'Immagine sconosciuta' };

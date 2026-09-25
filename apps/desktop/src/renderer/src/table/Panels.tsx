@@ -534,6 +534,7 @@ export function ScenePanel() {
           Rimuovi mappa
         </button>
       )}
+      {active.background && <MapAlignment scene={active} />}
       <p className="faint small">Suggerimento: trascina un'immagine sul tavolo per usarla come mappa, o su un token per dargli un ritratto.</p>
     </div>
   );
@@ -541,6 +542,50 @@ export function ScenePanel() {
 
 const sharedLabel = (n: Note, players: Record<string, { displayName: string }>) =>
   n.shared === 'all' ? 'Tutti' : n.shared === 'private' ? 'Privata' : n.shared.map((id) => players[id]?.displayName ?? '?').join(', ') || 'Privata';
+
+/** Lines a map's own grid up with the table's: pixels per square, shift, scene size. */
+function MapAlignment({ scene }: { scene: Scene }) {
+  const { dispatch, assets } = useTable();
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const src = scene.background ? assets[scene.background] : undefined;
+  useEffect(() => {
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => setSize({ w: img.naturalWidth, h: img.naturalHeight });
+    img.src = src;
+  }, [src]);
+  const upd = (patch: Partial<Scene>) => dispatch({ type: 'scene.update', sceneId: scene.id, patch });
+  const px = scene.bgCellPx ?? null;
+  return (
+    <div className="col" style={{ gap: 6 }}>
+      <div className="row between">
+        <span className="small" title="Se la mappa ha già una griglia disegnata, allineala a quella del tavolo">Griglia della mappa</span>
+        <Switch on={px !== null} onChange={(on) => upd({ bgCellPx: on ? Math.round((size?.w ?? 1400) / scene.widthCells) : null })} />
+      </div>
+      {px !== null && (
+        <>
+          <div className="row">
+            <Field label="Pixel per casella">
+              <input className="input" type="number" min={4} value={px} onChange={(e) => upd({ bgCellPx: Number(e.target.value) || px })} />
+            </Field>
+            <Field label="Sposta X">
+              <input className="input" type="number" step={0.05} value={scene.bgOffsetX ?? 0} onChange={(e) => upd({ bgOffsetX: Number(e.target.value) })} />
+            </Field>
+            <Field label="Sposta Y">
+              <input className="input" type="number" step={0.05} value={scene.bgOffsetY ?? 0} onChange={(e) => upd({ bgOffsetY: Number(e.target.value) })} />
+            </Field>
+          </div>
+          {size && (
+            <button className="btn sm" onClick={() => upd({ widthCells: Math.ceil(size.w / px), heightCells: Math.ceil(size.h / px) })}>
+              Adatta la scena alla mappa ({Math.ceil(size.w / px)} × {Math.ceil(size.h / px)} caselle)
+            </button>
+          )}
+          <p className="faint tiny">Conta i quadretti della mappa: pixel per casella = larghezza dell’immagine ({size?.w ?? '…'} px) ÷ numero di quadretti in orizzontale.</p>
+        </>
+      )}
+    </div>
+  );
+}
 
 export function NotesPanel() {
   const { state, dispatch, role, assets } = useTable();
@@ -745,6 +790,35 @@ function LightFields({ scene, light, onChange }: { scene: Scene; light: Light | 
   );
 }
 
+const AURA_RADII = [0, 1.5, 3, 4.5, 6, 9, 18];
+
+/** A circle around the token: radius in metres from its edge, any colour. */
+function AuraFields({ scene, aura, onChange }: { scene: Scene; aura: { radius: number; color: string } | null; onChange: (a: { radius: number; color: string } | null) => void }) {
+  const metres = aura ? cellsToMetres(scene, aura.radius) : 0;
+  return (
+    <div className="row" style={{ alignItems: 'flex-end' }}>
+      <Field label="Aura">
+        <select
+          className="select"
+          value={AURA_RADII.includes(metres) ? metres : 'custom'}
+          onChange={(e) => {
+            const m = Number(e.target.value);
+            onChange(m ? { radius: metresToCells(scene, m), color: aura?.color ?? '#c9a227' } : null);
+          }}
+        >
+          {AURA_RADII.map((m) => (
+            <option key={m} value={m}>
+              {m ? `${String(m).replace('.', ',')} m` : 'Nessuna'}
+            </option>
+          ))}
+          {!AURA_RADII.includes(metres) && <option value="custom">{String(metres).replace('.', ',')} m</option>}
+        </select>
+      </Field>
+      {aura && <input type="color" aria-label="Colore dell'aura" value={aura.color} onChange={(e) => onChange({ ...aura, color: e.target.value })} />}
+    </div>
+  );
+}
+
 /** GM: the selected piece of scenery. */
 export function PropInspector({ prop }: { prop: Prop }) {
   const { state, dispatch, selectProp } = useTable();
@@ -873,6 +947,7 @@ export function TokenInspector({ token }: { token: Token }) {
             )}
           </div>
           {state.scenes[token.sceneId] && <LightFields scene={state.scenes[token.sceneId]!} light={token.light ?? null} onChange={(light) => upd({ light })} />}
+          {state.scenes[token.sceneId] && <AuraFields scene={state.scenes[token.sceneId]!} aura={token.aura ?? null} onChange={(aura) => upd({ aura })} />}
           {isGm && state.scenes[token.sceneId] && (
             <Field label={`Scurovisione (${state.scenes[token.sceneId]!.unit ?? 'ft'})`}>
               <input
