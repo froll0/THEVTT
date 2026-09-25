@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { Armchair, ArrowLeft, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Armchair, ArrowLeft, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -12,7 +12,7 @@ import { Board, CELL, type Tool, type ToolOptions } from './Board';
 import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { PROP_KINDS } from './props';
-import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, PropInspector, ScenePanel, SheetPanel, SheetWindow, TokenInspector } from './Panels';
+import { BestiaryPanel, ChatPanel, DiceBar, DoorInspector, InitiativePanel, NotesPanel, PropInspector, ScenePanel, SheetPanel, SheetWindow, TokenInspector } from './Panels';
 import { FloatingWindow, MinimizedWindow } from '../components/FloatingWindow';
 import { useWindows } from '../store/windows';
 
@@ -32,6 +32,8 @@ export function TableView({ campaignId }: { campaignId: string }) {
     drawColor: '',
     drawWidth: 0.08,
     erase: false,
+    drawText: false,
+    doorState: 'closed',
     wallKind: 'wall',
     wallMode: 'line',
     wallErase: false,
@@ -63,6 +65,11 @@ export function TableView({ campaignId }: { campaignId: string }) {
       if (e.key === 'd') setTool('draw');
       if (e.key === 'w' && useTable.getState().role === 'gm') setTool('walls');
       if (e.key === 'o' && useTable.getState().role === 'gm') setTool('props');
+      if (e.key === 'l' && useTable.getState().role === 'gm') setTool('light');
+      if (e.key === 't') {
+        setTool('draw');
+        setOptions((o) => ({ ...o, drawText: true, erase: false }));
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -173,6 +180,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                         { id: 'fog', icon: CloudFog, label: 'Nebbia di guerra' },
                         { id: 'walls', icon: BrickWall, label: 'Muri e porte (W)' },
                         { id: 'props', icon: Armchair, label: 'Oggetti di scena (O)' },
+                        { id: 'light', icon: Lightbulb, label: 'Luci e visione (L)' },
                       ] as const)
                     : []),
                 ] as const
@@ -226,6 +234,13 @@ export function TableView({ campaignId }: { campaignId: string }) {
           )}
           {state && scene && tool === 'draw' && (
             <div className="float tool-options glass">
+              <button className={`tool ${!options.erase && !options.drawText ? 'active' : ''}`} title="Penna" onClick={() => setOptions({ ...options, drawText: false, erase: false })}>
+                <Pencil size={15} />
+              </button>
+              <button className={`tool ${!options.erase && options.drawText ? 'active' : ''}`} title="Testo (T): clic sulla mappa e scrivi" onClick={() => setOptions({ ...options, drawText: true, erase: false })}>
+                <Type size={15} />
+              </button>
+              <span className="vsep" />
               {DRAW_COLORS.map((c) => (
                 <button
                   key={c || 'mine'}
@@ -237,7 +252,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
               ))}
               <span className="vsep" />
               {([0.05, 0.08, 0.16] as const).map((w, i) => (
-                <button key={w} className={`tool ${!options.erase && options.drawWidth === w ? 'active' : ''}`} title={['Sottile', 'Medio', 'Spesso'][i]} onClick={() => setOptions({ ...options, drawWidth: w, erase: false })}>
+                <button key={w} className={`tool ${!options.erase && options.drawWidth === w ? 'active' : ''}`} title={options.drawText ? ['Testo piccolo', 'Testo medio', 'Testo grande'][i] : ['Sottile', 'Medio', 'Spesso'][i]} onClick={() => setOptions({ ...options, drawWidth: w, erase: false })}>
                   <span className="stroke-dot" style={{ width: 4 + i * 4, height: 4 + i * 4 }} />
                 </button>
               ))}
@@ -265,6 +280,13 @@ export function TableView({ campaignId }: { campaignId: string }) {
                   <Icon size={14} /> {label}
                 </button>
               ))}
+              {options.wallKind === 'door' && !options.wallErase && (
+                <select className="select tool-select" value={options.doorState} onChange={(e) => setOptions({ ...options, doorState: e.target.value as ToolOptions['doorState'] })} aria-label="Nuove porte">
+                  <option value="closed">chiuse</option>
+                  <option value="open">aperte</option>
+                  <option value="locked">a chiave</option>
+                </select>
+              )}
               <span className="vsep" />
               <button className={`tool wide ${options.wallMode === 'line' ? 'active' : ''}`} title="Clic dopo clic; Invio, Esc o tasto destro per finire" onClick={() => setOptions({ ...options, wallMode: 'line', wallErase: false })}>
                 <Spline size={14} /> Linea
@@ -292,6 +314,38 @@ export function TableView({ campaignId }: { campaignId: string }) {
               <span className="faint tiny" style={{ padding: '0 6px' }}>clic sulla mappa per posarlo</span>
             </div>
           )}
+          {state && scene && tool === 'light' && isGm && (
+            <div className="float tool-options glass">
+              <button
+                className={`tool wide ${scene.vision ? 'active' : ''}`}
+                title="Ogni giocatore vede solo ciò che vedono i suoi token"
+                onClick={() => table.dispatch({ type: 'scene.update', sceneId: scene.id, patch: { vision: !scene.vision } })}
+              >
+                <Eye size={14} /> Visione dinamica {scene.vision ? 'attiva' : 'spenta'}
+              </button>
+              {scene.vision && (
+                <>
+                  <span className="vsep" />
+                  {(
+                    [
+                      ['bright', 'Giorno'],
+                      ['dim', 'Penombra'],
+                      ['dark', 'Buio'],
+                    ] as const
+                  ).map(([a, label]) => (
+                    <button key={a} className={`tool wide ${(scene.ambient ?? 'bright') === a ? 'active' : ''}`} onClick={() => table.dispatch({ type: 'scene.update', sceneId: scene.id, patch: { ambient: a } })}>
+                      {label}
+                    </button>
+                  ))}
+                  <span className="vsep" />
+                  <button className={`tool wide ${options.lightPreview ? 'active' : ''}`} onClick={() => setOptions({ ...options, lightPreview: !options.lightPreview })}>
+                    Vista giocatori
+                  </button>
+                </>
+              )}
+              <span className="faint tiny" style={{ padding: '0 6px' }}>clic sulla mappa: fonte di luce · luci dei token nel loro pannello</span>
+            </div>
+          )}
           {state && scene && tool === 'fog' && isGm && (
             <div className="float tool-options glass">
               <button className={`tool wide ${options.fogReveal ? 'active' : ''}`} onClick={() => setOptions({ ...options, fogReveal: true })}>
@@ -317,6 +371,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
 
           {selected && <TokenInspector token={selected} />}
           {isGm && table.selectedPropId && state?.props?.[table.selectedPropId] && <PropInspector prop={state.props[table.selectedPropId]!} />}
+          {isGm && table.selectedWallId && state?.walls?.[table.selectedWallId] && <DoorInspector wall={state.walls[table.selectedWallId]!} />}
           {state && scene?.vision && !isGm && !Object.values(state.tokens).some((t) => t.sceneId === scene.id && t.ownerIds.includes(user.id)) && (
             <div className="float board-hint glass">Visione dinamica: vedi solo quello che vedono i tuoi token. Metti il tuo personaggio sulla mappa.</div>
           )}

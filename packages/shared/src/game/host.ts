@@ -587,6 +587,8 @@ export class GameHost {
             x2: coord(w.x2, scene.widthCells),
             y2: coord(w.y2, scene.heightCells),
             kind: w.kind === 'door' || w.kind === 'window' ? w.kind : ('wall' as const),
+            ...(w.kind === 'door' && w.open ? { open: true } : {}),
+            ...(w.kind === 'door' && w.locked && !w.open ? { locked: true } : {}),
           };
           if (wall.x1 === wall.x2 && wall.y1 === wall.y2) continue;
           s.walls![wall.id] = wall;
@@ -599,12 +601,20 @@ export class GameHost {
         if (!isGm) {
           // players may only open and close doors next to one of their tokens
           if (w.kind !== 'door' || Object.keys(action.patch).some((k) => k !== 'open')) return { ok: false, reason: 'Solo il master può farlo' };
+          if (w.locked) return { ok: false, reason: 'La porta è chiusa a chiave' };
           const mid = { x: (w.x1 + w.x2) / 2, y: (w.y1 + w.y2) / 2 };
           const near = Object.values(s.tokens).some((t) => t.sceneId === w.sceneId && t.ownerIds.includes(from) && Math.hypot(t.x + t.size / 2 - mid.x, t.y + t.size / 2 - mid.y) <= 2.5 + t.size / 2);
           if (!near) return { ok: false, reason: 'Devi essere vicino alla porta' };
         }
         if (action.patch.kind !== undefined) w.kind = action.patch.kind === 'door' || action.patch.kind === 'window' ? action.patch.kind : 'wall';
+        if (action.patch.locked !== undefined) w.locked = !!action.patch.locked;
         if (action.patch.open !== undefined) w.open = !!action.patch.open;
+        // a locked door is a closed door
+        if (w.locked) w.open = false;
+        if (w.kind !== 'door') {
+          delete w.open;
+          delete w.locked;
+        }
         break;
       }
       case 'wall.delete': {
@@ -662,7 +672,8 @@ export class GameHost {
       }
       case 'drawing.create': {
         const pts = Array.isArray(action.points) ? action.points.slice(0, 4000).map((v) => Math.round((Number(v) || 0) * 100) / 100) : [];
-        if (pts.length < 4 || pts.length % 2) return { ok: false, reason: 'Tratto non valido' };
+        const text = typeof action.text === 'string' ? action.text.trim().slice(0, 200) : '';
+        if (text ? pts.length < 2 : pts.length < 4 || pts.length % 2) return { ok: false, reason: 'Tratto non valido' };
         const onScene = Object.values(s.drawings!).filter((d) => d.sceneId === s.activeSceneId);
         if (onScene.length >= MAX_DRAWINGS) return { ok: false, reason: 'Troppi disegni: cancellane qualcuno' };
         const id = newId();
@@ -671,8 +682,9 @@ export class GameHost {
           sceneId: s.activeSceneId,
           points: pts,
           color: typeof action.color === 'string' ? action.color.slice(0, 20) : player?.color ?? '#ffffff',
-          width: Math.min(2, Math.max(0.02, Number(action.width) || 0.08)),
+          width: text ? Math.min(3, Math.max(0.2, Number(action.width) || 0.5)) : Math.min(2, Math.max(0.02, Number(action.width) || 0.08)),
           authorId: from,
+          ...(text ? { text, points: pts.slice(0, 2) } : {}),
         };
         break;
       }

@@ -47,6 +47,8 @@ export interface Wall {
   y2: number;
   kind: WallKind;
   open?: boolean;
+  /** doors: players can't open it */
+  locked?: boolean;
 }
 
 /** A light source. Radii in cells: fully lit up to `bright`, dim up to `dim`. */
@@ -125,15 +127,19 @@ export interface Token {
   aura?: { radius: number; color: string } | null;
 }
 
-/** A freehand stroke on the map. Points are in cells, flattened [x0, y0, x1, y1, ...]. */
+/**
+ * A freehand stroke on the map, or a text label. Points are in cells,
+ * flattened [x0, y0, x1, y1, ...]; a label sits at its first point.
+ */
 export interface Drawing {
   id: string;
   sceneId: string;
   points: number[];
   color: string;
-  /** stroke width in cells */
+  /** stroke width in cells; for labels, the text height */
   width: number;
   authorId: string;
+  text?: string;
 }
 
 /**

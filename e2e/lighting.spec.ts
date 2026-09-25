@@ -33,6 +33,7 @@ test('walls, doors, props and dynamic light', async () => {
   a = at(0.4, 0.2); b = at(0.4, 0.45);
   await G.mouse.click(a.x, a.y); await G.mouse.click(b.x, b.y); await G.keyboard.press('Escape');
   await G.getByRole('button', { name: 'Porta' }).click();
+  await G.getByLabel('Nuove porte').selectOption('locked');
   a = at(0.4, 0.45); b = at(0.4, 0.55);
   await G.mouse.click(a.x, a.y); await G.mouse.click(b.x, b.y); await G.keyboard.press('Escape');
   await G.getByRole('button', { name: 'Muro', exact: true }).click();
@@ -49,10 +50,19 @@ test('walls, doors, props and dynamic light', async () => {
   await G.getByTitle('Bestiario').click();
   await G.locator('.rows .r', { hasText: 'Scheletro' }).getByTitle('Aggiungi al tavolo').click();
   await G.getByTitle('Seleziona e sposta (V)').click();
-  // scene: vision + darkness
-  await G.getByTitle('Scene').click();
-  await G.getByText('Visione dinamica').locator('..').getByRole('switch').click();
-  await G.getByLabel('Luce ambientale').selectOption('dark');
+  // a label on the map
+  await G.getByTitle('Disegna (D)').click();
+  await G.getByTitle('Testo (T): clic sulla mappa e scrivi').click();
+  const lbl = at(0.25, 0.85);
+  await G.mouse.click(lbl.x, lbl.y);
+  await G.getByLabel('Testo sulla mappa').fill('Cripta di Varos');
+  await G.getByLabel('Testo sulla mappa').press('Enter');
+  await expect(G.getByLabel('Testo sulla mappa')).toHaveCount(0);
+  // lights and vision from their own tool
+  await G.getByTitle('Luci e visione (L)').click();
+  await G.getByRole('button', { name: /Visione dinamica spenta/ }).click();
+  await G.getByRole('button', { name: 'Buio', exact: true }).click();
+  await G.getByTitle('Seleziona e sposta (V)').click();
   await G.getByRole('button', { name: /Vista master/ }).click();
   await expect(G.getByRole('button', { name: /Vista giocatori/ })).toBeVisible();
   // a player with no token on a scene with dynamic vision is told why it's dark
@@ -61,11 +71,16 @@ test('walls, doors, props and dynamic light', async () => {
   await G.getByTitle('Aggiungi token').click();
   await G.getByRole('button', { name: 'Giulia' }).click();
   await G.locator('.inspector').getByLabel('Luce').selectOption('torch');
-  // the door opens: the other room appears (GM opens it)
+  // the GM picks the locked door, unlocks and opens it
   const d = at(0.4, 0.5);
   await G.getByTitle('Seleziona e sposta (V)').click();
   await G.keyboard.press('Escape');
   await G.mouse.click(d.x, d.y);
+  const door = G.locator('.inspector', { hasText: 'Porta' });
+  await expect(door.getByRole('button', { name: 'Apri la porta' })).toBeDisabled();
+  await door.getByRole('switch').click();
+  await door.getByRole('button', { name: 'Apri la porta' }).click();
+  await expect(door.getByRole('button', { name: 'Chiudi la porta' })).toBeVisible();
   // with a token on the map the hint goes away
   await expect(P.locator('.board-hint')).toHaveCount(0);
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);

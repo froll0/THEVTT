@@ -338,3 +338,28 @@ describe('character portraits on tokens', () => {
     expect(host.assetStore[host.state.tokens[tok.id]!.image!]).toBe('data:image/png;base64,CCCC');
   });
 });
+
+describe('locked doors and labels', () => {
+  it('keeps locked doors shut for players', () => {
+    const { host } = setup();
+    host.dispatch('p1', { type: 'token.create', token: { name: 'Lia', characterId: 'ch1', x: 3, y: 3 } });
+    host.dispatch('gm', { type: 'wall.create', walls: [{ x1: 5, y1: 3, x2: 5, y2: 5, kind: 'door', locked: true }] });
+    const door = Object.values(host.state.walls!)[0]!;
+    expect(door).toMatchObject({ kind: 'door', locked: true });
+    expect(host.dispatch('p1', { type: 'wall.update', wallId: door.id, patch: { open: true } })).toEqual({ ok: false, reason: 'La porta è chiusa a chiave' });
+    expect(host.dispatch('p1', { type: 'wall.update', wallId: door.id, patch: { locked: false } }).ok).toBe(false);
+    host.dispatch('gm', { type: 'wall.update', wallId: door.id, patch: { locked: false } });
+    expect(host.dispatch('p1', { type: 'wall.update', wallId: door.id, patch: { open: true } }).ok).toBe(true);
+    // locking an open door closes it
+    host.dispatch('gm', { type: 'wall.update', wallId: door.id, patch: { locked: true } });
+    expect(host.state.walls![door.id]).toMatchObject({ open: false, locked: true });
+  });
+
+  it('adds text labels to the map', () => {
+    const { host, lastState } = setup();
+    expect(host.dispatch('p1', { type: 'drawing.create', points: [4, 5], color: '#fff', width: 0.6, text: '  Trappola!  ' }).ok).toBe(true);
+    const d = Object.values(lastState('p2').drawings!)[0]!;
+    expect(d).toMatchObject({ text: 'Trappola!', points: [4, 5], width: 0.6 });
+    expect(host.dispatch('p1', { type: 'drawing.create', points: [4, 5], color: '#fff', width: 0.6, text: '   ' }).ok).toBe(false);
+  });
+});

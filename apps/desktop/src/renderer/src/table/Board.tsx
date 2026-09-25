@@ -10,7 +10,7 @@ import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
 
 export const CELL = 70;
-export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props';
+export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props' | 'light';
 
 export interface ToolOptions {
   fogReveal: boolean;
@@ -20,6 +20,10 @@ export interface ToolOptions {
   /** stroke width in cells */
   drawWidth: number;
   erase: boolean;
+  /** draw tool writes text labels instead of strokes */
+  drawText: boolean;
+  /** new doors start closed, open or locked */
+  doorState: 'closed' | 'open' | 'locked';
   wallKind: WallKind;
   /** chain of segments, or a rectangular room by dragging */
   wallMode: 'line' | 'rect';
@@ -47,7 +51,7 @@ function hitProp(p: Prop, x: number, y: number): boolean {
 const WALL_COLORS: Record<WallKind, string> = { wall: '#ffb347', door: '#5ec8ff', window: '#9be7c4' };
 
 /** Walls for the GM; doors for everyone (players click them to open). */
-function drawWalls(ctx: CanvasRenderingContext2D, walls: Wall[], zoom: number, which: 'all' | 'doors', hovered: string | null) {
+function drawWalls(ctx: CanvasRenderingContext2D, walls: Wall[], zoom: number, which: 'all' | 'doors', hovered: string | null, selected: string | null, redraw: () => void) {
   for (const w of walls) {
     if (which === 'doors' && w.kind !== 'door') continue;
     const a = { x: w.x1 * CELL, y: w.y1 * CELL };
@@ -64,9 +68,32 @@ function drawWalls(ctx: CanvasRenderingContext2D, walls: Wall[], zoom: number, w
       ctx.strokeStyle = 'rgba(0,0,0,0.7)';
       ctx.stroke();
       ctx.lineWidth = width;
-      ctx.strokeStyle = WALL_COLORS.door;
+      ctx.strokeStyle = w.locked ? '#ff8a5c' : WALL_COLORS.door;
       if (w.open) ctx.setLineDash([6 / zoom, 5 / zoom]);
       ctx.stroke();
+      ctx.setLineDash([]);
+      if (w.id === selected) {
+        ctx.lineWidth = 2 / zoom;
+        ctx.strokeStyle = '#fff';
+        ctx.setLineDash([4 / zoom, 4 / zoom]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (w.locked) {
+        // a padlock in the middle of the door
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        const r = 9 / zoom;
+        ctx.beginPath();
+        ctx.arc(mx, my, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#b8472a';
+        ctx.fill();
+        ctx.lineWidth = 1.5 / zoom;
+        ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+        ctx.stroke();
+        const icon = conditionImage('__lock', redraw);
+        if (icon) ctx.drawImage(icon, mx - r * 0.62, my - r * 0.62, r * 1.24, r * 1.24);
+      }
     } else {
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
@@ -101,6 +128,12 @@ function distToSegment(px: number, py: number, ax: number, ay: number, bx: numbe
 
 function hitDrawing(d: Drawing, wx: number, wy: number, slack: number) {
   const p = d.points;
+  if (d.text) {
+    // roughly the label's box
+    const h = d.width * CELL;
+    const w = d.text.length * h * 0.55;
+    return Math.abs(wx - p[0]! * CELL) <= w / 2 + slack && Math.abs(wy - p[1]! * CELL) <= h / 2 + slack;
+  }
   for (let i = 0; i + 3 < p.length; i += 2) {
     if (distToSegment(wx, wy, p[i]! * CELL, p[i + 1]! * CELL, p[i + 2]! * CELL, p[i + 3]! * CELL) <= (d.width * CELL) / 2 + slack) return true;
   }
@@ -239,16 +272,25 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [cursor, setCursor] = useState('default');
   const erased = useRef(new Set<string>());
+  /** a label being typed: where (cells) and where on screen */
+  const [textDraft, setTextDraft] = useState<{ x: number; y: number; sx: number; sy: number; value: string } | null>(null);
+  const commitText = () => {
+    const d = textDraft;
+    setTextDraft(null);
+    const L = live.current;
+    if (!d || !d.value.trim()) return;
+    dispatch({ type: 'drawing.create', points: [d.x, d.y], color: drawColor(L), width: L.options.drawWidth >= 0.16 ? 0.9 : L.options.drawWidth >= 0.08 ? 0.55 : 0.38, text: d.value });
+  };
 
   const me = useApp((s) => s.user?.id ?? '');
-  const { state, assets, pings, role, selectedTokenId, selectedPropId, dispatch, select, selectProp } = useTable();
+  const { state, assets, pings, role, selectedTokenId, selectedPropId, selectedWallId, dispatch, select, selectProp, selectWall } = useTable();
   const board = useSettings((s) => s.board);
   const isGm = role === 'gm';
   const scene = state ? state.scenes[state.activeSceneId] : undefined;
 
   // keep latest values available to the render loop and handlers
-  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, isGm, me, tool, options, selectedTemplate });
-  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, isGm, me, tool, options, selectedTemplate };
+  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, isGm, me, tool, options, selectedTemplate });
+  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, isGm, me, tool, options, selectedTemplate };
   const hoverWall = useRef<string | null>(null);
   dirty.current = true;
 
@@ -395,6 +437,21 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       };
       for (const d of Object.values(L.state.drawings ?? {})) {
         if (d.sceneId !== L.scene.id) continue;
+        if (d.text) {
+          const size = d.width * CELL;
+          ctx.save();
+          ctx.font = `700 ${size}px system-ui, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.lineJoin = 'round';
+          ctx.lineWidth = Math.max(3 / cam.zoom, size * 0.18);
+          ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+          ctx.strokeText(d.text, d.points[0]! * CELL, d.points[1]! * CELL);
+          ctx.fillStyle = vivid(d.color);
+          ctx.fillText(d.text, d.points[0]! * CELL, d.points[1]! * CELL);
+          ctx.restore();
+          continue;
+        }
         ctx.save();
         strokeLine(d.points.map((v) => v * CELL), d.color, d.width * CELL);
         ctx.restore();
@@ -585,7 +642,8 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
 
       // doors under the darkness (so players only see those in sight), then light and shadow
       const walls = Object.values(L.state.walls ?? {}).filter((w) => w.sceneId === L.scene!.id);
-      if (!L.isGm) drawWalls(ctx, walls, cam.zoom, 'doors', hoverWall.current);
+      const redraw = () => (dirty.current = true);
+      if (!L.isGm) drawWalls(ctx, walls, cam.zoom, 'doors', hoverWall.current, null, redraw);
       if (L.scene.vision) {
         const bounds = { w: L.scene.widthCells, h: L.scene.heightCells };
         if (!L.isGm) {
@@ -605,7 +663,8 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
           );
         }
       }
-      if (L.isGm && (L.tool === 'walls' || L.scene.vision || walls.length)) drawWalls(ctx, walls, cam.zoom, L.tool === 'walls' || L.scene.vision ? 'all' : 'doors', hoverWall.current);
+      if (L.isGm && (L.tool === 'walls' || L.scene.vision || walls.length))
+        drawWalls(ctx, walls, cam.zoom, L.tool === 'walls' || L.scene.vision ? 'all' : 'doors', hoverWall.current, L.selectedWallId, redraw);
 
       if (g.kind === 'wall' && g.points.length) {
         const last = g.points[g.points.length - 1]!;
@@ -822,7 +881,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
           endWalls(); // clicking the last point again ends the chain
           return;
         }
-        dispatch({ type: 'wall.create', walls: [{ x1: last.x, y1: last.y, x2: pt.x, y2: pt.y, kind: L.options.wallKind }] });
+        dispatch({ type: 'wall.create', walls: [{ x1: last.x, y1: last.y, x2: pt.x, y2: pt.y, kind: L.options.wallKind, open: L.options.doorState === 'open', locked: L.options.doorState === 'locked' }] });
         g.points.push(pt);
       } else {
         gesture.current = { kind: 'wall', points: [pt], tx: w.x, ty: w.y };
@@ -830,14 +889,21 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       dirty.current = true;
       return;
     }
-    if (L.tool === 'props' && L.isGm && L.scene) {
-      const kind = propKind(L.options.propKind);
+    if ((L.tool === 'props' || L.tool === 'light') && L.isGm && L.scene) {
+      const kind = propKind(L.tool === 'light' ? 'light' : L.options.propKind);
       if (!kind) return;
       const light = kind.light ? { bright: metresToCells(L.scene, kind.light.bright), dim: metresToCells(L.scene, kind.light.dim), color: kind.light.color } : null;
       dispatch({
         type: 'prop.create',
         prop: { kind: kind.id, x: snapHalf(w.x / CELL - kind.w / 2), y: snapHalf(w.y / CELL - kind.h / 2), w: kind.w, h: kind.h, light, blocksVision: !!kind.blocksVision },
       });
+      return;
+    }
+    if (L.tool === 'draw' && L.options.drawText && !L.options.erase) {
+      // the rest of the click would take the focus away from the text field
+      e.preventDefault();
+      const rect = canvasRef.current!.getBoundingClientRect();
+      setTextDraft({ x: w.x / CELL, y: w.y / CELL, sx: e.clientX - rect.left, sy: e.clientY - rect.top, value: '' });
       return;
     }
     if (L.tool === 'draw') {
@@ -867,9 +933,14 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     // doors open and close with a click (players need a token nearby: the host checks)
     const door = wallAt(w.x, w.y, true);
     if (door) {
-      dispatch({ type: 'wall.update', wallId: door.id, patch: { open: !door.open } });
+      if (L.isGm) {
+        // the GM picks the door (open, lock…) and double-clicks to open or close it
+        if (e.detail >= 2) dispatch({ type: 'wall.update', wallId: door.id, patch: { open: !door.open } });
+        selectWall(door.id);
+      } else dispatch({ type: 'wall.update', wallId: door.id, patch: { open: !door.open } });
       return;
     }
+    selectWall(null);
     if (L.isGm) {
       const prop = propAt(w.x, w.y);
       if (prop) {
@@ -1032,7 +1103,13 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         if (e.key === 'Enter') return;
         select(null);
         selectProp(null);
+        selectWall(null);
         setSelectedTemplate(null);
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && L.selectedWallId && L.isGm) {
+        dispatch({ type: 'wall.delete', wallId: L.selectedWallId });
+        selectWall(null);
+        return;
       }
       if ((e.key === 'Delete' || e.key === 'Backspace') && L.selectedPropId && L.isGm) {
         dispatch({ type: 'prop.delete', propId: L.selectedPropId });
@@ -1054,10 +1131,10 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [dispatch, select, selectProp]);
+  }, [dispatch, select, selectProp, selectWall]);
 
   const toolCursor =
-    tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' || tool === 'walls' || tool === 'props'
+    tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' || tool === 'walls' || tool === 'props' || tool === 'light'
       ? 'crosshair'
       : tool === 'ping'
         ? 'cell'
@@ -1078,6 +1155,25 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         onContextMenu={(e) => e.preventDefault()}
       />
       {selectedTemplate && <div className="board-hint glass">Area selezionata · Canc per eliminarla</div>}
+      {textDraft && (
+        <input
+          className="input board-text-input"
+          style={{ left: textDraft.sx, top: textDraft.sy }}
+          ref={(el) => {
+            if (el && document.activeElement !== el) requestAnimationFrame(() => el.focus());
+          }}
+          placeholder="Scrivi e premi Invio"
+          value={textDraft.value}
+          onChange={(e) => setTextDraft({ ...textDraft, value: e.target.value })}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') commitText();
+            if (e.key === 'Escape') setTextDraft(null);
+          }}
+          onBlur={commitText}
+          aria-label="Testo sulla mappa"
+        />
+      )}
     </div>
   );
 }

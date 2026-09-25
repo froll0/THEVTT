@@ -1,8 +1,8 @@
-import { describeRoll, isNat, type Ambient, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch } from '@thevtt/shared';
+import { describeRoll, isNat, type Ambient, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
-import { ChevronLeft, Copy, Dices, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
+import { ChevronLeft, Copy, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Field, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
@@ -816,6 +816,52 @@ function AuraFields({ scene, aura, onChange }: { scene: Scene; aura: { radius: n
         </select>
       </Field>
       {aura && <input type="color" aria-label="Colore dell'aura" value={aura.color} onChange={(e) => onChange({ ...aura, color: e.target.value })} />}
+    </div>
+  );
+}
+
+/** GM: the selected door (or wall). */
+export function DoorInspector({ wall }: { wall: Wall }) {
+  const { dispatch, selectWall } = useTable();
+  const upd = (patch: Partial<Pick<Wall, 'open' | 'locked' | 'kind'>>) => dispatch({ type: 'wall.update', wallId: wall.id, patch });
+  return (
+    <div className="inspector glass">
+      <div className="row between">
+        <b>{wall.kind === 'door' ? 'Porta' : wall.kind === 'window' ? 'Finestra' : 'Muro'}</b>
+        <button className="btn ghost sm icon" onClick={() => selectWall(null)} aria-label="Chiudi">
+          <X size={14} />
+        </button>
+      </div>
+      {wall.kind === 'door' && (
+        <>
+          <button className="btn" disabled={!!wall.locked} onClick={() => upd({ open: !wall.open })}>
+            {wall.open ? <DoorClosed size={15} /> : <DoorOpen size={15} />} {wall.open ? 'Chiudi la porta' : 'Apri la porta'}
+          </button>
+          <div className="row between">
+            <span className="small">
+              <Lock size={12} /> Chiusa a chiave
+            </span>
+            <Switch on={!!wall.locked} onChange={(locked) => upd({ locked })} />
+          </div>
+          <p className="faint tiny">I giocatori aprono le porte vicine con un clic, tranne quelle a chiave. Doppio clic sulla porta per aprirla o chiuderla al volo.</p>
+        </>
+      )}
+      <Field label="Tipo">
+        <select className="select" value={wall.kind} onChange={(e) => upd({ kind: e.target.value as Wall['kind'] })}>
+          <option value="wall">Muro</option>
+          <option value="door">Porta</option>
+          <option value="window">Finestra</option>
+        </select>
+      </Field>
+      <button
+        className="btn ghost sm danger"
+        onClick={() => {
+          dispatch({ type: 'wall.delete', wallId: wall.id });
+          selectWall(null);
+        }}
+      >
+        <Trash2 size={13} /> Elimina
+      </button>
     </div>
   );
 }
