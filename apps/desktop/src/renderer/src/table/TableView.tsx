@@ -8,6 +8,7 @@ import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
 import { Board, CELL, type Tool, type ToolOptions } from './Board';
+import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, ScenePanel, SheetPanel, TokenInspector } from './Panels';
 
@@ -116,7 +117,10 @@ export function TableView({ campaignId }: { campaignId: string }) {
             </div>
           )}
           {state && scene ? (
-            <Board tool={tool} options={options} cameraRef={cameraRef} />
+            <>
+              <Board tool={tool} options={options} cameraRef={cameraRef} />
+              <DiceLayer />
+            </>
           ) : (
             <div className="stage-message">
               {phase === 'waiting' ? (

@@ -616,3 +616,17 @@
   height: 4px;
   min-width: 0;
 }
+
+/* ---------- 3D dice ---------- */
+.dice-host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+}
+.dice-layer {
+  width: 100%;
+  height: 100%;
+  display: block;
+}

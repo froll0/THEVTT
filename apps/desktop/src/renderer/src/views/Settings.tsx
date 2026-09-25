@@ -155,6 +155,9 @@ function TableSettings() {
       <Setting title="Barre dei punti ferita">
         <Switch on={s.board.hpBars} onChange={(hpBars) => s.setBoard({ hpBars })} />
       </Setting>
+      <Setting title="Dadi 3D" hint="I dadi rotolano sul tavolo a ogni tiro. Disattivati anche con «Riduci animazioni».">
+        <Switch on={s.dice3d} onChange={(dice3d) => s.set({ dice3d })} />
+      </Setting>
       <Setting title="Connessione diretta" hint="Master e giocatori si collegano senza passare dal server; se non riesce si usa il server.">
         <Switch on={s.directConnection} onChange={(directConnection) => s.set({ directConnection })} />
       </Setting>

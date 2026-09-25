@@ -11,6 +11,9 @@ const devUrl = process.env.VITE_DEV_SERVER_URL;
 if (process.env.THEVTT_USER_DATA) app.setPath('userData', process.env.THEVTT_USER_DATA);
 // Otherwise one instance only: a second window would try to host a second server
 if (!process.env.THEVTT_USER_DATA && !app.requestSingleInstanceLock()) app.quit();
+// 3D dice need WebGL: on PCs whose GPU is blocklisted Chromium falls back to its
+// software renderer only when allowed. The page is our own code, not the web.
+app.commandLine.appendSwitch('enable-unsafe-swiftshader');
 
 // Everything the GM hosts (table state, maps) is kept on this machine.
 const dataDir = () => join(app.getPath('userData'), 'data');
