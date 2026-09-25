@@ -1,6 +1,6 @@
 import { roll, type ChatCard } from '@thevtt/shared';
 import { dnd5e } from '@thevtt/systems';
-import { ArrowUpCircle, Dices, Heart, MessageSquareShare, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun } from 'lucide-react';
+import { ArrowUpCircle, BookOpen, Dices, Heart, MessageSquareShare, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { Modal, Section, Switch } from '../../components/ui';
 import type { SheetProps } from '..';
@@ -449,6 +449,7 @@ function SpellsTab({
   onRoll: (f: string, l: string) => void;
   onShare: Share;
 }) {
+  const [preparing, setPreparing] = useState(false);
   const spells = dnd5e.knownSpells(c);
   const always = new Set(dnd5e.alwaysPrepared(c));
   const levels = [...new Set(spells.map((s) => s.level))].sort((a, b) => a - b);
@@ -475,8 +476,21 @@ function SpellsTab({
     if (!s.attack && !dmg && !s.heal) onRoll('0', `${label}${s.save ? ` · TS ${ABILITY_LABELS[s.save].name} CD ${sc.saveDc}` : ' · lanciato'}`);
   };
 
+  const preparedCount = c.spells.filter((id) => !always.has(id)).length;
+  if (preparing) return <PrepareSpells c={c} sc={sc} set={set} onDone={() => setPreparing(false)} />;
+
   return (
     <div className="col" style={{ gap: 'var(--s4)' }}>
+      {editable && (
+        <div className="prep-bar">
+          <span className="small">
+            <b>{preparedCount}</b>/{sc.prepared} preparati · <b>{c.cantrips.length}</b>/{sc.cantripsKnown} trucchetti
+          </span>
+          <button className="btn sm" onClick={() => setPreparing(true)}>
+            <BookOpen size={14} /> Prepara incantesimi
+          </button>
+        </div>
+      )}
       <div className="stat-row">
         <div className="stat">
           <small>CD</small>
@@ -495,7 +509,9 @@ function SpellsTab({
         <div className="rows">
           {sc.pact ? (
             <div className="r">
-              <span className="grow">{sc.pact.level}° livello</span>
+              <span className="grow">
+                {sc.pact.level}° livello <span className="faint small">· {sc.pact.count - c.pactSlotsUsed}/{sc.pact.count}</span>
+              </span>
               <span className="pips">
                 {Array.from({ length: sc.pact.count }, (_, i) => (
                   <button key={i} disabled={!editable} className={`pip ${i < c.pactSlotsUsed ? 'used' : ''}`} onClick={() => set({ pactSlotsUsed: i < c.pactSlotsUsed ? i : i + 1 })} />
@@ -505,7 +521,9 @@ function SpellsTab({
           ) : (
             sc.slots.map((n, idx) => (
               <div key={idx} className="r">
-                <span className="grow">{idx + 1}° livello</span>
+                <span className="grow">
+                  {idx + 1}° livello <span className="faint small">· {n - (c.spellSlotsUsed[idx] ?? 0)}/{n}</span>
+                </span>
                 <span className="pips">
                   {Array.from({ length: n }, (_, i) => (
                     <button
@@ -564,6 +582,61 @@ function SpellsTab({
         </Section>
       ))}
       {spells.length === 0 && <p className="muted small">Nessun incantesimo preparato. Sceglili dalla pagina del personaggio.</p>}
+    </div>
+  );
+}
+
+/** Choosing prepared spells and cantrips from the sheet, like after a long rest. */
+function PrepareSpells({ c, sc, set, onDone }: { c: C; sc: dnd5e.Spellcasting; set: (p: Partial<C>) => void; onDone: () => void }) {
+  const always = new Set(dnd5e.alwaysPrepared(c));
+  const available = dnd5e.availableSpells(c);
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const shown = available.filter((s) => !q || s.name.toLowerCase().includes(q));
+  const prepared = c.spells.filter((id) => !always.has(id));
+  const levels = [...new Set(shown.map((s) => s.level))].sort((a, b) => a - b);
+  const toggleSpell = (id: string) => {
+    if (c.spells.includes(id)) set({ spells: c.spells.filter((x) => x !== id) });
+    else if (prepared.length < sc.prepared) set({ spells: [...c.spells, id] });
+  };
+  const toggleCantrip = (id: string) => {
+    if (c.cantrips.includes(id)) set({ cantrips: c.cantrips.filter((x) => x !== id) });
+    else if (c.cantrips.length < sc.cantripsKnown) set({ cantrips: [...c.cantrips, id] });
+  };
+  return (
+    <div className="col" style={{ gap: 'var(--s3)' }}>
+      <div className="prep-bar">
+        <span className="small">
+          Preparati <b className={prepared.length > sc.prepared ? 'danger-text' : ''}>{prepared.length}</b>/{sc.prepared} · trucchetti <b>{c.cantrips.length}</b>/{sc.cantripsKnown}
+        </span>
+        <button className="btn primary sm" onClick={onDone}>
+          Fatto
+        </button>
+      </div>
+      <input className="input" placeholder="Cerca un incantesimo" value={query} onChange={(e) => setQuery(e.target.value)} />
+      {levels.map((lvl) => (
+        <Section key={lvl} title={lvl === 0 ? 'Trucchetti' : `${lvl}° livello`}>
+          <div className="prep-list">
+            {shown
+              .filter((s) => s.level === lvl)
+              .map((s) => {
+                const locked = always.has(s.id);
+                const on = locked || (lvl === 0 ? c.cantrips.includes(s.id) : c.spells.includes(s.id));
+                const full = lvl === 0 ? c.cantrips.length >= sc.cantripsKnown : prepared.length >= sc.prepared;
+                return (
+                  <label key={s.id} className={`prep-item ${on ? 'on' : ''} ${!on && full ? 'full' : ''}`} title={s.description}>
+                    <input type="checkbox" checked={on} disabled={locked || (!on && full)} onChange={() => (lvl === 0 ? toggleCantrip(s.id) : toggleSpell(s.id))} />
+                    <span className="grow">{s.name}</span>
+                    {locked && <span className="tag">sempre</span>}
+                    {s.concentration && <span className="tag" title="Concentrazione">C</span>}
+                    {s.ritual && <span className="tag" title="Rituale">R</span>}
+                    <span className="faint tiny">{SCHOOLS[s.school]}</span>
+                  </label>
+                );
+              })}
+          </div>
+        </Section>
+      ))}
     </div>
   );
 }

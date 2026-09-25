@@ -69,5 +69,12 @@ test('builds a wizard with the guided flow, casts and levels up', async () => {
   });
   await page.locator('.sheet-tabs button', { hasText: 'Incantesimi' }).click();
   await expect(page.locator('.pip.used')).toHaveCount(0);
+  // a new level, one more spell to prepare: straight from the sheet
+  await page.getByRole('button', { name: 'Prepara incantesimi' }).click();
+  await expect(page.locator('.prep-bar')).toContainText('4/5');
+  await page.locator('.prep-item:not(.on) input:not([disabled])').last().check();
+  await expect(page.locator('.prep-bar')).toContainText('5/5');
+  await page.getByRole('button', { name: 'Fatto' }).click();
+  await expect(page.locator('.prep-bar')).toContainText('5/5 preparati');
   expect(run.errors, run.errors.join('\n')).toEqual([]);
 });
