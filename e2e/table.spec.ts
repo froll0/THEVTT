@@ -119,10 +119,10 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await G.locator('.rows .r', { hasText: 'Guerriero goblin' }).getByTitle('Aggiungi al tavolo').click();
   await G.getByTitle('Nebbia di guerra').click();
   await G.getByRole('button', { name: 'Copri tutto' }).click();
-  await G.getByTitle('Iniziativa').click();
+  await G.getByTitle('Iniziativa', { exact: true }).click();
   await G.getByRole('button', { name: 'Tira per tutti i token' }).click();
   await expect(G.locator('.ini-row', { hasText: 'Guerriero goblin' })).toBeVisible();
-  await P.getByTitle('Iniziativa').click();
+  await P.getByTitle('Iniziativa', { exact: true }).click();
   await expect(P.locator('.ini-row', { hasText: 'Brunhild' })).toBeVisible();
   await expect(P.locator('.ini-row', { hasText: 'Guerriero goblin' })).toHaveCount(0);
   await G.getByRole('button', { name: 'Rivela tutto' }).click();
