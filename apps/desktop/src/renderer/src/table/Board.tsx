@@ -1,5 +1,6 @@
-import { blockingSegments, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { blockingSegments, lineOfSight, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
 import { exploredTexture, updateExplored } from './explored';
+import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
 import { animatedProp, drawProp, metresToCells, propKind } from './props';
 import { useEffect, useRef, useState } from 'react';
@@ -472,15 +473,49 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         ctx.setLineDash([]);
 
         if (t.conditions.length) {
-          t.conditions.slice(0, 5).forEach((_, i) => {
+          // icon badges along the top edge of the token
+          const shown = t.conditions.length > 6 ? t.conditions.slice(0, 5) : t.conditions;
+          // readable at any zoom, never bigger than half the token
+          const br = Math.min(r * 0.5, Math.max(8.5 / cam.zoom, r * 0.28));
+          // badges side by side along the rim, spread no further than the upper half
+          const step = Math.min((2.15 * br) / (r + 1), Math.PI / Math.max(1, shown.length));
+          const start = -Math.PI / 2 - (step * (shown.length - 1 + (shown.length < t.conditions.length ? 1 : 0))) / 2;
+          const badge = (i: number, draw: (x: number, y: number) => void, color: string) => {
+            const a = start + i * step;
+            const x = cx + Math.cos(a) * (r + 1);
+            const y = cy + Math.sin(a) * (r + 1);
             ctx.beginPath();
-            ctx.arc(cx + r * 0.75 - i * 11, cy - r * 0.8, 5, 0, Math.PI * 2);
-            ctx.fillStyle = '#e5a50a';
+            ctx.arc(x, y, br, 0, Math.PI * 2);
+            ctx.fillStyle = color;
             ctx.fill();
-            ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(0,0,0,0.7)';
             ctx.stroke();
-          });
+            draw(x, y);
+          };
+          shown.forEach((c, i) =>
+            badge(
+              i,
+              (x, y) => {
+                const icon = conditionImage(c, () => (dirty.current = true));
+                if (icon) ctx.drawImage(icon, x - br * 0.62, y - br * 0.62, br * 1.24, br * 1.24);
+              },
+              CONDITION_COLORS[c] ?? '#d9534f',
+            ),
+          );
+          if (shown.length < t.conditions.length) {
+            badge(
+              shown.length,
+              (x, y) => {
+                ctx.fillStyle = '#fff';
+                ctx.font = `700 ${Math.round(br)}px system-ui, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`+${t.conditions.length - shown.length}`, x, y + 0.5);
+              },
+              '#55575f',
+            );
+          }
         }
 
         if (L.board.hpBars && t.hp && t.hp.max > 0 && canControl(t, L.me, L.isGm)) {
@@ -506,6 +541,46 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
           ctx.fillText(t.name, cx, py + size + 5);
         }
         ctx.restore();
+      }
+
+      // dragging a token: how far it goes, and whether a wall is in the way (players)
+      if (g.kind === 'drag' && g.moved) {
+        const t = L.state.tokens[g.tokenId];
+        if (t) {
+          const half = (t.size * CELL) / 2;
+          const a = { x: t.x * CELL + half, y: t.y * CELL + half };
+          const nx = Math.round((g.wx - g.ox) / CELL);
+          const ny = Math.round((g.wy - g.oy) / CELL);
+          const b = { x: nx * CELL + half, y: ny * CELL + half };
+          const cells = Math.max(Math.abs(nx - t.x), Math.abs(ny - t.y));
+          const walls = Object.values(L.state.walls ?? {})
+            .filter((w) => w.sceneId === L.scene!.id && !(w.kind === 'door' && w.open))
+            .map((w) => ({ a: { x: w.x1, y: w.y1 }, b: { x: w.x2, y: w.y2 } }));
+          const blocked = !L.isGm && walls.length > 0 && !lineOfSight({ x: a.x / CELL, y: a.y / CELL }, { x: b.x / CELL, y: b.y / CELL }, walls);
+          const col = blocked ? '#ff5a5f' : accentColor();
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.setLineDash([10 / cam.zoom, 6 / cam.zoom]);
+          haloStroke(ctx, col, 3 / cam.zoom, cam.zoom);
+          ctx.setLineDash([]);
+          // landing square
+          ctx.beginPath();
+          ctx.rect(nx * CELL, ny * CELL, t.size * CELL, t.size * CELL);
+          haloStroke(ctx, col, 2 / cam.zoom, cam.zoom);
+          const dist = Math.round(cells * L.scene.cellDistance * 10) / 10;
+          const label = blocked ? 'C’è un muro' : `${String(dist).replace('.', ',')} ${L.scene.unit ?? 'ft'}`;
+          ctx.font = `700 ${14 / cam.zoom}px system-ui, sans-serif`;
+          const w = ctx.measureText(label).width + 14 / cam.zoom;
+          ctx.fillStyle = blocked ? 'rgba(120,20,24,0.9)' : 'rgba(0,0,0,0.8)';
+          ctx.beginPath();
+          ctx.roundRect(b.x + half + 6 / cam.zoom, b.y - 12 / cam.zoom, w, 24 / cam.zoom, 6 / cam.zoom);
+          ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, b.x + half + 13 / cam.zoom, b.y);
+        }
       }
 
       // doors under the darkness (so players only see those in sight), then light and shadow

@@ -1,6 +1,7 @@
 import { describeRoll, isNat, type Ambient, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
-import { getSystem } from '@thevtt/systems';
+import { dnd5e, getSystem } from '@thevtt/systems';
+import { ConditionIcon } from '../components/ConditionIcon';
 import { ChevronLeft, Copy, Dices, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Field, readImage, Switch } from '../components/ui';
@@ -968,9 +969,10 @@ export function TokenInspector({ token }: { token: Token }) {
                   key={c}
                   className={`chip ${token.conditions.includes(c) ? 'on' : ''}`}
                   style={{ padding: '2px 8px', fontSize: '0.78rem' }}
+                  title={dnd5e.CONDITION_INFO[c]}
                   onClick={() => upd({ conditions: token.conditions.includes(c) ? token.conditions.filter((x) => x !== c) : [...token.conditions, c] })}
                 >
-                  {c}
+                  <ConditionIcon name={c} /> {c}
                 </button>
               ))}
             </div>

@@ -126,6 +126,23 @@ export class GameHost {
 
   upsertCharacter(c: TableCharacter): void {
     this._state.characters[c.id] = c;
+    this.syncPortrait(c, null);
+  }
+
+  /** The character's portrait (a picture in its sheet data) as an asset id, if any. */
+  private portraitAsset(c: TableCharacter): string | null {
+    const p = (c.data as { portrait?: unknown } | null)?.portrait;
+    if (typeof p !== 'string' || !IMAGE_DATA_URL.test(p) || p.length > MAX_ASSET_BYTES) return null;
+    return this.addAsset(p);
+  }
+
+  /** Tokens of a character show its portrait, unless someone gave them another picture. */
+  private syncPortrait(c: TableCharacter, previous: string | null): void {
+    const asset = this.portraitAsset(c);
+    for (const t of Object.values(this._state.tokens)) {
+      if (t.characterId !== c.id) continue;
+      if (t.image === null || t.image === previous) t.image = asset;
+    }
   }
 
   removePlayer(userId: string): void {
@@ -255,7 +272,7 @@ export class GameHost {
           y: spot.y,
           size,
           color: typeof t.color === 'string' ? t.color : player?.color ?? '#c9a227',
-          image: isGm && t.image && this.assets[t.image] ? t.image : null,
+          image: isGm && t.image && this.assets[t.image] ? t.image : t.characterId && s.characters[t.characterId] ? this.portraitAsset(s.characters[t.characterId]!) : null,
           ownerIds: isGm ? (t.ownerIds ?? []) : [from],
           characterId: t.characterId ?? null,
           monsterId: isGm && typeof t.monsterId === 'string' ? t.monsterId : null,
@@ -443,7 +460,9 @@ export class GameHost {
         const ch = s.characters[action.characterId];
         if (!ch) return { ok: false, reason: 'Personaggio inesistente' };
         if (!isGm && ch.ownerId !== from) return { ok: false, reason: 'Non è il tuo personaggio' };
+        const before = this.portraitAsset(ch);
         ch.data = action.data;
+        this.syncPortrait(ch, before);
         if (action.name) ch.name = action.name.slice(0, 80);
         this.opts.onCharacterChange?.(ch);
         break;

@@ -317,3 +317,24 @@ describe('auras and map alignment', () => {
     expect(host.state.scenes[scene]).toMatchObject({ bgCellPx: 4, bgOffsetX: 0.33, bgOffsetY: -50 });
   });
 });
+
+describe('character portraits on tokens', () => {
+  it('uses the portrait for the token and follows its changes', () => {
+    const { host, outbox } = setup();
+    const pic = 'data:image/png;base64,AAAA';
+    host.dispatch('p1', { type: 'character.update', characterId: 'ch1', data: { portrait: pic } });
+    host.dispatch('p1', { type: 'token.create', token: { name: 'Lia', characterId: 'ch1' } });
+    const tok = Object.values(host.state.tokens)[0]!;
+    expect(tok.image).toBeTruthy();
+    expect(host.assetStore[tok.image!]).toBe(pic);
+    // the picture reaches the other players too
+    expect(outbox.some((o) => o.to === 'p2' && o.msg.k === 'asset' && o.msg.dataUrl === pic)).toBe(true);
+    const pic2 = 'data:image/png;base64,BBBB';
+    host.dispatch('p1', { type: 'character.update', characterId: 'ch1', data: { portrait: pic2 } });
+    expect(host.assetStore[host.state.tokens[tok.id]!.image!]).toBe(pic2);
+    // a picture set by the GM on the token stays
+    host.dispatch('gm', { type: 'asset.add', dataUrl: 'data:image/png;base64,CCCC', attachTo: { tokenId: tok.id } });
+    host.dispatch('p1', { type: 'character.update', characterId: 'ch1', data: { portrait: null } });
+    expect(host.assetStore[host.state.tokens[tok.id]!.image!]).toBe('data:image/png;base64,CCCC');
+  });
+});
