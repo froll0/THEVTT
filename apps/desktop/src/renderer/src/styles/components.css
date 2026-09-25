@@ -872,3 +872,137 @@ input[type='color']::-webkit-color-swatch {
 .callout.warn {
   background: color-mix(in oklab, var(--warning) 12%, transparent);
 }
+
+/* ---------- compendium ---------- */
+.compendium-page {
+  height: 100%;
+  min-height: 0;
+}
+.compendium {
+  display: grid;
+  grid-template-columns: 220px 300px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+.comp-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding: var(--s4);
+  border-right: 1px solid var(--border);
+  min-height: 0;
+  overflow: auto;
+}
+.comp-cats {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.comp-cats button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 0;
+  background: none;
+  color: var(--fg-muted);
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.comp-cats button:hover {
+  color: var(--fg);
+}
+.comp-cats button.active {
+  background: var(--bg-elev-2);
+  color: var(--fg);
+}
+.comp-results {
+  border-right: 1px solid var(--border);
+  overflow: auto;
+  min-height: 0;
+  padding: var(--s2) 0;
+}
+.comp-list {
+  display: flex;
+  flex-direction: column;
+}
+.comp-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 7px var(--s4);
+  cursor: pointer;
+  color: inherit;
+  min-width: 0;
+}
+.comp-row:hover {
+  background: var(--bg-elev);
+}
+.comp-row.active {
+  background: var(--accent-soft);
+}
+.compact .comp-row {
+  padding: 7px 4px;
+  border-top: 1px solid var(--border);
+}
+.comp-detail {
+  overflow: auto;
+  min-height: 0;
+  padding: var(--s5) var(--s6);
+}
+.comp-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  max-width: 720px;
+}
+.comp-page h2 {
+  margin: 2px 0;
+  font-size: 1.35rem;
+}
+.comp-page h4,
+.rule-text h4 {
+  margin: var(--s3) 0 0;
+  font-size: 0.95rem;
+}
+.rule-text p,
+.rule-text ul {
+  margin: 0 0 var(--s2);
+  line-height: 1.6;
+}
+.rule-text ul {
+  padding-left: 1.2em;
+}
+.rule-text li {
+  margin-bottom: 3px;
+}
+.rule-table {
+  border-collapse: collapse;
+  margin: var(--s2) 0;
+  font-size: 0.88rem;
+}
+.rule-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 5px 14px 5px 0;
+  vertical-align: top;
+}
+.meta-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 0.88rem;
+}
+.meta-list > div {
+  display: contents;
+}
+.meta-list dt {
+  color: var(--fg-faint);
+}
+.meta-list dd {
+  margin: 0;
+}

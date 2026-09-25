@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { CompendiumView } from './views/CompendiumView';
 import { TopBar } from './components/Shell';
 import { Toasts } from './components/ui';
 import { useApp } from './store/app';
@@ -75,6 +76,7 @@ export function App() {
           {route.name === 'characters' && <CharactersView />}
           {route.name === 'character' && <CharacterEditor key={route.id ?? 'new'} id={route.id} systemId={route.systemId} assignTo={route.assignTo} />}
           {route.name === 'friends' && <FriendsView />}
+          {route.name === 'compendium' && <CompendiumView />}
           {route.name === 'settings' && <SettingsView initial={route.section} />}
         </ErrorBoundary>
       </main>

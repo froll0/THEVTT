@@ -1,7 +1,8 @@
 import { getSystem } from '@thevtt/systems';
-import { ArrowLeft, ArrowLeftRight, Eraser, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Eraser, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
+import { Compendium } from '../components/Compendium';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Avatar } from '../components/ui';
 import { useApp } from '../store/app';
@@ -14,7 +15,7 @@ import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, ScenePa
 
 const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
 
-type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'scene' | 'notes' | 'music';
+type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'scene' | 'notes' | 'music' | 'rules';
 
 export function TableView({ campaignId }: { campaignId: string }) {
   const { campaigns, user, go, status } = useApp();
@@ -74,6 +75,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     { id: 'scene', label: 'Scene', icon: MapIcon, gm: true },
     { id: 'notes', label: 'Note e dispense', icon: NotebookPen },
     { id: 'music', label: 'Musica', icon: Music, gm: true },
+    { id: 'rules', label: 'Compendio', icon: Library },
   ];
 
   return (
@@ -281,6 +283,16 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 {tab === 'scene' && isGm && <ScenePanel />}
                 {tab === 'notes' && <NotesPanel />}
                 {tab === 'music' && isGm && <MusicPanel />}
+                {tab === 'rules' && (
+                  <div className="panel-body">
+                    <Compendium
+                      systemId={state.systemId}
+                      compact
+                      onRoll={(formula, label) => table.dispatch({ type: 'roll', formula, label, private: isGm })}
+                      onShare={(card) => table.dispatch({ type: 'card', card })}
+                    />
+                  </div>
+                )}
               </ErrorBoundary>
             </div>
           )}

@@ -161,6 +161,14 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await P.locator('.note-row', { hasText: 'Lettera del sindaco' }).click();
   await expect(P.getByText('Venite subito alla miniera.')).toBeVisible();
 
+  // compendium at the table: a player looks up a spell and shows it to everyone
+  await P.getByTitle('Compendio').click();
+  await P.getByLabel('Cerca nel compendio').fill('palla di fuoco');
+  await P.locator('.comp-row', { hasText: 'Palla di fuoco' }).first().click();
+  await P.getByRole('button', { name: 'Mostra in chat' }).click();
+  await G.getByTitle('Chat e tiri').click();
+  await expect(G.locator('.log-card', { hasText: 'Palla di fuoco' })).toBeVisible();
+
   // homebrew creature: made in the editor, put on the table, stat block for the GM
   await G.getByTitle('Bestiario').click();
   await G.getByRole('button', { name: 'Nuova' }).click();

@@ -27,6 +27,7 @@ const NAV: { route: Route; label: string; match: Route['name'][] }[] = [
   { route: { name: 'campaigns' }, label: 'Campagne', match: ['campaigns', 'campaign'] },
   { route: { name: 'characters' }, label: 'Personaggi', match: ['characters', 'character'] },
   { route: { name: 'friends' }, label: 'Amici', match: ['friends'] },
+  { route: { name: 'compendium' }, label: 'Compendio', match: ['compendium'] },
 ];
 
 function Notifications() {
