@@ -1,9 +1,10 @@
-import { Bell, Check, LogOut, Maximize2, Minus, Radio, Settings, X } from 'lucide-react';
+import { ArrowDownToLine, Bell, Check, LogOut, Maximize2, Minus, Radio, Settings, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { bridge } from '../lib/platform';
 import { unreadOf, useChat } from '../store/chat';
 import { useApp, type Route } from '../store/app';
 import { useHosting } from '../store/hosting';
+import { useUpdates } from '../store/updates';
 import { Avatar, Popover } from './ui';
 
 function WindowControls() {
@@ -131,6 +132,58 @@ function AccountMenu() {
   );
 }
 
+/** A new version is out: what's new, and one click to install it. */
+function UpdateButton() {
+  const { check, progress, error, install } = useUpdates();
+  if (check?.state !== 'available') return null;
+  const { info } = check;
+  const installing = progress !== null;
+  return (
+    <Popover
+      width={340}
+      trigger={(open, toggle) => (
+        <button className={`btn sm update-pill ${open ? 'active' : ''}`} onClick={toggle} title="È disponibile una nuova versione">
+          <ArrowDownToLine size={14} /> Aggiorna a {info.latest}
+        </button>
+      )}
+    >
+      {() => (
+        <div className="col update-pop">
+          <div>
+            <b>TheVTT {info.latest}</b>
+            <div className="faint small">
+              Hai la {info.current}
+              {info.publishedAt ? ` · pubblicata il ${new Date(info.publishedAt).toLocaleDateString('it-IT')}` : ''}
+            </div>
+          </div>
+          {info.notes && <div className="update-notes selectable">{info.notes}</div>}
+          {installing ? (
+            <div className="col" style={{ gap: 4 }}>
+              <div className="progress">
+                <i style={{ width: `${Math.round((progress ?? 0) * 100)}%` }} />
+              </div>
+              <span className="faint tiny">Scarico l’aggiornamento… l’app si riavvierà da sola.</span>
+            </div>
+          ) : (
+            <div className="row">
+              <button className="btn primary sm" onClick={() => void install()}>
+                {info.mode === 'page' ? 'Scarica la nuova versione' : 'Installa e riavvia'}
+              </button>
+              {info.mode !== 'page' && (
+                <button className="btn ghost sm" onClick={() => void window.thevtt?.updates.openPage()}>
+                  Dettagli
+                </button>
+              )}
+            </div>
+          )}
+          {error && <span className="danger-text small">{error}</span>}
+          {info.mode === 'installer' && !installing && <span className="faint tiny">Se sei al tavolo come master, chiudi prima la sessione: i giocatori verranno disconnessi.</span>}
+        </div>
+      )}
+    </Popover>
+  );
+}
+
 function HostingIndicator() {
   const status = useHosting((s) => s.status);
   const go = useApp((s) => s.go);
@@ -178,6 +231,7 @@ export function TopBar({ children, nav = true }: { children?: ReactNode; nav?: b
               <span className={`status-dot ${status}`} /> {status === 'connecting' ? 'Connessione…' : 'Offline'}
             </span>
           )}
+          <UpdateButton />
           <HostingIndicator />
           <Notifications />
           <AccountMenu />

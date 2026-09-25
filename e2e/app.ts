@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const desktopDir = resolve(fileURLToPath(new URL('.', import.meta.url)), '../apps/desktop');
 const electronPath = createRequire(join(desktopDir, 'package.json'))('electron') as unknown as string;
@@ -18,15 +18,19 @@ export interface RunningApp {
  * Launches the built desktop app with its own profile. With `hostPort`, the
  * profile is pre-configured to host the lobby server on that port.
  */
-export async function launchApp(opts: { hostPort?: number } = {}): Promise<RunningApp> {
+export async function launchApp(opts: { hostPort?: number; release?: unknown } = {}): Promise<RunningApp> {
   const profile = mkdtempSync(join(tmpdir(), 'thevtt-e2e-'));
   // tests never reach out to the router, Cloudflare or the code relay
   mkdirSync(join(profile, 'data'), { recursive: true });
   writeFileSync(join(profile, 'data', 'server-config.json'), JSON.stringify({ enabled: !!opts.hostPort, port: opts.hostPort ?? 4477, upnp: false, tunnel: false }));
+  // nor GitHub: updates come from a local file when a test wants one
+  const release = join(profile, 'release.json');
+  if (opts.release) writeFileSync(release, JSON.stringify(opts.release));
+  const updates = opts.release ? { THEVTT_UPDATE_URL: pathToFileURL(release).href } : { THEVTT_NO_UPDATES: '1' };
   const app = await _electron.launch({
     executablePath: electronPath,
     args: ['--no-sandbox', desktopDir],
-    env: { ...process.env, THEVTT_USER_DATA: profile, VITE_DEV_SERVER_URL: '' },
+    env: { ...process.env, THEVTT_USER_DATA: profile, VITE_DEV_SERVER_URL: '', ...updates },
   });
   const page = await app.firstWindow();
   const errors: string[] = [];

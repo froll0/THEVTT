@@ -1,9 +1,13 @@
 import { app, BrowserWindow, ipcMain, net, shell } from 'electron';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
+import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { HostedServerConfig, HostedServerStatus } from '../preload/api';
+import type { HostedServerConfig, HostedServerStatus, UpdateInfo } from '../preload/api';
 import { DEFAULT_RENDEZVOUS, newIdentity, normalizeCode, resolve as resolveCode, type GroupIdentity } from './group-code';
 import { DEFAULT_SERVER_CONFIG, HostedServer } from './hosted-server';
+import { pickUpdate, RELEASES_API, type GithubRelease } from './updates';
 
 const isMac = process.platform === 'darwin';
 const devUrl = process.env.VITE_DEV_SERVER_URL;
@@ -77,6 +81,74 @@ ipcMain.handle('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.c
 ipcMain.handle('store:read', (_e, key: string) => readJson(join(dataDir(), `${safeName(key)}.json`)));
 ipcMain.handle('store:write', (_e, key: string, value: unknown) => writeJson(join(dataDir(), `${safeName(key)}.json`), value));
 ipcMain.handle('app:info', () => ({ version: app.getVersion(), dataDir: dataDir() }));
+
+// ---------- app updates ----------
+
+const updateUrl = process.env.THEVTT_UPDATE_URL || RELEASES_API;
+/** the last update found: installs only ever use what the main process fetched */
+let pendingUpdate: UpdateInfo | null = null;
+let installing = false;
+
+ipcMain.handle('update:check', async () => {
+  if (process.env.THEVTT_NO_UPDATES || (devUrl && !process.env.THEVTT_UPDATE_URL)) return { state: 'disabled' };
+  try {
+    const res = await net.fetch(updateUrl, { headers: { accept: 'application/vnd.github+json', 'user-agent': `TheVTT/${app.getVersion()}` } });
+    if (!res.ok) return { state: 'error', message: res.status === 404 ? 'Nessuna versione pubblicata' : `GitHub ha risposto ${res.status}` };
+    const release = (await res.json()) as GithubRelease;
+    pendingUpdate = pickUpdate(release, app.getVersion(), process.platform, process.arch, !!process.env.APPIMAGE);
+    return pendingUpdate ? { state: 'available', info: pendingUpdate } : { state: 'none', current: app.getVersion() };
+  } catch {
+    return { state: 'error', message: 'Non riesco a controllare gli aggiornamenti: sei offline?' };
+  }
+});
+
+/** Downloads the new version and applies it. Resolves with an error message, or never (the app restarts). */
+ipcMain.handle('update:install', async (e) => {
+  const u = pendingUpdate;
+  if (!u || installing) return { error: 'Nessun aggiornamento da installare' };
+  if (u.mode === 'page' || !u.asset) {
+    await shell.openExternal(u.pageUrl);
+    return { opened: true };
+  }
+  installing = true;
+  try {
+    const res = await net.fetch(u.asset.url, { headers: { 'user-agent': `TheVTT/${app.getVersion()}` } });
+    if (!res.ok || !res.body) throw new Error(`download ${res.status}`);
+    const total = Number(res.headers.get('content-length')) || u.asset.size;
+    const target = u.mode === 'appimage' ? `${process.env.APPIMAGE}.new` : join(tmpdir(), u.asset.name);
+    const out = createWriteStream(target);
+    let received = 0;
+    let lastSent = 0;
+    const reader = res.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.length;
+      if (!out.write(value)) await new Promise<void>((r) => out.once('drain', () => r()));
+      if (received - lastSent > 256 * 1024 || received === total) {
+        lastSent = received;
+        e.sender.send('update:progress', { received, total });
+      }
+    }
+    await new Promise<void>((resolve, reject) => out.end((err?: Error | null) => (err ? reject(err) : resolve())));
+    if (u.mode === 'installer') {
+      // the installer replaces the app: let it start, then get out of its way
+      spawn(target, [], { detached: true, stdio: 'ignore' }).unref();
+      setTimeout(() => app.quit(), 800);
+    } else {
+      await chmod(target, 0o755);
+      await rename(target, process.env.APPIMAGE!);
+      app.relaunch({ execPath: process.env.APPIMAGE });
+      app.quit();
+    }
+    return { installing: true };
+  } catch {
+    installing = false;
+    return { error: 'Download non riuscito. Riprova, oppure scarica la nuova versione dalla pagina del progetto.' };
+  }
+});
+
+ipcMain.handle('update:open-page', () => (pendingUpdate ? shell.openExternal(pendingUpdate.pageUrl) : undefined));
 
 // ---------- hosted lobby server ----------
 

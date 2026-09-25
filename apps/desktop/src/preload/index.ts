@@ -29,6 +29,16 @@ const bridge: DesktopBridge = {
     },
   },
   resolveGroupCode: (code) => ipcRenderer.invoke('group:resolve', code),
+  updates: {
+    check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.invoke('update:install'),
+    openPage: () => ipcRenderer.invoke('update:open-page'),
+    onProgress: (cb) => {
+      const listener = (_: unknown, p: { received: number; total: number }) => cb(p);
+      ipcRenderer.on('update:progress', listener);
+      return () => ipcRenderer.removeListener('update:progress', listener);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('thevtt', bridge);

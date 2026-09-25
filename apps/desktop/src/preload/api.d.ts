@@ -30,6 +30,22 @@ export interface HostedServerStatus {
   published: 'no' | 'yes' | 'error';
 }
 
+export interface UpdateInfo {
+  current: string;
+  latest: string;
+  notes: string;
+  pageUrl: string;
+  publishedAt: string | null;
+  asset: { name: string; url: string; size: number } | null;
+  mode: 'installer' | 'appimage' | 'page';
+}
+
+export type UpdateCheck =
+  | { state: 'available'; info: UpdateInfo }
+  | { state: 'none'; current: string }
+  | { state: 'disabled' }
+  | { state: 'error'; message: string };
+
 /** API exposed by the preload script as `window.thevtt`. Absent when running in a browser. */
 export interface DesktopBridge {
   platform: string;
@@ -55,6 +71,14 @@ export interface DesktopBridge {
   };
   /** finds the current address of a friend's server from their group code */
   resolveGroupCode(code: string): Promise<{ url: string } | { error: string }>;
+  /** new versions of the app, from the project's releases */
+  updates: {
+    check(): Promise<UpdateCheck>;
+    /** downloads and installs (the app then restarts), or opens the release page */
+    install(): Promise<{ installing: true } | { opened: true } | { error: string }>;
+    openPage(): Promise<void>;
+    onProgress(cb: (p: { received: number; total: number }) => void): () => void;
+  };
 }
 
 declare global {

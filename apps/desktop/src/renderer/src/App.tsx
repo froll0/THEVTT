@@ -5,6 +5,7 @@ import { TopBar } from './components/Shell';
 import { Toasts } from './components/ui';
 import { useApp } from './store/app';
 import { useHosting } from './store/hosting';
+import { startUpdateChecks } from './store/updates';
 import { applySettings, useSettings } from './store/settings';
 import { TableView } from './table/TableView';
 import { AuthView } from './views/Auth';
@@ -36,6 +37,7 @@ export function App() {
     void useHosting.getState().load();
     void boot();
   }, [boot]);
+  useEffect(startUpdateChecks, []);
 
   if (booting) {
     return (

@@ -6,6 +6,7 @@ import { bridge } from '../lib/platform';
 import { useApp, type SettingsSection } from '../store/app';
 import { DEFAULT_HOSTING, localServerUrl, useHosting } from '../store/hosting';
 import { exportSettings, PRESETS, useSettings, type Settings } from '../store/settings';
+import { useUpdates } from '../store/updates';
 
 const ACCENTS = ['#c9a227', '#e6e6e8', '#e4572e', '#ef476f', '#8b7cf6', '#2f6fed', '#06b6d4', '#4fa37e', '#39d353'];
 const AVATAR_COLORS = ['#e07a5f', '#3d85c6', '#81b29a', '#f2cc8f', '#b388eb', '#ef476f', '#06d6a0', '#ffd166'];
@@ -406,6 +407,28 @@ function Account() {
   );
 }
 
+function UpdatesSetting({ version }: { version: string }) {
+  const { check, checking, checkNow } = useUpdates();
+  const text = checking
+    ? 'Controllo…'
+    : !check
+      ? 'Controllo automatico all’avvio e ogni 6 ore'
+      : check.state === 'available'
+        ? `Disponibile la ${check.info.latest}: la trovi in alto a destra`
+        : check.state === 'none'
+          ? 'Hai l’ultima versione'
+          : check.state === 'error'
+            ? check.message
+            : 'Aggiornamenti disattivati in questa installazione';
+  return (
+    <Setting title={`Versione ${version}`} hint={text}>
+      <button className="btn sm" disabled={checking} onClick={() => void checkNow()}>
+        Controlla aggiornamenti
+      </button>
+    </Setting>
+  );
+}
+
 function Advanced() {
   const s = useSettings();
   const { run } = useApp();
@@ -449,6 +472,7 @@ function Advanced() {
             Ripristina
           </button>
         </Setting>
+        {info && <UpdatesSetting version={info.version} />}
         {info && (
           <Setting title="Dati locali" hint={`TheVTT ${info.version}`}>
             <span className="mono tiny muted selectable">{info.dataDir}</span>

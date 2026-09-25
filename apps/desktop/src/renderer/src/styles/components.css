@@ -1424,3 +1424,32 @@ input[type='color']::-webkit-color-swatch {
   line-height: 1.55;
   margin: 0;
 }
+.update-pill {
+  border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+  color: var(--accent);
+}
+.update-pop {
+  padding: var(--s3);
+  gap: var(--s3);
+}
+.update-notes {
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+  border-left: 2px solid var(--border-strong);
+  padding-left: var(--s2);
+}
+.progress {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--bg-elev-2);
+  overflow: hidden;
+}
+.progress > i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s;
+}
