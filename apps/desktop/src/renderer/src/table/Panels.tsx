@@ -222,6 +222,7 @@ export function SheetPanel({ placeAt }: { placeAt: () => { x: number; y: number 
       )}
       <ui.Sheet
         data={selected.data}
+        compact
         editable={isGm || selected.ownerId === meId}
         onChange={(data) => {
           dispatch({ type: 'character.update', characterId: selected.id, data });

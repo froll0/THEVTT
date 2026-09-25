@@ -69,7 +69,7 @@ function Notifications() {
                 >
                   <Check size={14} />
                 </button>
-                <button className="btn sm icon ghost" aria-label="Rifiuta" onClick={() => run(async () => { await api.declineInvite(inv.id); await refresh(['invites']); })}>
+                <button className="btn sm icon ghost" aria-label="Rifiuta" onClick={() => run(async () => { await api.declineInvite(inv.id); await refresh(['invites']); close(); })}>
                   <X size={14} />
                 </button>
               </div>
@@ -80,10 +80,10 @@ function Notifications() {
                 <div className="grow small">
                   <b>{f.user.displayName}</b> vuole essere tuo amico
                 </div>
-                <button className="btn sm icon primary" aria-label="Accetta" onClick={() => run(async () => { await api.acceptFriend(f.user.id); await refresh(['friends']); })}>
+                <button className="btn sm icon primary" aria-label="Accetta" onClick={() => run(async () => { await api.acceptFriend(f.user.id); await refresh(['friends']); close(); })}>
                   <Check size={14} />
                 </button>
-                <button className="btn sm icon ghost" aria-label="Rifiuta" onClick={() => run(async () => { await api.removeFriend(f.user.id); await refresh(['friends']); })}>
+                <button className="btn sm icon ghost" aria-label="Rifiuta" onClick={() => run(async () => { await api.removeFriend(f.user.id); await refresh(['friends']); close(); })}>
                   <X size={14} />
                 </button>
               </div>

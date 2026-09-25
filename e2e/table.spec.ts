@@ -1,0 +1,103 @@
+import { expect, test } from '@playwright/test';
+import { apiCall, launchApp, nav, register, type RunningApp } from './app';
+
+const PORT = 4591;
+
+let gm: RunningApp;
+let player: RunningApp;
+
+test.beforeAll(async () => {
+  gm = await launchApp({ hostPort: PORT });
+  player = await launchApp();
+});
+
+test.afterAll(async () => {
+  await player?.app.close();
+  await gm?.app.close();
+});
+
+test('a group plays at a table hosted inside the GM app', async () => {
+  const G = gm.page;
+  const P = player.page;
+
+  await register(G, { where: 'host', username: 'master', displayName: 'Marco' });
+  await register(P, { where: { join: `localhost:${PORT}` }, username: 'giulia', displayName: 'Giulia' });
+
+  // friendship through the notification bell
+  await nav(G, 'Amici');
+  await G.getByPlaceholder('Cerca per nome utente').fill('giul');
+  await G.getByRole('button', { name: 'Aggiungi' }).click();
+  await P.getByRole('button', { name: 'Notifiche' }).click();
+  await P.locator('.popover').getByRole('button', { name: 'Accetta' }).click();
+  await expect(G.getByText('1 online')).toBeVisible();
+
+  // campaign + invite
+  await nav(G, 'Campagne');
+  await G.getByRole('main').getByRole('button', { name: 'Nuova campagna' }).click();
+  await G.getByLabel('Nome').fill('La Miniera Perduta');
+  await G.getByRole('button', { name: 'Crea', exact: true }).click();
+  await G.getByRole('button', { name: /Giulia/ }).click();
+  await expect(G.getByText('invitato, in attesa')).toBeVisible();
+  await P.getByRole('button', { name: 'Notifiche' }).click();
+  await P.locator('.popover').getByRole('button', { name: 'Unisciti' }).click();
+  await expect(P.getByText('Il tuo personaggio')).toBeVisible();
+
+  // a ready-made character through the API, assigned from the UI
+  const character = {
+    version: 2,
+    name: 'Brunhild',
+    level: 1,
+    classId: 'fighter',
+    speciesId: 'dwarf',
+    backgroundId: 'soldier',
+    baseScores: { str: 15, dex: 13, con: 14, int: 8, wis: 12, cha: 10 },
+    backgroundBonus: { str: 2, con: 1 },
+    classSkills: ['perception', 'survival'],
+    choices: { fightingStyle: ['defense'] },
+    masteries: ['longsword', 'greatsword', 'longbow'],
+    inventory: [
+      { uid: 'a', ref: 'chainMail', name: 'Cotta di maglia', qty: 1, weight: 55, equipped: true },
+      { uid: 'b', ref: 'longsword', name: 'Spada lunga', qty: 1, weight: 3, equipped: true },
+    ],
+  };
+  await apiCall(P, 'POST', '/characters', { name: 'Brunhild', systemId: 'dnd5e-2024', data: character });
+  await P.reload();
+  await nav(P, 'Campagne');
+  await P.getByText('La Miniera Perduta').click();
+  await P.getByRole('main').locator('select').selectOption({ label: 'Brunhild' });
+  await expect(P.getByText('Apri scheda')).toBeVisible();
+
+  // session: GM hosts, player sits, direct link comes up
+  await nav(G, 'Campagne');
+  await G.getByText('La Miniera Perduta').click();
+  await G.getByRole('button', { name: 'Avvia sessione' }).click();
+  await expect(G.getByTitle('Aggiungi token')).toBeVisible();
+  await P.getByRole('button', { name: 'Siediti al tavolo' }).click();
+  await expect(P.getByText('Diretta', { exact: true })).toBeVisible();
+  await expect(G.getByText('1/1 diretti')).toBeVisible();
+
+  // player: token and rolls from the sheet
+  await P.getByTitle('Scheda').click();
+  await P.getByRole('button', { name: 'Metti sulla mappa' }).click();
+  await P.locator('.rows button', { hasText: 'Atletica' }).click();
+  await P.getByTitle('Tira 1d20').click();
+  await P.locator('.sheet-tabs button', { hasText: 'Combattimento' }).click();
+  await P.locator('.attack', { hasText: 'Spada lunga' }).getByRole('button').first().click();
+
+  // GM sees every roll in the log, and rolls too (this used to blank the app)
+  const log = G.locator('.log');
+  await expect(log.getByText('Brunhild · Atletica')).toBeVisible();
+  await expect(log.getByText('Spada lunga · attacco')).toBeVisible();
+  await G.getByTitle('Tira 1d20').click();
+  await G.getByTitle('Tira 1d20').click();
+  await expect(G.locator('.log-roll')).toHaveCount(5);
+  await expect(G.locator('#root')).not.toBeEmpty();
+
+  // player damage from the sheet updates the token HP bar data on the GM side
+  await P.locator('.sheet-tabs button', { hasText: 'Principale' }).click();
+  await P.getByTitle('Danno').click();
+  await expect.poll(async () => (await apiCall<{ data: { hp?: { current: number | null } } }[]>(P, 'GET', '/characters'))[0]?.data.hp?.current, { timeout: 10_000 }).toBe(12);
+
+  expect(gm.errors, gm.errors.join('\n')).toEqual([]);
+  expect(player.errors, player.errors.join('\n')).toEqual([]);
+});

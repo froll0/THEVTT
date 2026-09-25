@@ -10,6 +10,8 @@ export interface BuilderProps<T = any> {
 export interface SheetProps<T = any> {
   data: T;
   editable: boolean;
+  /** narrow layout (table dock) */
+  compact?: boolean;
   onChange: (next: T) => void;
   onRoll: (formula: string, label: string) => void;
 }

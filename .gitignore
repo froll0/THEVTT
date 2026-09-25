@@ -7,3 +7,5 @@ release/
 apps/server/data/
 *.sqlite
 *.sqlite-*
+test-results/
+playwright-report/

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "description": "TheVTT — virtual tabletop desktop con launcher social, hosting affidato al master",
+  "description": "TheVTT \u2014 virtual tabletop desktop con launcher social, hosting affidato al master",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev:server": "pnpm --filter @thevtt/server dev",
@@ -12,9 +12,11 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
-    "dist": "pnpm --filter @thevtt/desktop dist"
+    "dist": "pnpm --filter @thevtt/desktop dist",
+    "e2e": "pnpm --filter @thevtt/desktop build && playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "^22.10.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.0"
