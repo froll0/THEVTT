@@ -11,8 +11,12 @@ type Where = 'host' | 'join';
 export function AuthView() {
   const { serverUrl, setServer, toast } = useApp();
   const hosting = useHosting();
-  const hostedUrl = hosting.config ? localServerUrl(hosting.config.port) : null;
-  const [where, setWhere] = useState<Where>(hosting.available && hostedUrl === serverUrl ? 'host' : 'join');
+  // "host" only when this PC is really serving: a preselected choice that isn't running is confusing
+  const hostingHere = () => {
+    const h = useHosting.getState();
+    return !!h.config?.enabled && h.status?.state === 'running' && localServerUrl(h.status.port) === useApp.getState().serverUrl;
+  };
+  const [where, setWhere] = useState<Where>(hostingHere() ? 'host' : 'join');
   const [address, setAddress] = useState(serverUrl.includes('localhost') ? '' : displayServerAddress(serverUrl));
   const [mode, setMode] = useState<'login' | 'register'>('register');
   const [username, setUsername] = useState('');
@@ -26,8 +30,8 @@ export function AuthView() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (hosting.config && hostedUrl === serverUrl) setWhere('host');
-  }, [hosting.config]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (hostingHere()) setWhere('host');
+  }, [hosting.status?.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const running = hosting.status?.state === 'running';
   const invite = hosting.status ? inviteAddress(hosting.status) : null;

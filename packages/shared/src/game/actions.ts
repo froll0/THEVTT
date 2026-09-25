@@ -1,4 +1,4 @@
-import type { AreaTemplate, GameState, Scene, Token } from './state';
+import type { AreaTemplate, ChatCard, GameState, Note, Scene, Token } from './state';
 
 export type TokenPatch = Partial<Omit<Token, 'id' | 'sceneId'>>;
 export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog'>>;
@@ -13,7 +13,9 @@ export type GameAction =
   | { type: 'token.update'; tokenId: string; patch: TokenPatch }
   | { type: 'token.delete'; tokenId: string }
   | { type: 'chat'; text: string; private?: boolean }
-  | { type: 'roll'; formula: string; label?: string; private?: boolean }
+  /** blind: only the GM sees the result */
+  | { type: 'roll'; formula: string; label?: string; private?: boolean; blind?: boolean }
+  | { type: 'card'; card: ChatCard; private?: boolean }
   | { type: 'initiative.add'; name: string; tokenId?: string | null; modifier?: number; value?: number }
   | { type: 'initiative.set'; entryId: string; value: number }
   | { type: 'initiative.remove'; entryId: string }
@@ -29,15 +31,30 @@ export type GameAction =
   | { type: 'template.delete'; templateId: string }
   | { type: 'template.clear' }
   | { type: 'notes.update'; text: string }
-  /** host only: register an image and get back its id through the state */
-  | { type: 'asset.add'; dataUrl: string; attachTo?: { sceneId: string } | { tokenId: string } };
+  | { type: 'note.create'; note?: Partial<Pick<Note, 'title' | 'body' | 'shared'>> }
+  | { type: 'note.update'; noteId: string; patch: Partial<Pick<Note, 'title' | 'body' | 'shared' | 'image'>> }
+  | { type: 'note.delete'; noteId: string }
+  | { type: 'drawing.create'; points: number[]; color: string; width: number }
+  | { type: 'drawing.delete'; drawingId: string }
+  | { type: 'drawing.clear' }
+  | { type: 'music.play'; trackId?: string; position?: number }
+  | { type: 'music.pause' }
+  | { type: 'music.seek'; position: number }
+  | { type: 'music.loop'; loop: boolean }
+  | { type: 'music.remove'; trackId: string }
+  | { type: 'music.rename'; trackId: string; name: string }
+  /**
+   * register an image (or, for music, an audio file) and get back its id through the state.
+   * Players may only attach images to their own notes.
+   */
+  | { type: 'asset.add'; dataUrl: string; attachTo?: { sceneId: string } | { tokenId: string } | { noteId: string } | { track: string } };
 
 /** Messages flowing inside relay payloads. */
 export type PlayerToHost = { k: 'hello' } | { k: 'action'; action: GameAction; seq?: number };
 
 export type HostToPlayer =
   /** rev grows with every state sent: receivers drop stale snapshots */
-  | { k: 'state'; state: GameState; rev: number }
+  | { k: 'state'; state: GameState; rev: number; now?: number }
   | { k: 'asset'; id: string; dataUrl: string }
   | { k: 'rejected'; seq?: number; reason: string }
   | { k: 'ping'; x: number; y: number; sceneId: string; color: string; from: string };

@@ -139,3 +139,95 @@ describe('fog of war and area templates', () => {
     expect(Object.keys(host.state.templates!)).toHaveLength(0);
   });
 });
+
+describe('notes, cards, drawings and music', () => {
+  it('sends players only their own character sheets', () => {
+    const { host, lastState } = setup();
+    host.upsertCharacter({ id: 'ch2', ownerId: 'p2', name: 'Bor', systemId: 'dnd5e-2024', data: {} });
+    host.broadcast();
+    expect(Object.keys(lastState('p1').characters)).toEqual(['ch1']);
+    expect(Object.keys(lastState('p2').characters)).toEqual(['ch2']);
+    expect(Object.keys(lastState('gm').characters)).toHaveLength(2);
+  });
+
+  it('shows notes only to the people they are shared with', () => {
+    const { host, lastState } = setup();
+    host.dispatch('gm', { type: 'note.create', note: { title: 'Segreto' } });
+    const id = Object.keys(host.state.notes!)[0]!;
+    expect(Object.keys(lastState('p1').notes!)).toHaveLength(0);
+    host.dispatch('gm', { type: 'note.update', noteId: id, patch: { shared: ['p1', 'ghost'] } });
+    expect(host.state.notes![id]!.shared).toEqual(['p1']);
+    expect(Object.keys(lastState('p1').notes!)).toEqual([id]);
+    expect(Object.keys(lastState('p2').notes!)).toHaveLength(0);
+    host.dispatch('gm', { type: 'note.update', noteId: id, patch: { shared: 'all' } });
+    expect(Object.keys(lastState('p2').notes!)).toEqual([id]);
+    // players can't edit the GM's notes but can write their own
+    expect(host.dispatch('p1', { type: 'note.update', noteId: id, patch: { body: 'x' } }).ok).toBe(false);
+    expect(host.dispatch('p1', { type: 'note.create', note: { title: 'Mie' } }).ok).toBe(true);
+    expect(Object.keys(lastState('p2').notes!)).toHaveLength(1);
+    expect(Object.keys(lastState('gm').notes!)).toHaveLength(2);
+  });
+
+  it('migrates the old GM scratchpad into a private note', () => {
+    const state = createInitialState({ campaignId: 'c', campaignName: 'T', systemId: 'x', gmId: 'gm', sceneId: 's' });
+    delete state.notes;
+    state.gmNotes = 'vecchie note';
+    const host = new GameHost({ state, send: () => {} });
+    const notes = Object.values(host.state.notes!);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]!.body).toBe('vecchie note');
+    expect(notes[0]!.shared).toBe('private');
+  });
+
+  it('hides blind roll results from the roller', () => {
+    const { host, lastState } = setup();
+    host.dispatch('p1', { type: 'roll', formula: '1d20', label: 'Percezione', blind: true });
+    const seen = lastState('p1').log.at(-1)!;
+    expect(seen.text).toBe('?');
+    expect(seen.roll).toBeUndefined();
+    expect(lastState('p2').log.some((l) => l.kind === 'roll')).toBe(false);
+    expect(lastState('gm').log.at(-1)!.roll?.total).toBe(10);
+  });
+
+  it('posts cards and keeps drawings per author', () => {
+    const { host, lastState } = setup();
+    expect(host.dispatch('p1', { type: 'card', card: { title: 'Palla di fuoco', rolls: [{ label: 'Danni', formula: '8d6' }] } }).ok).toBe(true);
+    expect(lastState('p2').log.at(-1)!.card?.title).toBe('Palla di fuoco');
+    expect(host.dispatch('p1', { type: 'drawing.create', points: [0, 0, 1, 1], color: '#fff', width: 0.1 }).ok).toBe(true);
+    expect(host.dispatch('p1', { type: 'drawing.create', points: [0, 0], color: '#fff', width: 0.1 }).ok).toBe(false);
+    const d = Object.keys(host.state.drawings!)[0]!;
+    expect(host.dispatch('p2', { type: 'drawing.delete', drawingId: d }).ok).toBe(false);
+    host.dispatch('p2', { type: 'drawing.clear' });
+    expect(Object.keys(host.state.drawings!)).toHaveLength(1);
+    host.dispatch('gm', { type: 'drawing.clear' });
+    expect(Object.keys(host.state.drawings!)).toHaveLength(0);
+  });
+
+  it('plays music in sync and ships only the current track', () => {
+    let now = 1000;
+    const outbox: { to: string; msg: HostToPlayer }[] = [];
+    const state = createInitialState({ campaignId: 'c', campaignName: 'T', systemId: 'x', gmId: 'gm', sceneId: 's' });
+    const host = new GameHost({ state, send: (to, msg) => outbox.push({ to, msg }), now: () => now });
+    host.upsertPlayer({ id: 'p1', displayName: 'A', color: '#f00', characterId: null });
+    host.connect('p1');
+    const audio = 'data:audio/mpeg;base64,AAAA';
+    expect(host.dispatch('p1', { type: 'asset.add', dataUrl: audio, attachTo: { track: 'x' } }).ok).toBe(false);
+    expect(host.dispatch('gm', { type: 'asset.add', dataUrl: audio }).ok).toBe(false);
+    host.dispatch('gm', { type: 'asset.add', dataUrl: audio, attachTo: { track: 'Taverna' } });
+    host.dispatch('gm', { type: 'asset.add', dataUrl: 'data:audio/ogg;base64,BBBB', attachTo: { track: 'Battaglia' } });
+    const [a, b] = host.state.music!.tracks;
+    expect(outbox.some((o) => o.msg.k === 'asset')).toBe(false);
+    host.dispatch('gm', { type: 'music.play', trackId: a!.id });
+    expect(outbox.filter((o) => o.msg.k === 'asset').map((o) => (o.msg as { id: string }).id)).toEqual([a!.asset]);
+    now += 30_000;
+    host.dispatch('gm', { type: 'music.pause' });
+    expect(host.state.music!.position).toBe(30);
+    host.dispatch('gm', { type: 'music.play' });
+    expect(host.state.music!.position).toBe(30);
+    host.dispatch('gm', { type: 'music.play', trackId: b!.id });
+    expect(host.state.music!.position).toBe(0);
+    expect(host.dispatch('p1', { type: 'music.pause' }).ok).toBe(false);
+    const last = [...outbox].reverse().find((o) => o.msg.k === 'state')!.msg;
+    expect(last.k === 'state' && last.now).toBe(now);
+  });
+});

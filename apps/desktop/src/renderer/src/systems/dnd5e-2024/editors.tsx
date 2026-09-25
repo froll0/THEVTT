@@ -1,5 +1,6 @@
 import { dnd5e } from '@thevtt/systems';
-import { ImagePlus, Plus, Search, Trash2 } from 'lucide-react';
+import type { ChatCard } from '@thevtt/shared';
+import { ImagePlus, MessageSquareShare, Plus, Search, Trash2 } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Field, readImage, Section, Switch, Tabs } from '../../components/ui';
 
@@ -766,7 +767,7 @@ export function StartingEquipment({ c, onChange }: { c: C; onChange: (next: C) =
   );
 }
 
-export function InventoryEditor({ c, set, readOnly }: { c: C; set: Set; readOnly?: boolean }) {
+export function InventoryEditor({ c, set, readOnly, onShare }: { c: C; set: Set; readOnly?: boolean; onShare?: (card: ChatCard) => void }) {
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState('');
   const weight = dnd5e.carriedWeight(c);
@@ -851,13 +852,26 @@ export function InventoryEditor({ c, set, readOnly }: { c: C; set: Set; readOnly
                   </div>
                   <input className="input num" type="number" min={0} value={i.qty} disabled={readOnly} onChange={(e) => update(i.uid, { qty: Math.max(0, Number(e.target.value) || 0) })} title="Quantità" />
                   <span className="faint tiny num">{Math.round(i.weight * i.qty * 10) / 10} lb</span>
-                  {!readOnly ? (
-                    <button className="btn ghost sm icon" aria-label="Rimuovi" onClick={() => set({ inventory: c.inventory.filter((x) => x.uid !== i.uid) })}>
-                      <Trash2 size={13} />
-                    </button>
-                  ) : (
-                    <span />
-                  )}
+                  <span className="row" style={{ gap: 0 }}>
+                    {onShare && (
+                      <button
+                        className="btn ghost sm icon"
+                        title="Mostra in chat"
+                        aria-label="Mostra in chat"
+                        onClick={() => {
+                          const d = describe(i);
+                          onShare({ title: i.name, subtitle: i.qty > 1 ? `× ${i.qty}` : undefined, body: typeof d === 'string' ? d : undefined });
+                        }}
+                      >
+                        <MessageSquareShare size={13} />
+                      </button>
+                    )}
+                    {!readOnly && (
+                      <button className="btn ghost sm icon" aria-label="Rimuovi" onClick={() => set({ inventory: c.inventory.filter((x) => x.uid !== i.uid) })}>
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </span>
                 </div>
               );
             })}

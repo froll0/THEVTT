@@ -4,6 +4,7 @@ import type { GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actio
 import { emptyMask, paintRect, resizeMask } from './fog';
 import {
   createScene,
+  emptyMusic,
   LOG_LIMIT,
   referencedAssets,
   viewFor,
@@ -31,6 +32,14 @@ export interface GameHostOptions {
 
 const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'color', 'name'];
 const MAX_ASSET_BYTES = 12 * 1024 * 1024;
+/** audio travels to every player: keep tracks to a sane size (~15MB file) */
+const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
+const IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,/;
+const AUDIO_DATA_URL = /^data:audio\/(mpeg|mp3|ogg|wav|x-wav|webm|mp4|x-m4a|aac|flac);base64,/;
+const MAX_DRAWINGS = 500;
+
+const cleanShared = (v: unknown, players: GameState['players']): 'private' | 'all' | string[] =>
+  v === 'all' ? 'all' : Array.isArray(v) ? v.filter((id): id is string => typeof id === 'string' && !!players[id]).slice(0, 50) : 'private';
 
 const clampInt = (v: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(Number(v) || 0)));
 
@@ -51,6 +60,17 @@ export class GameHost {
   constructor(opts: GameHostOptions) {
     this.opts = opts;
     this._state = opts.state;
+    // tables saved before notes existed: the old GM scratchpad becomes a private note
+    if (!this._state.notes) {
+      this._state.notes = {};
+      if (this._state.gmNotes.trim()) {
+        const id = newId();
+        this._state.notes[id] = { id, title: 'Note del master', body: this._state.gmNotes, image: null, shared: 'private', authorId: this._state.gmId, updatedAt: Date.now() };
+      }
+      this._state.gmNotes = '';
+    }
+    this._state.drawings ??= {};
+    this._state.music ??= emptyMusic();
     this.assets = { ...(opts.assets ?? {}) };
     this.rng = opts.rng ?? cryptoRng;
     this.now = opts.now ?? Date.now;
@@ -276,11 +296,27 @@ export class GameHost {
             text: `${r.total}`,
             label: action.label?.slice(0, 120),
             roll: r,
-            private: !!action.private,
+            private: !!action.private || !!action.blind,
+            blind: !!action.blind && !isGm,
           });
         } catch (e) {
           return { ok: false, reason: e instanceof DiceError ? e.message : 'Tiro non valido' };
         }
+        break;
+      }
+      case 'card': {
+        const c = action.card;
+        if (!c || typeof c.title !== 'string' || !c.title.trim()) return { ok: false, reason: 'Scheda vuota' };
+        const card = {
+          title: c.title.slice(0, 120),
+          subtitle: typeof c.subtitle === 'string' ? c.subtitle.slice(0, 200) : undefined,
+          body: typeof c.body === 'string' ? c.body.slice(0, 4000) : undefined,
+          tags: Array.isArray(c.tags) ? c.tags.slice(0, 12).map((t) => String(t).slice(0, 40)) : undefined,
+          rolls: Array.isArray(c.rolls)
+            ? c.rolls.slice(0, 6).map((r) => ({ label: String(r.label).slice(0, 60), formula: String(r.formula).slice(0, 60) }))
+            : undefined,
+        };
+        this.log({ kind: 'card', authorId: from, text: card.title, card, private: !!action.private });
         break;
       }
       case 'initiative.add': {
@@ -431,15 +467,138 @@ export class GameHost {
         s.gmNotes = action.text.slice(0, 100_000);
         break;
       }
-      case 'asset.add': {
+      case 'note.create': {
+        const n = action.note ?? {};
+        const id = newId();
+        s.notes![id] = {
+          id,
+          title: String(n.title ?? '').slice(0, 120) || 'Nuova nota',
+          body: String(n.body ?? '').slice(0, 100_000),
+          image: null,
+          shared: cleanShared(n.shared, s.players),
+          authorId: from,
+          updatedAt: this.now(),
+        };
+        break;
+      }
+      case 'note.update': {
+        const note = s.notes![action.noteId];
+        if (!note) return { ok: false, reason: 'Nota inesistente' };
+        if (!isGm && note.authorId !== from) return { ok: false, reason: 'Puoi modificare solo le tue note' };
+        const p = action.patch;
+        const wasShared = note.shared;
+        if (p.title !== undefined) note.title = String(p.title).slice(0, 120);
+        if (p.body !== undefined) note.body = String(p.body).slice(0, 100_000);
+        if (p.shared !== undefined) note.shared = cleanShared(p.shared, s.players);
+        if (p.image !== undefined) {
+          if (p.image !== null && !this.assets[p.image]) return { ok: false, reason: 'Immagine sconosciuta' };
+          note.image = p.image;
+        }
+        note.updatedAt = this.now();
+        if (isGm && p.shared !== undefined && note.shared === 'all' && wasShared !== 'all') this.system(`Il master ha condiviso «${note.title}»`);
+        break;
+      }
+      case 'note.delete': {
+        const note = s.notes![action.noteId];
+        if (!note) return { ok: false, reason: 'Nota inesistente' };
+        if (!isGm && note.authorId !== from) return { ok: false, reason: 'Puoi cancellare solo le tue note' };
+        delete s.notes![note.id];
+        break;
+      }
+      case 'drawing.create': {
+        const pts = Array.isArray(action.points) ? action.points.slice(0, 4000).map((v) => Math.round((Number(v) || 0) * 100) / 100) : [];
+        if (pts.length < 4 || pts.length % 2) return { ok: false, reason: 'Tratto non valido' };
+        const onScene = Object.values(s.drawings!).filter((d) => d.sceneId === s.activeSceneId);
+        if (onScene.length >= MAX_DRAWINGS) return { ok: false, reason: 'Troppi disegni: cancellane qualcuno' };
+        const id = newId();
+        s.drawings![id] = {
+          id,
+          sceneId: s.activeSceneId,
+          points: pts,
+          color: typeof action.color === 'string' ? action.color.slice(0, 20) : player?.color ?? '#ffffff',
+          width: Math.min(2, Math.max(0.02, Number(action.width) || 0.08)),
+          authorId: from,
+        };
+        break;
+      }
+      case 'drawing.delete': {
+        const d = s.drawings![action.drawingId];
+        if (!d) return { ok: false, reason: 'Disegno inesistente' };
+        if (!isGm && d.authorId !== from) return { ok: false, reason: 'Puoi cancellare solo i tuoi disegni' };
+        delete s.drawings![d.id];
+        break;
+      }
+      case 'drawing.clear': {
+        for (const d of Object.values(s.drawings!)) {
+          if (d.sceneId === s.activeSceneId && (isGm || d.authorId === from)) delete s.drawings![d.id];
+        }
+        break;
+      }
+      case 'music.play':
+      case 'music.pause':
+      case 'music.seek':
+      case 'music.loop':
+      case 'music.remove':
+      case 'music.rename': {
         const denied = gmOnly();
         if (denied) return denied;
-        if (!/^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,/.test(action.dataUrl)) return { ok: false, reason: 'Formato immagine non supportato' };
-        if (action.dataUrl.length > MAX_ASSET_BYTES) return { ok: false, reason: 'Immagine troppo grande (max ~9MB)' };
-        const id = this.addAsset(action.dataUrl);
+        const m = s.music!;
+        const now = this.now();
+        const here = () => (m.playing ? m.position + (now - m.startedAt) / 1000 : m.position);
+        if (action.type === 'music.play') {
+          if (action.trackId !== undefined && !m.tracks.some((t) => t.id === action.trackId)) return { ok: false, reason: 'Brano inesistente' };
+          // another track starts from the top, the same one resumes where it is
+          const switching = (action.trackId !== undefined && action.trackId !== m.current) || !m.current;
+          m.current = action.trackId ?? m.current ?? m.tracks[0]?.id ?? null;
+          if (!m.current) return { ok: false, reason: 'Nessun brano in scaletta' };
+          m.position = Math.max(0, Number(action.position ?? (switching ? 0 : here())) || 0);
+          m.playing = true;
+          m.startedAt = now;
+        } else if (action.type === 'music.pause') {
+          m.position = here();
+          m.playing = false;
+          m.startedAt = now;
+        } else if (action.type === 'music.seek') {
+          m.position = Math.max(0, Number(action.position) || 0);
+          m.startedAt = now;
+        } else if (action.type === 'music.loop') {
+          m.loop = !!action.loop;
+        } else if (action.type === 'music.rename') {
+          const t = m.tracks.find((x) => x.id === action.trackId);
+          if (!t) return { ok: false, reason: 'Brano inesistente' };
+          t.name = String(action.name).slice(0, 120) || t.name;
+        } else {
+          m.tracks = m.tracks.filter((t) => t.id !== action.trackId);
+          if (m.current === action.trackId) Object.assign(m, { current: null, playing: false, position: 0 });
+        }
+        break;
+      }
+      case 'asset.add': {
         const target = action.attachTo;
+        const audio = AUDIO_DATA_URL.test(action.dataUrl);
+        if (!isGm) {
+          // players: only a picture for one of their own notes
+          const note = target && 'noteId' in target ? s.notes![target.noteId] : undefined;
+          if (!note || note.authorId !== from) return { ok: false, reason: 'Solo il master può farlo' };
+        }
+        if (audio) {
+          if (!target || !('track' in target)) return { ok: false, reason: 'Formato non supportato' };
+          if (action.dataUrl.length > MAX_AUDIO_BYTES) return { ok: false, reason: 'Brano troppo grande (max ~15MB)' };
+        } else {
+          if (!IMAGE_DATA_URL.test(action.dataUrl)) return { ok: false, reason: 'Formato immagine non supportato' };
+          if (action.dataUrl.length > MAX_ASSET_BYTES) return { ok: false, reason: 'Immagine troppo grande (max ~9MB)' };
+          if (target && 'track' in target) return { ok: false, reason: 'Formato audio non supportato' };
+        }
+        const id = this.addAsset(action.dataUrl);
         if (target && 'sceneId' in target && s.scenes[target.sceneId]) s.scenes[target.sceneId]!.background = id;
         if (target && 'tokenId' in target && s.tokens[target.tokenId]) s.tokens[target.tokenId]!.image = id;
+        if (target && 'noteId' in target && s.notes![target.noteId]) {
+          s.notes![target.noteId]!.image = id;
+          s.notes![target.noteId]!.updatedAt = this.now();
+        }
+        if (target && 'track' in target) {
+          s.music!.tracks.push({ id: newId(), name: String(target.track).slice(0, 120) || 'Brano', asset: id });
+        }
         break;
       }
       default: {
@@ -478,7 +637,7 @@ export class GameHost {
       this.opts.send(userId, { k: 'asset', id: assetId, dataUrl });
       known.add(assetId);
     }
-    this.opts.send(userId, { k: 'state', state: view, rev: ++this.rev });
+    this.opts.send(userId, { k: 'state', state: view, rev: ++this.rev, now: this.now() });
   }
 
   private commit(): void {

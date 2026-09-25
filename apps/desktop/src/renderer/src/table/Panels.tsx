@@ -1,6 +1,6 @@
-import { describeRoll, isNat, type LogEntry, type Token, type TokenPatch } from '@thevtt/shared';
+import { describeRoll, isNat, type LogEntry, type Note, type Token, type TokenPatch } from '@thevtt/shared';
 import { getSystem } from '@thevtt/systems';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
+import { ChevronLeft, Dices, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Field, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
@@ -20,9 +20,64 @@ const time = (ts: number) => new Date(ts).toLocaleTimeString('it-IT', { hour: '2
 
 // ---------- chat & dice log ----------
 
-function LogLine({ e, meId }: { e: LogEntry; meId: string }) {
+function LogLine({ e, meId, onRoll }: { e: LogEntry; meId: string; onRoll: (formula: string, label: string) => void }) {
   if (e.kind === 'system') return <div className="log-system">{e.text}</div>;
   const mine = e.authorId === meId;
+  if (e.kind === 'card' && e.card) {
+    const c = e.card;
+    return (
+      <div className="log-card">
+        <div className="row between small">
+          <b>{e.authorName}</b>
+          <span className="faint tiny">
+            {e.private && <Lock size={10} />} {time(e.ts)}
+          </span>
+        </div>
+        <div className="card-title">{c.title}</div>
+        {c.subtitle && <div className="faint tiny">{c.subtitle}</div>}
+        {c.tags && c.tags.length > 0 && (
+          <div className="card-tags">
+            {c.tags.filter(Boolean).map((t, i) => (
+              <span key={i} className="tag">
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+        {c.body && (
+          <details className="card-body" open={c.body.length < 220}>
+            <summary className="faint tiny">Descrizione</summary>
+            <p className="selectable">{c.body}</p>
+          </details>
+        )}
+        {c.rolls && c.rolls.length > 0 && (
+          <div className="row wrap" style={{ gap: 4 }}>
+            {c.rolls.map((r, i) => (
+              <button key={i} className="btn sm" onClick={() => onRoll(r.formula, `${c.title} · ${r.label}`)}>
+                <Dices size={13} /> {r.label} <span className="mono faint">{r.formula}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (e.kind === 'roll' && e.blind && !e.roll) {
+    return (
+      <div className="log-roll">
+        <div className="row between small">
+          <span>
+            <b>{e.authorName}</b> {e.label && <span className="muted">· {e.label}</span>}
+          </span>
+          <span className="faint">{time(e.ts)}</span>
+        </div>
+        <div className="row between">
+          <span className="faint small">Tiro alla cieca: il risultato lo vede solo il master</span>
+          <span className="roll-total">?</span>
+        </div>
+      </div>
+    );
+  }
   if (e.kind === 'roll' && e.roll) {
     const crit = isNat(e.roll, 20) && e.roll.parts.some((p) => p.type === 'dice' && p.sides === 20);
     const fumble = isNat(e.roll, 1) && e.roll.parts.some((p) => p.type === 'dice' && p.sides === 20);
@@ -33,7 +88,7 @@ function LogLine({ e, meId }: { e: LogEntry; meId: string }) {
             <b>{e.authorName}</b> {e.label && <span className="muted">· {e.label}</span>}
           </span>
           <span className="faint">
-            {e.private && <Lock size={10} />} {time(e.ts)}
+            {e.blind ? <span className="badge">alla cieca</span> : e.private && <Lock size={10} />} {time(e.ts)}
           </span>
         </div>
         <div className="row between">
@@ -70,8 +125,9 @@ export function ChatPanel() {
   const send = () => {
     const t = text.trim();
     if (!t) return;
-    const m = /^\/(r|roll|gr)\s+(.+)$/i.exec(t);
-    if (m) dispatch({ type: 'roll', formula: m[2]!, private: m[1]!.toLowerCase() === 'gr' });
+    const m = /^\/(r|roll|gr|br)\s+(.+)$/i.exec(t);
+    const kind = m?.[1]!.toLowerCase();
+    if (m) dispatch({ type: 'roll', formula: m[2]!, private: kind === 'gr', blind: kind === 'br' });
     else if (/^\/gm\s+/i.test(t)) dispatch({ type: 'chat', text: t.replace(/^\/gm\s+/i, ''), private: true });
     else dispatch({ type: 'chat', text: t });
     setText('');
@@ -82,7 +138,7 @@ export function ChatPanel() {
       <div className="log">
         {log.length === 0 && <p className="faint small center">Nessun messaggio. Prova /r 1d20+5</p>}
         {log.map((e) => (
-          <LogLine key={e.id} e={e} meId={meId} />
+          <LogLine key={e.id} e={e} meId={meId} onRoll={(formula, label) => dispatch({ type: 'roll', formula, label })} />
         ))}
         <div ref={endRef} />
       </div>
@@ -90,7 +146,7 @@ export function ChatPanel() {
         <input
           className="input"
           value={text}
-          placeholder={role === 'gm' ? 'Messaggio, /r 2d6+3, /gr tiro nascosto' : 'Messaggio, /r 1d20+4, /gm al master'}
+          placeholder={role === 'gm' ? 'Messaggio, /r 2d6+3, /gr tiro nascosto' : 'Messaggio, /r 1d20+4, /br alla cieca, /gm al master'}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
         />
@@ -205,17 +261,60 @@ export function SheetPanel({ placeAt }: { placeAt: () => { x: number; y: number 
   const meId = useApp((s) => s.user?.id ?? '');
   const isGm = role === 'gm';
   const characters = useMemo(() => Object.values(state?.characters ?? {}), [state?.characters]);
-  const mine = characters.find((c) => c.ownerId === meId && state?.players[meId]?.characterId === c.id);
-  const [pick, setPick] = useState<string>('');
-  const selected = isGm ? characters.find((c) => c.id === pick) ?? characters[0] : mine;
+  const [openId, setOpenId] = useState<string | null>(null);
   if (!state) return null;
   const system = getSystem(state.systemId);
   const ui = getSystemUi(state.systemId);
+  // players only ever receive their own characters; the one assigned to them comes first
+  const assigned = state.players[meId]?.characterId;
+  const selected = isGm ? characters.find((c) => c.id === openId) : characters.find((c) => c.id === assigned) ?? characters[0];
 
-  if (!selected || !system || !ui) {
+  if (!system || !ui) return <div className="panel-body muted small">Sistema di gioco non supportato.</div>;
+
+  if (isGm && !selected) {
+    return (
+      <div className="panel-body col">
+        {characters.length === 0 && <p className="muted small">Nessun personaggio al tavolo. I giocatori li assegnano dalla pagina della campagna.</p>}
+        <div className="char-list">
+          {characters.map((c) => {
+            const d = system.tokenDefaults(c.data);
+            const portrait = (c.data as { portrait?: string } | null)?.portrait;
+            const owner = state.players[c.ownerId];
+            return (
+              <button key={c.id} className="char-row" onClick={() => setOpenId(c.id)}>
+                <span className="portrait" style={{ width: 34, height: 34, backgroundImage: portrait ? `url(${portrait})` : undefined, borderColor: owner?.color }}>
+                  {!portrait && (c.name || '?').slice(0, 1).toUpperCase()}
+                </span>
+                <span className="col grow" style={{ gap: 0, minWidth: 0 }}>
+                  <b className="ellipsis">{c.name}</b>
+                  <span className="faint tiny ellipsis">
+                    {system.headline?.(c.data) ?? ''} · {owner?.displayName ?? '—'}
+                  </span>
+                </span>
+                {d.hp && (
+                  <span className="char-stat" title="Punti ferita">
+                    <small>PF</small>
+                    {d.hp.current}/{d.hp.max}
+                  </span>
+                )}
+                {d.ac != null && (
+                  <span className="char-stat" title="Classe armatura">
+                    <small>CA</small>
+                    {d.ac}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (!selected) {
     return (
       <div className="panel-body">
-        <p className="muted small">{isGm ? 'Nessun personaggio al tavolo.' : 'Non hai un personaggio in questa campagna. Assegnalo dalla pagina della campagna.'}</p>
+        <p className="muted small">Non hai un personaggio in questa campagna. Assegnalo dalla pagina della campagna.</p>
       </div>
     );
   }
@@ -232,16 +331,13 @@ export function SheetPanel({ placeAt }: { placeAt: () => { x: number; y: number 
 
   return (
     <div className="panel-body col">
-      {isGm && characters.length > 1 && (
-        <select className="select" value={selected.id} onChange={(e) => setPick(e.target.value)}>
-          {characters.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} · {state.players[c.ownerId]?.displayName ?? '—'}
-            </option>
-          ))}
-        </select>
+      {isGm && (
+        <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => setOpenId(null)}>
+          <ChevronLeft size={14} /> Tutti i personaggi
+        </button>
       )}
       <ui.Sheet
+        key={selected.id}
         data={selected.data}
         compact
         editable={isGm || selected.ownerId === meId}
@@ -254,6 +350,7 @@ export function SheetPanel({ placeAt }: { placeAt: () => { x: number; y: number 
           }
         }}
         onRoll={(formula, label) => dispatch({ type: 'roll', formula, label: `${selected.name} · ${label}` })}
+        onShare={(card) => dispatch({ type: 'card', card: { ...card, subtitle: [selected.name, card.subtitle].filter(Boolean).join(' · ') } })}
       />
       {!onMap && (
         <button className="btn" onClick={place}>
@@ -377,17 +474,179 @@ export function ScenePanel() {
   );
 }
 
+const sharedLabel = (n: Note, players: Record<string, { displayName: string }>) =>
+  n.shared === 'all' ? 'Tutti' : n.shared === 'private' ? 'Privata' : n.shared.map((id) => players[id]?.displayName ?? '?').join(', ') || 'Privata';
+
 export function NotesPanel() {
-  const { state, dispatch } = useTable();
-  const [text, setText] = useState(state?.gmNotes ?? '');
+  const { state, dispatch, role, assets } = useTable();
+  const meId = useApp((s) => s.user?.id ?? '');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  /** ids known when we asked for a new note: the first new one of ours gets opened */
+  const pending = useRef<Set<string> | null>(null);
+  const notesMap = state?.notes;
   useEffect(() => {
-    const t = setTimeout(() => text !== state?.gmNotes && dispatch({ type: 'notes.update', text }), 600);
-    return () => clearTimeout(t);
-  }, [text]); // eslint-disable-line react-hooks/exhaustive-deps
+    const before = pending.current;
+    if (!before) return;
+    const created = Object.values(notesMap ?? {}).find((n) => n.authorId === meId && !before.has(n.id));
+    if (created) {
+      pending.current = null;
+      setOpenId(created.id);
+    }
+  }, [notesMap, meId]);
+  if (!state) return null;
+  const isGm = role === 'gm';
+  // the GM technically holds every note; players' private ones stay out of sight
+  const notes = Object.values(state.notes ?? {})
+    .filter((n) => n.authorId === meId || n.shared === 'all' || (Array.isArray(n.shared) && n.shared.includes(meId)) || (isGm && n.authorId === state.gmId))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+  const q = query.trim().toLowerCase();
+  const shown = q ? notes.filter((n) => `${n.title} ${n.body}`.toLowerCase().includes(q)) : notes;
+  const open = notes.find((n) => n.id === openId);
+
+  const create = () => {
+    pending.current = new Set(notes.map((n) => n.id));
+    dispatch({ type: 'note.create', note: { title: 'Nuova nota' } });
+  };
+
+  if (open) return <NoteEditor key={open.id} note={open} canEdit={isGm || open.authorId === meId} onBack={() => setOpenId(null)} image={open.image ? assets[open.image] : undefined} />;
+
   return (
-    <div className="panel-body col" style={{ height: '100%' }}>
-      <p className="faint small">Visibili solo a te. Salvate automaticamente.</p>
-      <textarea className="textarea grow" style={{ resize: 'none' }} value={text} onChange={(e) => setText(e.target.value)} placeholder="Segreti, PNG, indizi…" />
+    <div className="panel-body col">
+      <div className="row">
+        <input className="input grow" placeholder="Cerca nelle note" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <button className="btn sm" onClick={create}>
+          <Plus size={14} /> Nuova
+        </button>
+      </div>
+      {shown.length === 0 && (
+        <p className="faint small">
+          {q ? 'Nessuna nota trovata.' : isGm ? 'Scrivi appunti segreti o prepara dispense (lettere, mappe, indizi) da mostrare ai giocatori quando serve.' : 'Qui trovi le dispense del master e i tuoi appunti.'}
+        </p>
+      )}
+      <div className="note-list">
+        {shown.map((n) => (
+          <button key={n.id} className="note-row" onClick={() => setOpenId(n.id)}>
+            {n.image && assets[n.image] ? <span className="note-thumb" style={{ backgroundImage: `url(${assets[n.image]})` }} /> : null}
+            <span className="col grow" style={{ gap: 0, minWidth: 0 }}>
+              <b className="ellipsis">{n.title || 'Senza titolo'}</b>
+              <span className="faint tiny ellipsis">{n.body.slice(0, 90) || '—'}</span>
+            </span>
+            <span className={`badge ${n.shared === 'private' ? '' : 'live'}`} title="Chi può leggerla">
+              {n.shared === 'private' ? <EyeOff size={10} /> : <Eye size={10} />}{' '}
+              {n.authorId !== meId ? (state.players[n.authorId]?.displayName ?? 'Master') : sharedLabel(n, state.players)}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NoteEditor({ note, canEdit, onBack, image }: { note: Note; canEdit: boolean; onBack: () => void; image?: string }) {
+  const { state, dispatch } = useTable();
+  const meId = useApp((s) => s.user?.id ?? '');
+  const [title, setTitle] = useState(note.title);
+  const [body, setBody] = useState(note.body);
+  const [zoom, setZoom] = useState(false);
+  useEffect(() => {
+    if (!canEdit || (title === note.title && body === note.body)) return;
+    const t = setTimeout(() => dispatch({ type: 'note.update', noteId: note.id, patch: { title, body } }), 600);
+    return () => clearTimeout(t);
+  }, [title, body]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!state) return null;
+  const players = Object.values(state.players).filter((p) => p.id !== meId);
+  // pending edits go out together with the sharing, so players never get a half-written note
+  const setShared = (shared: Note['shared']) => dispatch({ type: 'note.update', noteId: note.id, patch: { shared, title, body } });
+  const picked = Array.isArray(note.shared) ? note.shared : [];
+
+  return (
+    <div className="panel-body col">
+      <div className="row between">
+        <button className="btn ghost sm" onClick={onBack}>
+          <ChevronLeft size={14} /> Note
+        </button>
+        {canEdit && (
+          <button
+            className="btn ghost sm icon danger"
+            aria-label="Elimina nota"
+            onClick={() => {
+              dispatch({ type: 'note.delete', noteId: note.id });
+              onBack();
+            }}
+          >
+            <Trash2 size={13} />
+          </button>
+        )}
+      </div>
+      {canEdit ? (
+        <input className="input bare note-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titolo" />
+      ) : (
+        <h3 className="note-title">{note.title}</h3>
+      )}
+      {canEdit && (
+        <div className="col" style={{ gap: 6 }}>
+          <span className="section-title">Chi può leggerla</span>
+          <div className="seg">
+            <button className={note.shared === 'private' ? 'on' : ''} onClick={() => setShared('private')}>
+              <EyeOff size={12} /> Solo io
+            </button>
+            <button className={note.shared === 'all' ? 'on' : ''} onClick={() => setShared('all')}>
+              <Eye size={12} /> Tutti
+            </button>
+            <button className={Array.isArray(note.shared) ? 'on' : ''} onClick={() => setShared(picked.length ? picked : [])} disabled={!players.length}>
+              <UserPlus size={12} /> Alcuni
+            </button>
+          </div>
+          {Array.isArray(note.shared) && (
+            <div className="row wrap" style={{ gap: 4 }}>
+              {players.map((p) => {
+                const on = picked.includes(p.id);
+                return (
+                  <button key={p.id} className={`chip ${on ? 'on' : ''}`} onClick={() => setShared(on ? picked.filter((x) => x !== p.id) : [...picked, p.id])}>
+                    <span className="ini-dot" style={{ background: p.color }} /> {p.displayName}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+      {image ? (
+        <div className="note-image">
+          <img src={image} alt="" onClick={() => setZoom(true)} />
+          {canEdit && (
+            <button className="btn ghost sm" onClick={() => dispatch({ type: 'note.update', noteId: note.id, patch: { image: null } })}>
+              Rimuovi immagine
+            </button>
+          )}
+        </div>
+      ) : (
+        canEdit && (
+          <label className="btn sm" style={{ alignSelf: 'flex-start' }}>
+            <ImagePlus size={14} /> Aggiungi immagine
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (f) dispatch({ type: 'asset.add', dataUrl: await readImage(f, 2400), attachTo: { noteId: note.id } });
+              }}
+            />
+          </label>
+        )
+      )}
+      {canEdit ? (
+        <textarea className="textarea note-body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Scrivi qui…" />
+      ) : (
+        <p className="selectable note-read">{note.body}</p>
+      )}
+      {zoom && image && (
+        <div className="lightbox" onClick={() => setZoom(false)}>
+          <img src={image} alt="" />
+        </div>
+      )}
     </div>
   );
 }

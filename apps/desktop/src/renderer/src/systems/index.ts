@@ -1,4 +1,4 @@
-import type { Token } from '@thevtt/shared';
+import type { ChatCard, Token } from '@thevtt/shared';
 import type { FC } from 'react';
 import { Dnd5eBestiary, dnd5eMonsterInitiative, Dnd5eStatBlock } from './dnd5e-2024/Bestiary';
 import { Dnd5eBuilder } from './dnd5e-2024/Builder';
@@ -16,6 +16,8 @@ export interface SheetProps<T = any> {
   compact?: boolean;
   onChange: (next: T) => void;
   onRoll: (formula: string, label: string) => void;
+  /** at the table: post a spell, feature or attack to the chat */
+  onShare?: (card: ChatCard) => void;
 }
 
 export interface BestiaryProps {

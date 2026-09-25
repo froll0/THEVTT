@@ -1,4 +1,4 @@
-import type { AreaTemplate, Scene, TemplateShape, Token } from '@thevtt/shared';
+import type { AreaTemplate, Drawing, Scene, TemplateShape, Token } from '@thevtt/shared';
 import { useEffect, useRef, useState } from 'react';
 import { readImage } from '../components/ui';
 import { useApp } from '../store/app';
@@ -6,11 +6,33 @@ import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
 
 export const CELL = 70;
-export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template';
+export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw';
 
 export interface ToolOptions {
   fogReveal: boolean;
   shape: TemplateShape;
+  /** drawing colour; empty = the player's own colour */
+  drawColor: string;
+  /** stroke width in cells */
+  drawWidth: number;
+  erase: boolean;
+}
+
+/** Distance from point p to segment ab. */
+function distToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+function hitDrawing(d: Drawing, wx: number, wy: number, slack: number) {
+  const p = d.points;
+  for (let i = 0; i + 3 < p.length; i += 2) {
+    if (distToSegment(wx, wy, p[i]! * CELL, p[i + 1]! * CELL, p[i + 2]! * CELL, p[i + 3]! * CELL) <= (d.width * CELL) / 2 + slack) return true;
+  }
+  return false;
 }
 
 /** Half-angle of a 2024 cone: its width at the end equals its length. */
@@ -82,15 +104,50 @@ type Gesture =
   | { kind: 'drag'; tokenId: string; ox: number; oy: number; wx: number; wy: number; moved: boolean }
   | { kind: 'measure'; fx: number; fy: number; tx: number; ty: number }
   | { kind: 'fog'; fx: number; fy: number; tx: number; ty: number }
-  | { kind: 'template'; fx: number; fy: number; tx: number; ty: number };
+  | { kind: 'template'; fx: number; fy: number; tx: number; ty: number }
+  /** points in world pixels */
+  | { kind: 'draw'; points: number[] }
+  | { kind: 'erase' };
 
-const accentColor = () => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#c9a227';
+/**
+ * Overlays (ruler, areas, drawings) must read on any map: a dark theme accent on a
+ * dark dungeon disappears. Colours too dark are lifted towards white.
+ */
+export function vivid(color: string): string {
+  const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(color.trim());
+  if (!m) return '#ffd166';
+  const h = m[1]!.length === 3 ? m[1]!.split('').map((c) => c + c).join('') : m[1]!;
+  let [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const lum = (0.2126 * r! + 0.7152 * g! + 0.0722 * b!) / 255;
+  if (lum < 0.55) {
+    const t = (0.55 - lum) / (1 - lum);
+    [r, g, b] = [r!, g!, b!].map((v) => Math.round(v + (255 - v) * t));
+  }
+  return `#${[r!, g!, b!].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+const accentColor = () => vivid(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#c9a227');
+
+/** Stroke the current path with a dark halo under the colour, so it stands out on light and dark maps. */
+function haloStroke(ctx: CanvasRenderingContext2D, color: string, width: number, zoom: number) {
+  ctx.save();
+  ctx.lineWidth = width + 3 / zoom;
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.stroke();
+  ctx.restore();
+  ctx.lineWidth = width;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
 
 const hexToRgba = (hex: string, a: number) => {
   const h = hex.replace('#', '');
   const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 };
+
+const drawColor = (L: { options: ToolOptions; state: { players: Record<string, { color: string }> } | null; me: string; isGm: boolean }) =>
+  L.options.drawColor || (L.isGm ? '#ffffff' : L.state?.players[L.me]?.color ?? '#ffffff');
 
 /** Everyone can see a token's name; HP only its owners and the GM. */
 const canControl = (t: Token, me: string, gm: boolean) => gm || t.ownerIds.includes(me);
@@ -105,6 +162,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
   const fogCache = useRef<{ key: string; canvas: HTMLCanvasElement | null }>({ key: '', canvas: null });
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [cursor, setCursor] = useState('default');
+  const erased = useRef(new Set<string>());
 
   const me = useApp((s) => s.user?.id ?? '');
   const { state, assets, pings, role, selectedTokenId, dispatch, select } = useTable();
@@ -136,7 +194,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
   // render loop
   useEffect(() => {
     let raf = 0;
-    const accent = () => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#c9a227';
+    const accent = accentColor;
     const image = (id: string | null) => {
       if (!id) return null;
       const src = live.current.assets[id];
@@ -208,17 +266,39 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       }
 
       const acc = accent();
+      const g0 = gesture.current;
       for (const t of Object.values(L.state.templates ?? {})) {
         if (t.sceneId !== L.scene.id) continue;
         ctx.save();
         templatePath(ctx, t);
-        ctx.fillStyle = hexToRgba(t.color.length === 7 ? t.color : '#c9a227', 0.22);
+        const tc = vivid(t.color);
+        ctx.fillStyle = hexToRgba(tc, 0.28);
         ctx.fill();
-        ctx.lineWidth = (t.id === L.selectedTemplate ? 3 : 1.5) / cam.zoom;
-        ctx.strokeStyle = t.id === L.selectedTemplate ? acc : hexToRgba(t.color.length === 7 ? t.color : '#c9a227', 0.9);
-        ctx.stroke();
+        if (t.id === L.selectedTemplate) ctx.setLineDash([8 / cam.zoom, 5 / cam.zoom]);
+        haloStroke(ctx, tc, (t.id === L.selectedTemplate ? 3 : 2) / cam.zoom, cam.zoom);
         ctx.restore();
       }
+      const strokeLine = (pts: number[], color: string, width: number) => {
+        if (pts.length < 4) return;
+        ctx.beginPath();
+        ctx.moveTo(pts[0]!, pts[1]!);
+        for (let i = 2; i + 1 < pts.length; i += 2) ctx.lineTo(pts[i]!, pts[i + 1]!);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        haloStroke(ctx, vivid(color), width, cam.zoom);
+      };
+      for (const d of Object.values(L.state.drawings ?? {})) {
+        if (d.sceneId !== L.scene.id) continue;
+        ctx.save();
+        strokeLine(d.points.map((v) => v * CELL), d.color, d.width * CELL);
+        ctx.restore();
+      }
+      if (g0.kind === 'draw') {
+        ctx.save();
+        strokeLine(g0.points, drawColor(L), L.options.drawWidth * CELL);
+        ctx.restore();
+      }
+
       const ini = L.state.initiative;
       const activeTokenId = ini.round > 0 ? ini.entries[ini.turn]?.tokenId : null;
       const g = gesture.current;
@@ -319,19 +399,17 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         const y1 = Math.floor(Math.max(g.fy, g.ty) / CELL) + 1;
         ctx.fillStyle = L.options.fogReveal ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.45)';
         ctx.fillRect(x0 * CELL, y0 * CELL, (x1 - x0) * CELL, (y1 - y0) * CELL);
-        ctx.strokeStyle = acc;
-        ctx.lineWidth = 2 / cam.zoom;
-        ctx.strokeRect(x0 * CELL, y0 * CELL, (x1 - x0) * CELL, (y1 - y0) * CELL);
+        ctx.beginPath();
+        ctx.rect(x0 * CELL, y0 * CELL, (x1 - x0) * CELL, (y1 - y0) * CELL);
+        haloStroke(ctx, acc, 2 / cam.zoom, cam.zoom);
       }
       if (g.kind === 'template') {
         const size = Math.max(0.5, Math.hypot(g.tx - g.fx, g.ty - g.fy) / CELL);
         const draft = { shape: L.options.shape, x: g.fx / CELL, y: g.fy / CELL, size: Math.round(size * 2) / 2, angle: Math.atan2(g.ty - g.fy, g.tx - g.fx) };
         templatePath(ctx, draft);
-        ctx.fillStyle = hexToRgba(acc.length === 7 ? acc : '#c9a227', 0.2);
+        ctx.fillStyle = hexToRgba(acc, 0.28);
         ctx.fill();
-        ctx.strokeStyle = acc;
-        ctx.lineWidth = 2 / cam.zoom;
-        ctx.stroke();
+        haloStroke(ctx, acc, 2.5 / cam.zoom, cam.zoom);
         const unit = L.scene.unit ?? 'ft';
         const label = `${String(Math.round(draft.size * L.scene.cellDistance * 10) / 10).replace('.', ',')} ${unit}`;
         ctx.font = `700 ${14 / cam.zoom}px system-ui, sans-serif`;
@@ -354,14 +432,22 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         const cells = Math.max(Math.abs(tx - fx), Math.abs(ty - fy));
         const a = { x: (fx + 0.5) * CELL, y: (fy + 0.5) * CELL };
         const b = { x: (tx + 0.5) * CELL, y: (ty + 0.5) * CELL };
-        ctx.strokeStyle = acc;
-        ctx.lineWidth = 3 / cam.zoom;
         ctx.setLineDash([10 / cam.zoom, 6 / cam.zoom]);
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
-        ctx.stroke();
+        haloStroke(ctx, acc, 3 / cam.zoom, cam.zoom);
         ctx.setLineDash([]);
+        // end points
+        for (const p of [a, b]) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 5 / cam.zoom, 0, Math.PI * 2);
+          ctx.fillStyle = acc;
+          ctx.fill();
+          ctx.lineWidth = 2 / cam.zoom;
+          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+          ctx.stroke();
+        }
         const unit = L.scene.unit ?? 'ft';
         const dist = Math.round(cells * L.scene.cellDistance * 10) / 10;
         const label = `${String(dist).replace('.', ',')} ${unit}`;
@@ -414,6 +500,20 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       });
   };
 
+  /** eraser: delete the topmost of your drawings under the pointer */
+  const eraseAt = (wx: number, wy: number) => {
+    const L = live.current;
+    const cam = cameraRef.current;
+    if (!L.state || !L.scene || !cam) return;
+    const hit = Object.values(L.state.drawings ?? {})
+      .reverse()
+      .find((d) => d.sceneId === L.scene!.id && (L.isGm || d.authorId === L.me) && !erased.current.has(d.id) && hitDrawing(d, wx, wy, 6 / cam.zoom));
+    if (hit) {
+      erased.current.add(hit.id);
+      dispatch({ type: 'drawing.delete', drawingId: hit.id });
+    }
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (!cameraRef.current) return;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -433,6 +533,13 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     }
     if (L.tool === 'fog' && L.isGm) {
       gesture.current = { kind: 'fog', fx: w.x, fy: w.y, tx: w.x, ty: w.y };
+      return;
+    }
+    if (L.tool === 'draw') {
+      if (L.options.erase) {
+        gesture.current = { kind: 'erase' };
+        eraseAt(w.x, w.y);
+      } else gesture.current = { kind: 'draw', points: [w.x, w.y] };
       return;
     }
     if (L.tool === 'template') {
@@ -475,6 +582,16 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       g.wy = w.y;
       g.moved = true;
       dirty.current = true;
+    } else if (g.kind === 'draw') {
+      const lx = g.points[g.points.length - 2]!;
+      const ly = g.points[g.points.length - 1]!;
+      // skip points closer than a few screen pixels: smaller strokes, same look
+      if (Math.hypot(w.x - lx, w.y - ly) * cam.zoom >= 3) {
+        g.points.push(w.x, w.y);
+        dirty.current = true;
+      }
+    } else if (g.kind === 'erase') {
+      eraseAt(w.x, w.y);
     } else if (g.kind === 'measure' || g.kind === 'fog' || g.kind === 'template') {
       g.tx = w.x;
       g.ty = w.y;
@@ -506,6 +623,11 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       if (!L.scene.fog?.enabled) dispatch({ type: 'fog.enable', sceneId: L.scene.id, enabled: true });
       dispatch({ type: 'fog.paint', sceneId: L.scene.id, x: x0, y: y0, w: x1 - x0, h: y1 - y0, reveal: L.options.fogReveal });
     }
+    if (g.kind === 'draw') {
+      const pts = g.points.length === 2 ? [...g.points, g.points[0]! + 0.5, g.points[1]! + 0.5] : g.points;
+      dispatch({ type: 'drawing.create', points: pts.slice(0, 4000).map((v) => v / CELL), color: drawColor(L), width: L.options.drawWidth });
+    }
+    if (g.kind === 'erase') erased.current.clear();
     if (g.kind === 'template') {
       const size = Math.hypot(g.tx - g.fx, g.ty - g.fy) / CELL;
       if (size >= 0.5) {
@@ -565,7 +687,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     return () => window.removeEventListener('keydown', onKey);
   }, [dispatch, select]);
 
-  const toolCursor = tool === 'measure' || tool === 'template' || tool === 'fog' ? 'crosshair' : tool === 'ping' ? 'cell' : cursor;
+  const toolCursor = tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' ? 'crosshair' : tool === 'ping' ? 'cell' : cursor;
 
   return (
     <div ref={wrapRef} className="board" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>

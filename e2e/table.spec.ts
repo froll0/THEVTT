@@ -82,7 +82,7 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await P.locator('.rows button', { hasText: 'Atletica' }).click();
   await P.getByTitle('Tira 1d20').click();
   await P.locator('.sheet-tabs button', { hasText: 'Combattimento' }).click();
-  await P.locator('.attack', { hasText: 'Spada lunga' }).getByRole('button').first().click();
+  await P.locator('.attack', { hasText: 'Spada lunga' }).getByRole('button', { name: /^[+-]\d+$/ }).click();
 
   // GM sees every roll in the log, and rolls too (this used to blank the app)
   const log = G.locator('.log');
@@ -122,6 +122,43 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await P.mouse.up();
   await G.getByTitle('Aree d\u2019effetto (A)').click();
   await expect(G.getByRole('button', { name: 'Cancella tutte' })).toBeVisible();
+
+  // freehand drawing reaches the GM
+  await P.getByTitle('Disegna (D)').click();
+  await P.mouse.move(box.x + 100, box.y + 100);
+  await P.mouse.down();
+  await P.mouse.move(box.x + 220, box.y + 160, { steps: 8 });
+  await P.mouse.up();
+  await G.getByTitle('Disegna (D)').click();
+  await expect(G.getByRole('button', { name: 'Cancella tutto' })).toBeVisible();
+
+  // the GM sees a list of characters and opens one; players only get their own sheet
+  await G.getByTitle('Scheda').click();
+  await G.locator('.char-row', { hasText: 'Brunhild' }).click();
+  await expect(G.locator('.sheet-head', { hasText: 'Brunhild' })).toBeVisible();
+  await G.getByRole('button', { name: 'Tutti i personaggi' }).click();
+
+  // sharing an attack from the sheet posts a card with roll buttons
+  await P.getByTitle('Scheda').click();
+  await P.locator('.sheet-tabs button', { hasText: 'Combattimento' }).click();
+  await P.locator('.attack', { hasText: 'Spada lunga' }).getByTitle('Mostra in chat').click();
+  await G.getByTitle('Chat e tiri').click();
+  const card = G.locator('.log-card', { hasText: 'Spada lunga' });
+  await expect(card).toBeVisible();
+  await card.getByRole('button', { name: /Danni/ }).click();
+  await expect(G.locator('.log-roll', { hasText: 'Spada lunga · Danni' })).toBeVisible();
+
+  // handouts: private until the GM shares them
+  await G.getByTitle('Note e dispense').click();
+  await G.getByRole('button', { name: 'Nuova' }).click();
+  await G.getByPlaceholder('Titolo').fill('Lettera del sindaco');
+  await G.getByPlaceholder('Scrivi qui…').fill('Venite subito alla miniera.');
+  await P.getByTitle('Note e dispense').click();
+  await expect(P.getByText('Qui trovi le dispense del master')).toBeVisible();
+  await G.getByRole('button', { name: 'Tutti' }).click();
+  await expect(P.getByText('Nuova dispensa: Lettera del sindaco')).toBeVisible();
+  await P.locator('.note-row', { hasText: 'Lettera del sindaco' }).click();
+  await expect(P.getByText('Venite subito alla miniera.')).toBeVisible();
 
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   expect(player.errors, player.errors.join('\n')).toEqual([]);

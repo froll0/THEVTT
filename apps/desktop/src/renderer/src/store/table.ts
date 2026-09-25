@@ -43,6 +43,8 @@ interface TableStore {
   selectedTokenId: string | null;
   /** host: route per player · player: route to the host */
   routes: Record<string, Route>;
+  /** host clock minus local clock (ms), to follow the shared music */
+  clockOffset: number;
 
   host(campaign: Campaign): Promise<void>;
   join(campaign: Campaign): void;
@@ -62,6 +64,16 @@ const charTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const saveKey = (campaignId: string) => `table-${campaignId}`;
 
+/** Players: a toast when someone shares a note or handout with you. */
+function announceNotes(prev: GameState | null, next: GameState) {
+  if (!prev || prev.campaignId !== next.campaignId) return;
+  const me = useApp.getState().user?.id;
+  if (!me || me === next.gmId) return;
+  for (const n of Object.values(next.notes ?? {})) {
+    if (n.authorId !== me && !prev.notes?.[n.id]) useApp.getState().toast(`Nuova dispensa: ${n.title}`);
+  }
+}
+
 export const useTable = create<TableStore>((set, get) => {
   const apply = (msg: HostToPlayer) => {
     switch (msg.k) {
@@ -69,7 +81,8 @@ export const useTable = create<TableStore>((set, get) => {
         // snapshots may arrive through both relay and direct link while switching
         if (msg.rev <= lastRev) break;
         lastRev = msg.rev;
-        set({ state: msg.state, phase: 'live' });
+        announceNotes(get().state, msg.state);
+        set({ state: msg.state, phase: 'live', ...(msg.now ? { clockOffset: msg.now - Date.now() } : {}) });
         break;
       case 'asset':
         set((s) => ({ assets: { ...s.assets, [msg.id]: msg.dataUrl } }));
@@ -196,6 +209,7 @@ export const useTable = create<TableStore>((set, get) => {
     pings: [],
     selectedTokenId: null,
     routes: {},
+    clockOffset: 0,
 
     async host(campaign) {
       teardown();

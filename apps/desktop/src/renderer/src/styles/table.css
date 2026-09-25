@@ -390,3 +390,187 @@
 .stage-paused h2 {
   color: var(--fg);
 }
+
+/* ---------- characters list (GM) ---------- */
+.char-list,
+.note-list {
+  display: flex;
+  flex-direction: column;
+}
+.char-row,
+.note-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 0;
+  color: inherit;
+}
+.char-row:first-child,
+.note-row:first-child {
+  border-top: 0;
+}
+.char-row:hover,
+.note-row:hover {
+  background: var(--bg-elev-2);
+}
+.char-row .portrait {
+  border: 2px solid var(--border-strong);
+  flex: none;
+  font-size: 14px;
+}
+.char-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 0.85rem;
+  min-width: 38px;
+}
+.char-stat small {
+  font-size: 0.64rem;
+  color: var(--fg-faint);
+  font-weight: 500;
+}
+
+/* ---------- notes ---------- */
+.note-thumb {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  flex: none;
+  background: center / cover no-repeat var(--bg-elev-2);
+}
+.note-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+.note-body {
+  min-height: 220px;
+  resize: vertical;
+}
+.note-read {
+  white-space: pre-wrap;
+  margin: 0;
+  line-height: 1.55;
+}
+.note-image {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+.note-image img {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: var(--radius);
+  cursor: zoom-in;
+  object-fit: contain;
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  align-self: flex-start;
+}
+.seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: none;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.seg button + button {
+  border-left: 1px solid var(--border-strong);
+}
+.seg button.on {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+.seg button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.8);
+  cursor: zoom-out;
+  padding: 32px;
+}
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius);
+}
+
+/* ---------- chat cards ---------- */
+.log-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+}
+.card-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.card-body p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.card-body summary {
+  cursor: pointer;
+}
+.share {
+  opacity: 0.55;
+}
+.share:hover {
+  opacity: 1;
+}
+
+.swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgb(0 0 0 / 0.35);
+  cursor: pointer;
+  margin: 0 2px;
+  padding: 0;
+}
+.swatch.active {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+.stroke-dot {
+  display: inline-block;
+  border-radius: 50%;
+  background: currentColor;
+}

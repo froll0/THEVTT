@@ -62,6 +62,63 @@ export interface Token {
   conditions: string[];
 }
 
+/** A freehand stroke on the map. Points are in cells, flattened [x0, y0, x1, y1, ...]. */
+export interface Drawing {
+  id: string;
+  sceneId: string;
+  points: number[];
+  color: string;
+  /** stroke width in cells */
+  width: number;
+  authorId: string;
+}
+
+/**
+ * A note or handout. Who can read it: the author always, the GM always
+ * (the table runs on the GM's machine), and whoever `shared` says.
+ */
+export interface Note {
+  id: string;
+  title: string;
+  body: string;
+  /** optional picture (asset id): a map, a letter, a portrait... */
+  image: string | null;
+  /** 'private' = only the author (and the GM); 'all' = every player; or a list of user ids */
+  shared: 'private' | 'all' | string[];
+  authorId: string;
+  updatedAt: number;
+}
+
+export interface MusicTrack {
+  id: string;
+  name: string;
+  /** audio asset id */
+  asset: string;
+}
+
+/**
+ * Shared music. Players compute where to be from `position` (seconds) at
+ * host time `startedAt`; the host sends its clock with every state.
+ */
+export interface MusicState {
+  tracks: MusicTrack[];
+  current: string | null;
+  playing: boolean;
+  position: number;
+  startedAt: number;
+  loop: boolean;
+}
+
+/** A rich chat message: a spell, a feature, an item shared from a sheet. */
+export interface ChatCard {
+  title: string;
+  subtitle?: string;
+  body?: string;
+  tags?: string[];
+  /** roll buttons shown under the card */
+  rolls?: { label: string; formula: string }[];
+}
+
 export interface InitiativeEntry {
   id: string;
   name: string;
@@ -81,12 +138,15 @@ export interface LogEntry {
   ts: number;
   authorId: string;
   authorName: string;
-  kind: 'chat' | 'roll' | 'system';
+  kind: 'chat' | 'roll' | 'system' | 'card';
   text: string;
   label?: string;
   roll?: RollResult;
+  card?: ChatCard;
   /** visible only to the author and the GM */
   private?: boolean;
+  /** rolled blind: only the GM sees the result, the author sees that it happened */
+  blind?: boolean;
 }
 
 export interface TablePlayer {
@@ -119,8 +179,20 @@ export interface GameState {
   log: LogEntry[];
   players: Record<string, TablePlayer>;
   characters: Record<string, TableCharacter>;
-  /** GM-only notes, stripped from player views */
+  /** GM-only notes, stripped from player views. Superseded by `notes` (migrated on load). */
   gmNotes: string;
+  notes?: Record<string, Note>;
+  drawings?: Record<string, Drawing>;
+  music?: MusicState;
+}
+
+export function emptyMusic(): MusicState {
+  return { tracks: [], current: null, playing: false, position: 0, startedAt: 0, loop: true };
+}
+
+export function noteVisibleTo(note: Note, userId: string, gmId: string): boolean {
+  if (userId === gmId || note.authorId === userId) return true;
+  return note.shared === 'all' || (Array.isArray(note.shared) && note.shared.includes(userId));
 }
 
 export const LOG_LIMIT = 300;
@@ -152,6 +224,9 @@ export function createInitialState(opts: {
     players: {},
     characters: {},
     gmNotes: '',
+    notes: {},
+    drawings: {},
+    music: emptyMusic(),
   };
 }
 
@@ -180,7 +255,14 @@ export function viewFor(state: GameState, userId: string): GameState {
       // hidden combatants stay hidden in the tracker too
       entries: state.initiative.entries.filter((e) => !e.tokenId || visibleTokenIds.has(e.tokenId) || !state.tokens[e.tokenId]),
     },
-    log: state.log.filter((l) => !l.private || l.authorId === userId),
+    log: state.log
+      .filter((l) => !l.private || l.authorId === userId)
+      // blind rolls: the author only learns that the GM got a result
+      .map((l) => (l.blind && l.roll ? { ...l, text: '?', roll: undefined } : l)),
+    // your own characters only: the others' sheets are private
+    characters: Object.fromEntries(Object.entries(state.characters).filter(([, c]) => c.ownerId === userId)),
+    notes: Object.fromEntries(Object.entries(state.notes ?? {}).filter(([, n]) => noteVisibleTo(n, userId, state.gmId))),
+    drawings: Object.fromEntries(Object.entries(state.drawings ?? {}).filter(([, d]) => d.sceneId === state.activeSceneId)),
     gmNotes: '',
   });
 }
@@ -190,5 +272,8 @@ export function referencedAssets(state: GameState): Set<string> {
   const ids = new Set<string>();
   for (const s of Object.values(state.scenes)) if (s.background) ids.add(s.background);
   for (const t of Object.values(state.tokens)) if (t.image) ids.add(t.image);
+  for (const n of Object.values(state.notes ?? {})) if (n.image) ids.add(n.image);
+  const track = state.music?.tracks.find((t) => t.id === state.music?.current);
+  if (track) ids.add(track.asset);
   return ids;
 }

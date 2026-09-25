@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { ArrowLeft, ArrowLeftRight, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Eraser, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -10,6 +10,8 @@ import { useTable } from '../store/table';
 import { Board, CELL, type Tool, type ToolOptions } from './Board';
 import { BestiaryPanel, ChatPanel, DiceBar, InitiativePanel, NotesPanel, ScenePanel, SheetPanel, TokenInspector } from './Panels';
 
+const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
+
 type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'scene' | 'notes';
 
 export function TableView({ campaignId }: { campaignId: string }) {
@@ -18,7 +20,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const table = useTable();
   const dockPosition = useSettings((s) => s.dockPosition);
   const [tool, setTool] = useState<Tool>('select');
-  const [options, setOptions] = useState<ToolOptions>({ fogReveal: true, shape: 'circle' });
+  const [options, setOptions] = useState<ToolOptions>({ fogReveal: true, shape: 'circle', drawColor: '', drawWidth: 0.08, erase: false });
   const [tab, setTab] = useState<DockTab>('chat');
   const [dockOpen, setDockOpen] = useState(true);
   const cameraRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
@@ -38,6 +40,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
       if (e.key === 'm') setTool('measure');
       if (e.key === 'p') setTool('ping');
       if (e.key === 'a') setTool('template');
+      if (e.key === 'd') setTool('draw');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -67,7 +70,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     { id: 'sheet', label: 'Scheda', icon: Users },
     { id: 'bestiary', label: 'Bestiario', icon: BookOpen, gm: true },
     { id: 'scene', label: 'Scene', icon: MapIcon, gm: true },
-    { id: 'notes', label: 'Note', icon: NotebookPen, gm: true },
+    { id: 'notes', label: 'Note e dispense', icon: NotebookPen },
   ];
 
   return (
@@ -135,6 +138,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                   { id: 'measure', icon: Ruler, label: 'Righello (M)' },
                   { id: 'ping', icon: Crosshair, label: 'Ping (P · o Alt+clic)' },
                   { id: 'template', icon: Shapes, label: 'Aree d’effetto (A)' },
+                  { id: 'draw', icon: Pencil, label: 'Disegna (D)' },
                   ...(isGm ? ([{ id: 'fog', icon: CloudFog, label: 'Nebbia di guerra' }] as const) : []),
                 ] as const
               ).map((t) => (
@@ -180,6 +184,34 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 </>
               )}
               <span className="faint tiny" style={{ padding: '0 6px' }}>trascina dall’origine</span>
+            </div>
+          )}
+          {state && scene && tool === 'draw' && (
+            <div className="float tool-options glass">
+              {DRAW_COLORS.map((c) => (
+                <button
+                  key={c || 'mine'}
+                  className={`swatch ${!options.erase && options.drawColor === c ? 'active' : ''}`}
+                  style={{ background: c || (isGm ? '#ffffff' : state.players[user.id]?.color) }}
+                  title={c ? c : 'Il tuo colore'}
+                  onClick={() => setOptions({ ...options, drawColor: c, erase: false })}
+                />
+              ))}
+              <span className="vsep" />
+              {([0.05, 0.08, 0.16] as const).map((w, i) => (
+                <button key={w} className={`tool ${!options.erase && options.drawWidth === w ? 'active' : ''}`} title={['Sottile', 'Medio', 'Spesso'][i]} onClick={() => setOptions({ ...options, drawWidth: w, erase: false })}>
+                  <span className="stroke-dot" style={{ width: 4 + i * 4, height: 4 + i * 4 }} />
+                </button>
+              ))}
+              <span className="vsep" />
+              <button className={`tool ${options.erase ? 'active' : ''}`} title="Gomma: trascina sui tratti" onClick={() => setOptions({ ...options, erase: !options.erase })}>
+                <Eraser size={15} />
+              </button>
+              {Object.values(state.drawings ?? {}).some((d) => d.sceneId === scene.id && (isGm || d.authorId === user.id)) && (
+                <button className="tool wide" onClick={() => table.dispatch({ type: 'drawing.clear' })}>
+                  {isGm ? 'Cancella tutto' : 'Cancella i miei'}
+                </button>
+              )}
             </div>
           )}
           {state && scene && tool === 'fog' && isGm && (
@@ -239,7 +271,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 {tab === 'sheet' && <SheetPanel placeAt={viewCenter} />}
                 {tab === 'bestiary' && isGm && <BestiaryPanel placeAt={viewCenter} />}
                 {tab === 'scene' && isGm && <ScenePanel />}
-                {tab === 'notes' && isGm && <NotesPanel />}
+                {tab === 'notes' && <NotesPanel />}
               </ErrorBoundary>
             </div>
           )}

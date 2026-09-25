@@ -1,6 +1,6 @@
-import { roll } from '@thevtt/shared';
+import { roll, type ChatCard } from '@thevtt/shared';
 import { dnd5e } from '@thevtt/systems';
-import { ArrowUpCircle, Dices, Heart, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun } from 'lucide-react';
+import { ArrowUpCircle, Dices, Heart, MessageSquareShare, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { Modal, Section, Switch } from '../../components/ui';
 import type { SheetProps } from '..';
@@ -12,8 +12,45 @@ const d20 = (b: number) => `1d20${b >= 0 ? '+' : ''}${b}`;
 const addDice = (base: string, extra: string | undefined, times: number) => (extra && times > 0 ? `${base}+${Array(times).fill(extra).join('+')}` : base);
 
 type Tab = 'main' | 'combat' | 'spells' | 'features' | 'inventory' | 'details';
+type Share = ((card: ChatCard) => void) | undefined;
 
-export function Dnd5eSheet({ data, editable, onChange, onRoll, compact }: SheetProps<C> & { compact?: boolean }) {
+function ShareButton({ onShare, card }: { onShare: Share; card: () => ChatCard }) {
+  if (!onShare) return null;
+  return (
+    <button
+      type="button"
+      className="btn ghost sm icon share"
+      title="Mostra in chat"
+      aria-label="Mostra in chat"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onShare(card());
+      }}
+    >
+      <MessageSquareShare size={13} />
+    </button>
+  );
+}
+
+/** Chat card for a spell, with the rolls it needs at the given caster's numbers. */
+function spellCard(c: C, sc: dnd5e.Spellcasting, s: dnd5e.SpellDef): ChatCard {
+  const castMod = dnd5e.abilityMod(c, sc.ability);
+  const rolls: ChatCard['rolls'] = [];
+  if (s.attack) rolls.push({ label: 'Attacco', formula: d20(sc.attack) });
+  const dmg = s.level === 0 ? dnd5e.cantripDice(c, s) : s.damage;
+  if (dmg) rolls.push({ label: 'Danni', formula: s.addMod ? `${dmg}+${castMod}` : dmg });
+  if (s.heal) rolls.push({ label: 'Cura', formula: s.addMod ? `${s.heal}+${castMod}` : s.heal });
+  return {
+    title: s.name,
+    subtitle: `${s.level === 0 ? 'Trucchetto' : `${s.level}° livello`} · ${SCHOOLS[s.school]}${s.concentration ? ' · concentrazione' : ''}${s.ritual ? ' · rituale' : ''}${s.save ? ` · TS ${ABILITY_LABELS[s.save].name} CD ${sc.saveDc}` : ''}`,
+    tags: [s.time, s.range, s.components, s.duration],
+    body: s.description + (s.upcast && s.level > 0 ? `\n\nAi livelli superiori: +${s.upcast} per ogni livello dello slot sopra il ${s.level}°.` : ''),
+    rolls,
+  };
+}
+
+export function Dnd5eSheet({ data, editable, onChange, onRoll, onShare, compact }: SheetProps<C> & { compact?: boolean }) {
   const c = dnd5e.normalize(data);
   const set = (patch: Partial<C>) => onChange({ ...c, ...patch });
   const sc = dnd5e.spellcasting(c);
@@ -192,10 +229,10 @@ export function Dnd5eSheet({ data, editable, onChange, onRoll, compact }: SheetP
       </div>
 
       {tab === 'main' && <MainTab c={c} onRoll={onRoll} />}
-      {tab === 'combat' && <CombatTab c={c} editable={editable} set={set} onRoll={onRoll} onRest={() => setResting(true)} onLongRest={() => onChange(dnd5e.longRest(c))} />}
-      {tab === 'spells' && sc && <SpellsTab c={c} sc={sc} editable={editable} set={set} onRoll={onRoll} />}
-      {tab === 'features' && <FeaturesTab c={c} />}
-      {tab === 'inventory' && <InventoryEditor c={c} set={set} readOnly={!editable} />}
+      {tab === 'combat' && <CombatTab c={c} editable={editable} set={set} onRoll={onRoll} onShare={onShare} onRest={() => setResting(true)} onLongRest={() => onChange(dnd5e.longRest(c))} />}
+      {tab === 'spells' && sc && <SpellsTab c={c} sc={sc} editable={editable} set={set} onRoll={onRoll} onShare={onShare} />}
+      {tab === 'features' && <FeaturesTab c={c} onShare={onShare} />}
+      {tab === 'inventory' && <InventoryEditor c={c} set={set} readOnly={!editable} onShare={onShare} />}
       {tab === 'details' && (editable && !compact ? <DetailsEditor c={c} set={set} /> : <DetailsView c={c} />)}
 
       {levelUp && <LevelUpModal c={c} onClose={() => setLevelUp(false)} onConfirm={(r) => { onChange(dnd5e.levelUp(c, r)); setLevelUp(false); }} />}
@@ -285,6 +322,7 @@ function CombatTab({
   editable,
   set,
   onRoll,
+  onShare,
   onRest,
   onLongRest,
 }: {
@@ -292,6 +330,7 @@ function CombatTab({
   editable: boolean;
   set: (p: Partial<C>) => void;
   onRoll: (f: string, l: string) => void;
+  onShare: Share;
   onRest: () => void;
   onLongRest: () => void;
 }) {
@@ -303,8 +342,20 @@ function CombatTab({
         <div>
           {attacks.map((a) => (
             <div key={a.id} className="attack">
-              <div className="col" style={{ gap: 0, minWidth: 0 }}>
+              <div className="row" style={{ gap: 2, minWidth: 0 }}>
                 <b className="ellipsis">{a.name}</b>
+                <ShareButton
+                  onShare={onShare}
+                  card={() => ({
+                    title: a.name,
+                    subtitle: `${a.damageType} · ${a.range}${a.versatile ? ` · a due mani ${a.versatile}` : ''}`,
+                    body: a.mastery ? `Maestria ${a.mastery.name}: ${a.mastery.description}` : undefined,
+                    rolls: [
+                      { label: 'Attacco', formula: d20(a.bonus) },
+                      { label: 'Danni', formula: a.damage },
+                    ],
+                  })}
+                />
               </div>
               <button className="btn sm" onClick={() => onRoll(d20(a.bonus), `${a.name} · attacco`)}>
                 {dnd5e.fmtMod(a.bonus)}
@@ -383,7 +434,21 @@ function CombatTab({
   );
 }
 
-function SpellsTab({ c, sc, editable, set, onRoll }: { c: C; sc: dnd5e.Spellcasting; editable: boolean; set: (p: Partial<C>) => void; onRoll: (f: string, l: string) => void }) {
+function SpellsTab({
+  c,
+  sc,
+  editable,
+  set,
+  onRoll,
+  onShare,
+}: {
+  c: C;
+  sc: dnd5e.Spellcasting;
+  editable: boolean;
+  set: (p: Partial<C>) => void;
+  onRoll: (f: string, l: string) => void;
+  onShare: Share;
+}) {
   const spells = dnd5e.knownSpells(c);
   const always = new Set(dnd5e.alwaysPrepared(c));
   const levels = [...new Set(spells.map((s) => s.level))].sort((a, b) => a - b);
@@ -472,6 +537,7 @@ function SpellsTab({ c, sc, editable, set, onRoll }: { c: C; sc: dnd5e.Spellcast
                       </span>
                       {s.concentration && <span className="tag" title="Concentrazione">C</span>}
                       {s.ritual && <span className="tag" title="Rituale">R</span>}
+                      <ShareButton onShare={onShare} card={() => spellCard(c, sc, s)} />
                       <button
                         className="btn sm"
                         disabled={!editable || (s.level > 0 && !slot)}
@@ -502,7 +568,7 @@ function SpellsTab({ c, sc, editable, set, onRoll }: { c: C; sc: dnd5e.Spellcast
   );
 }
 
-function FeaturesTab({ c }: { c: C }) {
+function FeaturesTab({ c, onShare }: { c: C; onShare: Share }) {
   const list = dnd5e.features(c);
   const groups = [...new Set(list.map((f) => f.source))];
   return (
@@ -517,6 +583,7 @@ function FeaturesTab({ c }: { c: C }) {
                   <summary>
                     <span className="grow">{f.name}</span>
                     {f.level > 1 && <span className="faint tiny">{f.level}°</span>}
+                    <ShareButton onShare={onShare} card={() => ({ title: f.name, subtitle: f.source, body: f.description })} />
                   </summary>
                   <p>{f.description}</p>
                 </details>
