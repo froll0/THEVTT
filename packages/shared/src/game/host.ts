@@ -315,7 +315,8 @@ export class GameHost {
       const col = this.collection(c.col);
       // a scene deleted since then stays deleted: its things would float nowhere
       if (c.col !== 'scenes' && c.value && !this._state.scenes[(c.value as { sceneId: string }).sceneId]) continue;
-      if (c.col === 'scenes' && !col[c.id]) continue;
+      // the last scene never goes away
+      if (c.col === 'scenes' && c.value === undefined && Object.keys(col).length <= 1) continue;
       if (c.fields) {
         const cur = col[c.id] as Record<string, unknown> | undefined;
         if (!cur) continue;
@@ -332,6 +333,8 @@ export class GameHost {
       if (c.value === undefined) delete col[c.id];
       else col[c.id] = structuredClone(c.value);
     }
+    // undoing a scene that was being played: back to one that exists
+    if (!this._state.scenes[this._state.activeSceneId]) this._state.activeSceneId = Object.keys(this._state.scenes)[0]!;
     return inverse;
   }
 
@@ -359,7 +362,8 @@ export class GameHost {
       case 'scene.create': {
         const denied = gmOnly();
         if (denied) return denied;
-        const scene = createScene(newId(), action.name.trim().slice(0, 80) || 'Nuova scena');
+        const wanted = typeof action.id === 'string' && /^[A-Za-z0-9_-]{6,40}$/.test(action.id) && !s.scenes[action.id] ? action.id : null;
+        const scene = createScene(wanted ?? newId(), action.name.trim().slice(0, 80) || 'Nuova scena');
         s.scenes[scene.id] = scene;
         break;
       }

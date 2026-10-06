@@ -2,8 +2,9 @@ import { describeRoll, isNat, type Ambient, type Light, type LogEntry, type Note
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
+import { MapGenerator } from './MapGenerator';
 import { plainText, RichEditor, RichView } from '../components/RichText';
-import { BookText, ChevronLeft, Copy, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
+import { BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, Field, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
@@ -457,11 +458,16 @@ export function BestiaryPanel({ placeAt }: { placeAt: () => { x: number; y: numb
 export function ScenePanel() {
   const { state, dispatch } = useTable();
   const [newName, setNewName] = useState('');
+  const [generating, setGenerating] = useState(false);
   if (!state) return null;
   const active = state.scenes[state.activeSceneId]!;
 
   return (
     <div className="panel-body col">
+      <button className="btn primary block" onClick={() => setGenerating(true)}>
+        <Wand2 size={15} /> Genera una mappa
+      </button>
+      {generating && <MapGenerator onClose={() => setGenerating(false)} />}
       <div className="section-title">Scene</div>
       <div className="initiative">
         {Object.values(state.scenes).map((s) => (

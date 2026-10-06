@@ -4,7 +4,8 @@ export type TokenPatch = Partial<Omit<Token, 'id' | 'sceneId'>>;
 export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog'>>;
 
 export type GameAction =
-  | { type: 'scene.create'; name: string }
+  /** id: optional, chosen by the GM's app to fill the new scene in the same batch */
+  | { type: 'scene.create'; name: string; id?: string }
   | { type: 'scene.update'; sceneId: string; patch: ScenePatch }
   | { type: 'scene.activate'; sceneId: string }
   | { type: 'scene.delete'; sceneId: string }

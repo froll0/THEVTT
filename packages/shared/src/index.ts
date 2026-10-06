@@ -5,6 +5,7 @@ export * from './game/state';
 export * from './game/fog';
 export * from './game/vision';
 export * from './game/sight';
+export * from './game/mapgen';
 export * from './game/actions';
 export * from './game/host';
 export * from './id';

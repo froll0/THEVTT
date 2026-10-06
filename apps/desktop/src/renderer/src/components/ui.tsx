@@ -1,6 +1,7 @@
 import type { UserPublic } from '@thevtt/shared';
 import { X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../store/app';
 
 export function Avatar({ user, size = 32, presence }: { user: Pick<UserPublic, 'displayName' | 'avatarColor' | 'online' | 'avatar'>; size?: number; presence?: boolean }) {
@@ -85,7 +86,8 @@ export function Modal({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-  return (
+  // on the page itself: a glass panel around the opener would otherwise trap and offset it
+  return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-label={title}>
         <div className="row between">
@@ -97,7 +99,8 @@ export function Modal({
         {children}
         {actions && <div className="modal-actions">{actions}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
