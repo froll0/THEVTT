@@ -1,12 +1,14 @@
 import type { AreaTemplate, ChatCard, GameState, Note, Prop, Scene, Token, Wall } from './state';
 
 export type TokenPatch = Partial<Omit<Token, 'id' | 'sceneId'>>;
-export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog'>>;
+export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog' | 'terrain'>>;
 
 export type GameAction =
   /** id: optional, chosen by the GM's app to fill the new scene in the same batch */
   | { type: 'scene.create'; name: string; id?: string }
   | { type: 'scene.update'; sceneId: string; patch: ScenePatch }
+  /** the painted map of a scene (null: none); its walls follow */
+  | { type: 'terrain.set'; sceneId: string; terrain: string | null }
   | { type: 'scene.activate'; sceneId: string }
   | { type: 'scene.delete'; sceneId: string }
   | { type: 'token.create'; token: Partial<Omit<Token, 'id'>> & { name: string } }

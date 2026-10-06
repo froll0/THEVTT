@@ -1,9 +1,9 @@
-import { generateMap, newId, type GameAction, type GeneratedMap, type MapKind, type Prop } from '@thevtt/shared';
+import { generateMap, mapToTerrain, newId, type GameAction, type GeneratedMap, type MapKind, type Prop } from '@thevtt/shared';
 import { Dices } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Field, Modal, Switch } from '../components/ui';
 import { useTable } from '../store/table';
-import { renderMap } from './mapRender';
+import { renderTerrain, terrainSeed } from './terrainRender';
 import { drawProp, metresToCells, propKind } from './props';
 
 const KINDS: { id: MapKind; label: string; name: string; hint: string }[] = [
@@ -18,8 +18,6 @@ const SIZES = [
   { id: 'l', label: 'Grande', w: 46, h: 32 },
 ] as const;
 
-/** pixels per square in the generated image: sharp at normal zoom, light enough to send */
-const IMAGE_CELL_PX = 70;
 const SCENE_UNITS = { cellDistance: 1.5, unit: 'm' as const };
 
 const randomSeed = () => Math.floor(Math.random() * 2 ** 31);
@@ -40,6 +38,9 @@ export function MapGenerator({ onClose }: { onClose: () => void }) {
 
   const dims = SIZES.find((s) => s.id === size)!;
   const map = useMemo(() => generateMap({ kind, width: dims.w, height: dims.h, seed, density, doors, lights, furniture }), [kind, dims.w, dims.h, seed, density, doors, lights, furniture]);
+  // the scene's id is chosen now: the preview is painted exactly as the table will paint it
+  const sceneId = useMemo(() => `gen-${newId()}`, [map]); // eslint-disable-line react-hooks/exhaustive-deps
+  const terrain = useMemo(() => mapToTerrain(map), [map]);
   const info = KINDS.find((k) => k.id === kind)!;
   const count = Object.values(state?.scenes ?? {}).filter((s) => s.name.startsWith(info.name)).length;
   const sceneName = name.trim() || `${info.name} ${count + 1}`;
@@ -49,7 +50,7 @@ export function MapGenerator({ onClose }: { onClose: () => void }) {
     const cv = preview.current;
     if (!cv) return;
     const cell = Math.floor(Math.min(560 / map.width, 360 / map.height));
-    const img = renderMap(map, cell);
+    const img = renderTerrain(terrain, map.width, map.height, terrainSeed(sceneId), cell);
     cv.width = img.width;
     cv.height = img.height;
     const c = cv.getContext('2d')!;
@@ -67,23 +68,25 @@ export function MapGenerator({ onClose }: { onClose: () => void }) {
       c.lineTo(w.x2 * cell, w.y2 * cell);
       c.stroke();
     }
-  }, [map]);
+  }, [map, terrain, sceneId]);
 
   const create = async () => {
     setBusy(true);
-    // let the button show it's working before the (heavy) painting
     await new Promise((r) => setTimeout(r, 30));
-    const id = `gen-${newId()}`;
+    const id = sceneId;
     const actions: GameAction[] = [
       { type: 'scene.create', name: sceneName, id },
       { type: 'scene.activate', sceneId: id },
       {
         type: 'scene.update',
         sceneId: id,
-        patch: { widthCells: map.width, heightCells: map.height, ...SCENE_UNITS, showGrid: true, vision: kind !== 'wilderness', ambient: kind === 'wilderness' ? 'bright' : 'dark' },
+        patch: { widthCells: map.width, heightCells: map.height, ...SCENE_UNITS, showGrid: true, vision: kind !== 'wilderness', ambient: kind === 'wilderness' ? 'bright' : 'dark', autoWalls: true },
       },
+      // a painted map, so the GM can keep working on it: its walls come with it, the doors are placed
+      { type: 'terrain.set', sceneId: id, terrain },
     ];
-    if (map.walls.length) actions.push({ type: 'wall.create', walls: map.walls.map((w) => ({ ...w })) });
+    const doors = map.walls.filter((w) => w.kind === 'door');
+    if (doors.length) actions.push({ type: 'wall.create', walls: doors.map((w) => ({ ...w })) });
     for (const p of map.props) {
       const k = propKind(p.kind);
       if (!k) continue;
@@ -91,8 +94,6 @@ export function MapGenerator({ onClose }: { onClose: () => void }) {
       actions.push({ type: 'prop.create', prop: { kind: k.id, x: p.x, y: p.y, w: k.w, h: k.h, light, blocksVision: !!k.blocksVision } });
     }
     dispatch({ type: 'batch', actions });
-    const picture = renderMap(map, IMAGE_CELL_PX).toDataURL('image/webp', 0.85);
-    dispatch({ type: 'asset.add', dataUrl: picture, attachTo: { sceneId: id } });
     onClose();
   };
 
@@ -161,7 +162,7 @@ export function MapGenerator({ onClose }: { onClose: () => void }) {
             )}
           </div>
           <p className="faint tiny">
-            {map.width} × {map.height} caselle · {map.walls.filter((w) => w.kind === 'wall').length} muri · {map.walls.filter((w) => w.kind === 'door').length} porte · {map.props.length} oggetti. La scena nuova diventa quella attiva.
+            {map.width} × {map.height} caselle · {map.walls.filter((w) => w.kind === 'wall').length} muri · {map.walls.filter((w) => w.kind === 'door').length} porte · {map.props.length} oggetti. La scena nuova diventa quella attiva e si può ritoccare col pennello (B).
           </p>
         </div>
       </div>

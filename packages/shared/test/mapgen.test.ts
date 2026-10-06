@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialState, GameHost, generateMap, T } from '../src';
+import { createInitialState, GameHost, generateMap, mapToTerrain, T } from '../src';
 
 const walkable = (t: number) => t === T.floor || t === T.corridor || t === T.path || t === T.grass;
 
@@ -71,12 +71,17 @@ describe('map generator', () => {
         { type: 'scene.create', name: 'Cripta', id: 'gen-abc123' },
         { type: 'scene.activate', sceneId: 'gen-abc123' },
         { type: 'scene.update', sceneId: 'gen-abc123', patch: { widthCells: 30, heightCells: 20, vision: true, ambient: 'dark' } },
-        { type: 'wall.create', walls: m.walls },
+        { type: 'terrain.set', sceneId: 'gen-abc123', terrain: mapToTerrain(m) },
+        { type: 'wall.create', walls: m.walls.filter((w) => w.kind === 'door') },
       ],
     });
     expect(res.ok).toBe(true);
     expect(host.state.activeSceneId).toBe('gen-abc123');
-    expect(Object.values(host.state.walls!).filter((w) => w.sceneId === 'gen-abc123')).toHaveLength(m.walls.length);
+    // the painted map gives the same walls the generator drew
+    const key = (w: { x1: number; y1: number; x2: number; y2: number }) => `${w.x1},${w.y1},${w.x2},${w.y2}`;
+    const walls = Object.values(host.state.walls!).filter((w) => w.sceneId === 'gen-abc123');
+    expect(walls.filter((w) => w.auto).map(key).sort()).toEqual(m.walls.filter((w) => w.kind === 'wall').map(key).sort());
+    expect(walls.filter((w) => w.kind === 'door')).toHaveLength(m.walls.filter((w) => w.kind === 'door').length);
     // undone in one step: the scene goes, the table is back on the first one
     host.dispatch('gm', { type: 'game.undo' });
     expect(host.state.scenes['gen-abc123']).toBeUndefined();

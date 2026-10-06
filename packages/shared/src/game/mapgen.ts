@@ -374,3 +374,17 @@ export function generateMap(options: MapGenOptions): GeneratedMap {
   if (o.kind === 'wilderness') return wilderness(o, rnd);
   return dungeon(o, rnd);
 }
+
+/**
+ * The generated map as a painted map (terrain.ts), so the GM can keep editing
+ * it at the table. Its walls then come from the terrain; only the doors are
+ * placed walls.
+ */
+export function mapToTerrain(m: GeneratedMap): string {
+  const code = (t: number): string => {
+    if (m.kind === 'dungeon') return t === T.void ? 'r' : t === T.water ? 'q' : 's';
+    if (m.kind === 'cave') return t === T.void ? 'r' : t === T.water ? 'q' : 'e';
+    return t === T.water ? 'q' : t === T.path ? 'd' : 'g';
+  };
+  return m.cells.map(code).join('');
+}

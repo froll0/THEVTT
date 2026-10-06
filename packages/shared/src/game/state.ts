@@ -31,6 +31,10 @@ export interface Scene {
   /** shift of the map image, in cells, to line its grid up with ours */
   bgOffsetX?: number;
   bgOffsetY?: number;
+  /** the map painted at the table, one terrain code per cell (see terrain.ts) */
+  terrain?: string | null;
+  /** rock and rooms of the painted map get their walls by themselves (default on) */
+  autoWalls?: boolean;
 }
 
 export type Ambient = 'bright' | 'dim' | 'dark';
@@ -49,6 +53,8 @@ export interface Wall {
   open?: boolean;
   /** doors: players can't open it */
   locked?: boolean;
+  /** made by the painted map: redone when the map changes */
+  auto?: boolean;
 }
 
 /** A light source. Radii in cells: fully lit up to `bright`, dim up to `dim`. */

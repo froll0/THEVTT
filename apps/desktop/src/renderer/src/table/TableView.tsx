@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { Armchair, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Paintbrush, Armchair, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -12,6 +12,7 @@ import { Board, CELL, groupDeleteActions, type Tool, type ToolOptions } from './
 import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { PROP_KINDS } from './props';
+import { TerrainTools } from './TerrainTools';
 import { BestiaryPanel, ChatPanel, DiceBar, DoorInspector, InitiativePanel, NotesPanel, PropInspector, ScenePanel, SheetPanel, SheetWindow, TokenInspector } from './Panels';
 import { FloatingWindow, MinimizedWindow } from '../components/FloatingWindow';
 import { useWindows } from '../store/windows';
@@ -41,6 +42,9 @@ export function TableView({ campaignId }: { campaignId: string }) {
     propKind: 'crate',
     lightPreview: false,
     snap: true,
+    terrain: 's',
+    terrainMode: 'brush',
+    brushSize: 2,
   });
   const [tab, setTab] = useState<DockTab>('chat');
   const [dockOpen, setDockOpen] = useState(true);
@@ -108,6 +112,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
       if (e.key === 'a') setTool('template');
       if (e.key === 'd') setTool('draw');
       if (e.key === 'w' && useTable.getState().role === 'gm') setTool('walls');
+      if (e.key === 'b' && useTable.getState().role === 'gm') setTool('terrain');
       if (e.key === 'o' && useTable.getState().role === 'gm') setTool('props');
       if (e.key === 'l' && useTable.getState().role === 'gm') setTool('light');
       if (e.key === 'g') setOptions((o) => ({ ...o, snap: !o.snap }));
@@ -242,6 +247,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                   { id: 'draw', icon: Pencil, label: 'Disegna (D)' },
                   ...(isGm
                     ? ([
+                        { id: 'terrain', icon: Paintbrush, label: 'Dipingi la mappa (B)' },
                         { id: 'fog', icon: CloudFog, label: 'Nebbia di guerra' },
                         { id: 'walls', icon: BrickWall, label: 'Muri e porte (W)' },
                         { id: 'props', icon: Armchair, label: 'Oggetti di scena (O)' },
@@ -385,6 +391,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
               )}
             </div>
           )}
+          {state && scene && tool === 'terrain' && isGm && <TerrainTools scene={scene} options={options} setOptions={setOptions} />}
           {state && scene && tool === 'props' && isGm && (
             <div className="float tool-options glass props-palette">
               {PROP_KINDS.map((k) => (
@@ -626,6 +633,7 @@ const SHORTCUTS: { title: string; gm?: boolean; keys: [string, string, boolean?]
       ['A', 'Aree d’effetto'],
       ['D', 'Disegna'],
       ['T', 'Testo sulla mappa'],
+      ['B', 'Dipingi la mappa', true],
       ['W', 'Muri e porte', true],
       ['O', 'Oggetti di scena', true],
       ['L', 'Luci e visione', true],

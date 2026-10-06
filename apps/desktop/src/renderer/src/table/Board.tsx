@@ -1,8 +1,9 @@
-import { blockingSegments, lineOfSight, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { blockingSegments, brushCells, emptyTerrain, floodCells, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
 import { exploredTexture, updateExplored } from './explored';
 import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
 import { animatedProp, drawProp, metresToCells, propKind } from './props';
+import { TerrainLayer, terrainSeed } from './terrainRender';
 import { useEffect, useRef, useState } from 'react';
 import { readImage } from '../components/ui';
 import { useApp } from '../store/app';
@@ -10,7 +11,7 @@ import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
 
 export const CELL = 70;
-export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props' | 'light';
+export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props' | 'light' | 'terrain';
 
 export interface ToolOptions {
   fogReveal: boolean;
@@ -33,6 +34,10 @@ export interface ToolOptions {
   lightPreview: boolean;
   /** tokens and props land on the grid (Alt while dragging does the opposite) */
   snap: boolean;
+  /** map painting: terrain code (EMPTY_TERRAIN rubs out), how, and brush size in cells */
+  terrain: string;
+  terrainMode: 'brush' | 'rect' | 'fill';
+  brushSize: number;
 }
 
 /**
@@ -232,7 +237,10 @@ type Gesture =
   | { kind: 'prop'; propId: string; ox: number; oy: number; wx: number; wy: number; moved: boolean }
   /** a group dragged by one of its members (the anchor), which sets the snap */
   | { kind: 'group'; anchor: { x: number; y: number; w: number; h: number }; ox: number; oy: number; wx: number; wy: number; moved: boolean }
-  | { kind: 'box'; fx: number; fy: number; tx: number; ty: number };
+  | { kind: 'box'; fx: number; fy: number; tx: number; ty: number }
+  /** painting the map: the map as it will be, the last brush point in cells, or the rectangle in world px */
+  | { kind: 'paint'; terrain: string; lx: number; ly: number }
+  | { kind: 'paintRect'; fx: number; fy: number; tx: number; ty: number };
 
 /**
  * Overlays (ruler, areas, drawings) must read on any map: a dark theme accent on a
@@ -329,6 +337,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     };
   };
   const fogCache = useRef<{ key: string; canvas: HTMLCanvasElement | null }>({ key: '', canvas: null });
+  const terrainLayer = useRef(new TerrainLayer());
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [cursor, setCursor] = useState('default');
   const erased = useRef(new Set<string>());
@@ -426,6 +435,22 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         if (px) ctx.drawImage(bg, (L.scene.bgOffsetX ?? 0) * CELL, (L.scene.bgOffsetY ?? 0) * CELL, (bg.naturalWidth / px) * CELL, (bg.naturalHeight / px) * CELL);
         else ctx.drawImage(bg, 0, 0, W, H);
       }
+      // the painted map (while the GM paints, the stroke under way)
+      const pg0 = gesture.current;
+      const terrain = pg0.kind === 'paint' ? pg0.terrain : L.scene.terrain;
+      terrainLayer.current.update(terrain, L.scene.widthCells, L.scene.heightCells, terrainSeed(L.scene.id));
+      terrainLayer.current.draw(ctx, CELL);
+      if (pg0.kind === 'paintRect') {
+        const x0 = Math.floor(Math.min(pg0.fx, pg0.tx) / CELL);
+        const y0 = Math.floor(Math.min(pg0.fy, pg0.ty) / CELL);
+        const x1 = Math.floor(Math.max(pg0.fx, pg0.tx) / CELL) + 1;
+        const y1 = Math.floor(Math.max(pg0.fy, pg0.ty) / CELL) + 1;
+        ctx.fillStyle = hexToRgba(accentColor(), 0.25);
+        ctx.fillRect(x0 * CELL, y0 * CELL, (x1 - x0) * CELL, (y1 - y0) * CELL);
+        ctx.strokeStyle = accentColor();
+        ctx.lineWidth = 2 / cam.zoom;
+        ctx.strokeRect(x0 * CELL, y0 * CELL, (x1 - x0) * CELL, (y1 - y0) * CELL);
+      }
 
       if (L.scene.showGrid && L.board.gridOpacity > 0) {
         ctx.strokeStyle = hexToRgba(L.board.gridColor, L.board.gridOpacity);
@@ -444,6 +469,21 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       ctx.strokeStyle = hexToRgba(L.board.gridColor, 0.25);
       ctx.lineWidth = 2 / cam.zoom;
       ctx.strokeRect(0, 0, W, H);
+
+      // where the brush will paint
+      const bh = hoverWorld.current;
+      if (bh && L.isGm && L.tool === 'terrain' && L.options.terrainMode !== 'fill' && gesture.current.kind !== 'paintRect') {
+        const size = L.options.terrainMode === 'rect' ? 1 : L.options.brushSize;
+        const cells = brushCells(L.scene.widthCells, L.scene.heightCells, bh.x / CELL, bh.y / CELL, size);
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1 / cam.zoom;
+        for (const i of cells) {
+          const cx = i % L.scene.widthCells;
+          const cy = (i - cx) / L.scene.widthCells;
+          ctx.fillRect(cx * CELL, cy * CELL, CELL, CELL);
+        }
+      }
 
       // scenery, under everything else
       const tnow = performance.now() / 1000;
@@ -761,8 +801,10 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
           );
         }
       }
-      if (L.isGm && (L.tool === 'walls' || L.scene.vision || walls.length))
-        drawWalls(ctx, walls, cam.zoom, L.tool === 'walls' || L.scene.vision ? 'all' : 'doors', hoverWall.current, L.selectedWallId, redraw);
+      // the map's own walls only while working on walls or the map: the painting shows them already
+      const gmWalls = L.tool === 'walls' || L.tool === 'terrain' ? walls : walls.filter((w) => !w.auto);
+      if (L.isGm && (L.tool === 'walls' || L.scene.vision || gmWalls.length))
+        drawWalls(ctx, gmWalls, cam.zoom, L.tool === 'walls' || L.scene.vision ? 'all' : 'doors', hoverWall.current, L.selectedWallId, redraw);
 
       if (g.kind === 'wall' && g.points.length) {
         const last = g.points[g.points.length - 1]!;
@@ -924,7 +966,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     let best: Wall | undefined;
     let bestD = 10 / cam.zoom;
     for (const w of Object.values(L.state.walls ?? {})) {
-      if (w.sceneId !== L.scene.id || (doorsOnly && w.kind !== 'door')) continue;
+      if (w.sceneId !== L.scene.id || w.auto || (doorsOnly && w.kind !== 'door')) continue;
       const d = distToSegment(wx, wy, w.x1 * CELL, w.y1 * CELL, w.x2 * CELL, w.y2 * CELL);
       if (d < bestD) [best, bestD] = [w, d];
     }
@@ -992,6 +1034,24 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         g.points.push(pt);
       } else {
         gesture.current = { kind: 'wall', points: [pt], tx: w.x, ty: w.y };
+      }
+      dirty.current = true;
+      return;
+    }
+    if (L.tool === 'terrain' && L.isGm && L.scene) {
+      const { widthCells: sw, heightCells: sh } = L.scene;
+      const base = L.scene.terrain ?? emptyTerrain(sw, sh);
+      const cx = w.x / CELL;
+      const cy = w.y / CELL;
+      if (L.options.terrainMode === 'fill') {
+        const cells = floodCells(base, sw, sh, Math.floor(cx), Math.floor(cy));
+        if (cells.length) dispatch({ type: 'terrain.set', sceneId: L.scene.id, terrain: paintCells(base, cells, L.options.terrain) });
+        return;
+      }
+      if (L.options.terrainMode === 'rect') {
+        gesture.current = { kind: 'paintRect', fx: w.x, fy: w.y, tx: w.x, ty: w.y };
+      } else {
+        gesture.current = { kind: 'paint', terrain: paintCells(base, brushCells(sw, sh, cx, cy, L.options.brushSize), L.options.terrain), lx: cx, ly: cy };
       }
       dirty.current = true;
       return;
@@ -1089,9 +1149,28 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     const w = toWorld(e.clientX, e.clientY);
     altDown.current = e.altKey;
     const Lm = live.current;
-    if (Lm.tool === 'props' || Lm.tool === 'light') {
+    if (Lm.tool === 'props' || Lm.tool === 'light' || Lm.tool === 'terrain') {
       hoverWorld.current = w;
       dirty.current = true;
+    }
+    if (g.kind === 'paint' && Lm.scene) {
+      // a stroke: brush dabs every half cell from the last point, so fast moves leave no gaps
+      const cx = w.x / CELL;
+      const cy = w.y / CELL;
+      const steps = Math.max(1, Math.ceil(Math.hypot(cx - g.lx, cy - g.ly) * 2));
+      const cells: number[] = [];
+      for (let i = 1; i <= steps; i++) cells.push(...brushCells(Lm.scene.widthCells, Lm.scene.heightCells, g.lx + ((cx - g.lx) * i) / steps, g.ly + ((cy - g.ly) * i) / steps, Lm.options.brushSize));
+      g.terrain = paintCells(g.terrain, cells, Lm.options.terrain);
+      g.lx = cx;
+      g.ly = cy;
+      dirty.current = true;
+      return;
+    }
+    if (g.kind === 'paintRect') {
+      g.tx = w.x;
+      g.ty = w.y;
+      dirty.current = true;
+      return;
     }
     if (g.kind === 'pan') {
       cam.x = g.cx - (e.clientX - g.sx) / cam.zoom;
@@ -1215,6 +1294,16 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         });
       }
     }
+    if (g.kind === 'paint' && L.scene && g.terrain !== (L.scene.terrain ?? emptyTerrain(L.scene.widthCells, L.scene.heightCells))) {
+      dispatch({ type: 'terrain.set', sceneId: L.scene.id, terrain: g.terrain });
+    }
+    if (g.kind === 'paintRect' && L.scene) {
+      const { widthCells: sw, heightCells: sh } = L.scene;
+      const base = L.scene.terrain ?? emptyTerrain(sw, sh);
+      const cells = rectCells(sw, sh, Math.floor(g.fx / CELL), Math.floor(g.fy / CELL), Math.floor(g.tx / CELL), Math.floor(g.ty / CELL));
+      const next = paintCells(base, cells, L.options.terrain);
+      if (next !== base) dispatch({ type: 'terrain.set', sceneId: L.scene.id, terrain: next });
+    }
     if (g.kind === 'wall') return; // the chain continues with the next click
     if (g.kind === 'draw') {
       const pts = g.points.length === 2 ? [...g.points, g.points[0]! + 0.5, g.points[1]! + 0.5] : g.points;
@@ -1305,7 +1394,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
   }, [dispatch, select, selectProp, selectWall, setGroup]);
 
   const toolCursor =
-    tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' || tool === 'walls' || tool === 'props' || tool === 'light'
+    tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' || tool === 'walls' || tool === 'props' || tool === 'light' || tool === 'terrain'
       ? 'crosshair'
       : tool === 'ping'
         ? 'cell'

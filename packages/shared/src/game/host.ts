@@ -2,6 +2,7 @@ import { cryptoRng, DiceError, roll, type Rng } from '../dice';
 import { newId } from '../id';
 import type { GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
 import { emptyMask, paintRect, resizeMask } from './fog';
+import { cleanTerrain, resizeTerrain, terrainWalls } from './terrain';
 import { lineOfSight } from './vision';
 import {
   createScene,
@@ -44,7 +45,8 @@ const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: s
   'fog.enable': { cols: ['scenes'], label: 'nebbia' },
   'fog.paint': { cols: ['scenes'], label: 'nebbia' },
   'fog.fill': { cols: ['scenes'], label: 'nebbia' },
-  'scene.update': { cols: ['scenes'], label: 'modifica della scena' },
+  'scene.update': { cols: ['scenes', 'walls'], label: 'modifica della scena' },
+  'terrain.set': { cols: ['scenes', 'walls'], label: 'mappa' },
 };
 const HISTORY_LIMIT = 50;
 /** what `apply` returns when the state changed and must go out */
@@ -316,7 +318,7 @@ export class GameHost {
       // a scene deleted since then stays deleted: its things would float nowhere
       if (c.col !== 'scenes' && c.value && !this._state.scenes[(c.value as { sceneId: string }).sceneId]) continue;
       // the last scene never goes away
-      if (c.col === 'scenes' && c.value === undefined && Object.keys(col).length <= 1) continue;
+      if (c.col === 'scenes' && !c.fields && c.value === undefined && Object.keys(col).length <= 1) continue;
       if (c.fields) {
         const cur = col[c.id] as Record<string, unknown> | undefined;
         if (!cur) continue;
@@ -381,6 +383,10 @@ export class GameHost {
         if (scene.fog && (oldW !== scene.widthCells || oldH !== scene.heightCells)) {
           scene.fog.revealed = resizeMask(scene.fog.revealed, oldW, oldH, scene.widthCells, scene.heightCells);
         }
+        const resized = oldW !== scene.widthCells || oldH !== scene.heightCells;
+        if (scene.terrain && resized) scene.terrain = resizeTerrain(scene.terrain, oldW, oldH, scene.widthCells, scene.heightCells);
+        if (p.autoWalls !== undefined) scene.autoWalls = !!p.autoWalls;
+        if (resized || p.autoWalls !== undefined) this.refreshAutoWalls(scene.id);
         if (p.cellDistance !== undefined) scene.cellDistance = Math.min(1000, Math.max(0.1, Math.round(Number(p.cellDistance) * 10) / 10 || 1));
         if (p.unit !== undefined) scene.unit = p.unit === 'ft' ? 'ft' : 'm';
         if (p.showGrid !== undefined) scene.showGrid = !!p.showGrid;
@@ -395,6 +401,17 @@ export class GameHost {
           if (p.background !== null && !this.assets[p.background]) return { ok: false, reason: 'Immagine sconosciuta' };
           scene.background = p.background;
         }
+        break;
+      }
+      case 'terrain.set': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const scene = s.scenes[action.sceneId];
+        if (!scene) return { ok: false, reason: 'Scena inesistente' };
+        const terrain = cleanTerrain(action.terrain, scene.widthCells, scene.heightCells);
+        if ((scene.terrain ?? null) === terrain) break;
+        scene.terrain = terrain;
+        this.refreshAutoWalls(scene.id);
         break;
       }
       case 'scene.activate': {
@@ -742,7 +759,7 @@ export class GameHost {
         const denied = gmOnly();
         if (denied) return denied;
         const scene = s.scenes[s.activeSceneId]!;
-        const count = Object.values(s.walls!).filter((w) => w.sceneId === scene.id).length;
+        const count = Object.values(s.walls!).filter((w) => w.sceneId === scene.id && !w.auto).length;
         const list = Array.isArray(action.walls) ? action.walls.slice(0, 500) : [];
         if (count + list.length > MAX_WALLS) return { ok: false, reason: 'Troppi muri in questa scena' };
         for (const w of list) {
@@ -762,6 +779,8 @@ export class GameHost {
         }
         // the first walls of a scene: they hide what's behind them (unless the GM turned vision off)
         if (scene.vision === undefined && list.length) scene.vision = true;
+        // a door in a wall of the painted map: the wall makes room for it
+        this.refreshAutoWalls(scene.id);
         break;
       }
       case 'wall.update': {
@@ -789,14 +808,19 @@ export class GameHost {
       case 'wall.delete': {
         const denied = gmOnly();
         if (denied) return denied;
-        if (!s.walls![action.wallId]) return { ok: false, reason: 'Muro inesistente' };
+        const wall = s.walls![action.wallId];
+        if (!wall) return { ok: false, reason: 'Muro inesistente' };
+        if (wall.auto) return { ok: false, reason: 'È un muro della mappa: dipingi il pavimento per aprire un passaggio' };
         delete s.walls![action.wallId];
+        this.refreshAutoWalls(wall.sceneId);
         break;
       }
       case 'wall.clear': {
         const denied = gmOnly();
         if (denied) return denied;
-        for (const w of Object.values(s.walls!)) if (w.sceneId === s.activeSceneId) delete s.walls![w.id];
+        // the walls of the painted map stay: they go with the map
+        for (const w of Object.values(s.walls!)) if (w.sceneId === s.activeSceneId && !w.auto) delete s.walls![w.id];
+        this.refreshAutoWalls(s.activeSceneId);
         break;
       }
       case 'prop.create':
@@ -977,6 +1001,32 @@ export class GameHost {
       known.add(assetId);
     }
     this.opts.send(userId, { k: 'state', state: view, rev: ++this.rev, now: this.now() });
+  }
+
+  /**
+   * Walls of the painted map: rock and room edges, minus where the GM put a
+   * door or a wall of their own. The ones that didn't move keep their id.
+   */
+  private refreshAutoWalls(sceneId: string): void {
+    const s = this._state;
+    const scene = s.scenes[sceneId];
+    if (!scene) return;
+    const walls = s.walls!;
+    const old = new Map<string, string>();
+    for (const w of Object.values(walls)) if (w.sceneId === sceneId && w.auto) old.set(`${w.x1},${w.y1},${w.x2},${w.y2}`, w.id);
+    const placed = Object.values(walls).filter((w) => w.sceneId === sceneId && !w.auto);
+    const wanted = scene.terrain && scene.autoWalls !== false ? terrainWalls(scene.terrain, scene.widthCells, scene.heightCells, placed).slice(0, Math.max(0, MAX_WALLS - placed.length)) : [];
+    for (const seg of wanted) {
+      const key = `${seg.x1},${seg.y1},${seg.x2},${seg.y2}`;
+      if (old.has(key)) {
+        old.delete(key);
+        continue;
+      }
+      const id = newId();
+      walls[id] = { id, sceneId, ...seg, kind: 'wall', auto: true };
+    }
+    for (const id of old.values()) delete walls[id];
+    if (wanted.length && scene.vision === undefined) scene.vision = true;
   }
 
   private commit(): void {
