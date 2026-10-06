@@ -1,6 +1,8 @@
 ## Novità
 
-- **Partecipanti al posto degli Amici**: il server del gruppo è privato, quindi tutti quelli che ci giocano compaiono nella pagina "Partecipanti", senza richieste di amicizia. Chi è online è in cima, con le campagne che avete in comune.
-- **Messaggi privati con chiunque** sul server, con il conteggio dei non letti.
-- **Inviti più semplici**: il master può invitare nelle sue campagne qualsiasi partecipante.
-- Chi si registra per la prima volta compare da solo nella lista degli altri.
+- **Generatore di mappe**: al tavolo, in "Scene", il pulsante "Genera una mappa" crea in un attimo un luogo pronto da giocare.
+  - Tre tipi di luogo: **Dungeon** (stanze, corridoi e porte), **Caverna** (gallerie naturali, pozze d'acqua, massi) e **All'aperto** (radura con sentiero, stagno e bosco).
+  - Si scelgono dimensione e densità, con porte, luci e arredi a piacere. L'anteprima si aggiorna mentre cambi le opzioni e "Un'altra" propone una variante.
+  - La scena nuova ha già l'immagine di sfondo, muri e porte veri, torce e fuochi accesi, oggetti di scena, buio e visione dinamica.
+  - Un solo Ctrl+Z annulla tutta la generazione.
+- Le finestre di dialogo si aprono sempre centrate, anche quando partono dai pannelli del tavolo.
