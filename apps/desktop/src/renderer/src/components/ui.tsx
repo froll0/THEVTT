@@ -76,11 +76,15 @@ export function Modal({
   actions?: ReactNode;
   wide?: boolean;
 }) {
+  // one listener for the modal's life: re-adding it on every render (onClose is often a new
+  // function) could drop the very Escape that caused a re-render elsewhere
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close.current();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, []);
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-label={title}>

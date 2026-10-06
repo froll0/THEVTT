@@ -1257,7 +1257,8 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest('input, textarea, select')) return;
+      // typing anywhere (fields, rich text) never reaches the map
+      if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return;
       const L = live.current;
       if (e.key === 'Escape' || e.key === 'Enter') {
         if (gesture.current.kind === 'wall') {

@@ -90,6 +90,11 @@ test('a group plays at a table hosted inside the GM app', async () => {
   // session: GM hosts, player sits, direct link comes up
   await G.getByRole('button', { name: 'Avvia sessione' }).click();
   await expect(G.getByTitle('Aggiungi token')).toBeVisible();
+  // the shortcuts, at a keystroke
+  await G.keyboard.press('Shift+?');
+  await expect(G.locator('.modal', { hasText: 'Annulla l’ultima modifica alla mappa' })).toBeVisible();
+  await G.keyboard.press('Escape');
+  await expect(G.locator('.shortcuts')).toHaveCount(0);
   await P.getByRole('button', { name: 'Siediti al tavolo' }).click();
   await expect(P.getByText('Diretta', { exact: true })).toBeVisible();
   await expect(G.getByText('1/1 diretti')).toBeVisible();

@@ -1,10 +1,10 @@
 import { getSystem } from '@thevtt/systems';
-import { Armchair, ArrowLeft, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Armchair, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { Avatar } from '../components/ui';
+import { Avatar, Modal } from '../components/ui';
 import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
@@ -44,6 +44,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
   });
   const [tab, setTab] = useState<DockTab>('chat');
   const [dockOpen, setDockOpen] = useState(true);
+  const [showKeys, setShowKeys] = useState(false);
   const cameraRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
   const { windows, open: openWindow, closeAll } = useWindows();
   const undoRedo = (which: 'undo' | 'redo') => {
@@ -110,6 +111,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
       if (e.key === 'o' && useTable.getState().role === 'gm') setTool('props');
       if (e.key === 'l' && useTable.getState().role === 'gm') setTool('light');
       if (e.key === 'g') setOptions((o) => ({ ...o, snap: !o.snap }));
+      if (e.key === '?') setShowKeys((v) => !v);
       if (e.key === 't') {
         setTool('draw');
         setOptions((o) => ({ ...o, drawText: true, erase: false }));
@@ -167,6 +169,9 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 {state.paused ? <Play size={14} /> : <Pause size={14} />} {state.paused ? 'Riprendi il gioco' : 'Pausa gioco'}
               </button>
             )}
+            <button className="btn ghost sm icon" onClick={() => setShowKeys(true)} title="Scorciatoie da tastiera (?)" aria-label="Scorciatoie da tastiera">
+              <Keyboard size={15} />
+            </button>
             <button className="btn ghost sm" onClick={() => openWindow('journal', campaign.id, 'Diario')} title="Il tuo diario personale: appunti che legge solo tu">
               <BookText size={14} /> Diario
             </button>
@@ -445,6 +450,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
             </div>
           )}
 
+          {showKeys && <ShortcutsHelp isGm={isGm} onClose={() => setShowKeys(false)} />}
           {state && table.group.tokens.length + table.group.props.length > 1 && <GroupBar isGm={isGm} />}
           {selected && <TokenInspector token={selected} />}
           {isGm && table.selectedPropId && state?.props?.[table.selectedPropId] && <PropInspector prop={state.props[table.selectedPropId]!} />}
@@ -607,5 +613,87 @@ function GroupBar({ isGm }: { isGm: boolean }) {
         </button>
       </div>
     </div>
+  );
+}
+
+const SHORTCUTS: { title: string; gm?: boolean; keys: [string, string, boolean?][] }[] = [
+  {
+    title: 'Strumenti',
+    keys: [
+      ['V', 'Seleziona e sposta'],
+      ['M', 'Righello'],
+      ['P', 'Ping (o Alt+clic ovunque)'],
+      ['A', 'Aree d’effetto'],
+      ['D', 'Disegna'],
+      ['T', 'Testo sulla mappa'],
+      ['W', 'Muri e porte', true],
+      ['O', 'Oggetti di scena', true],
+      ['L', 'Luci e visione', true],
+    ],
+  },
+  {
+    title: 'Sulla mappa',
+    keys: [
+      ['Rotella', 'Zoom'],
+      ['Trascina il vuoto · tasto destro', 'Sposta la vista'],
+      ['G', 'Aggancia alla griglia / movimento libero'],
+      ['Alt + trascina', 'Il contrario dell’aggancio, per una volta'],
+      ['Shift + clic', 'Aggiungi o togli dalla selezione'],
+      ['Shift + trascina', 'Seleziona un’area'],
+      ['Canc', 'Elimina ciò che è selezionato'],
+      ['Esc', 'Deseleziona · chiudi i muri'],
+      ['Clic su una porta', 'Aprila o chiudila', false],
+      ['Doppio clic su una porta', 'Aprila o chiudila (un clic la seleziona)', true],
+      ['Invio · tasto destro', 'Finisci una linea di muri', true],
+    ],
+  },
+  {
+    title: 'Master',
+    gm: true,
+    keys: [
+      ['Ctrl + Z', 'Annulla l’ultima modifica alla mappa'],
+      ['Ctrl + Y · Ctrl + Shift + Z', 'Ripeti'],
+    ],
+  },
+  {
+    title: 'Chat',
+    keys: [
+      ['/r 1d20+5', 'Tira i dadi'],
+      ['/gr', 'Tiro nascosto (master)', true],
+      ['/br', 'Tiro alla cieca: il risultato lo vede il master', false],
+      ['/gm', 'Messaggio al solo master', false],
+    ],
+  },
+];
+
+function ShortcutsHelp({ isGm, onClose }: { isGm: boolean; onClose: () => void }) {
+  return (
+    <Modal title="Scorciatoie" onClose={onClose}>
+      <div className="shortcuts">
+        {SHORTCUTS.filter((g) => !g.gm || isGm).map((g) => (
+          <section key={g.title}>
+            <h4>{g.title}</h4>
+            <dl>
+              {g.keys
+                .filter(([, , who]) => who === undefined || who === isGm)
+                .map(([k, what]) => (
+                  <div key={k}>
+                    <dt>
+                      {k.split(' · ').map((part, i) => (
+                        <span key={part}>
+                          {i > 0 && <span className="faint"> o </span>}
+                          <kbd>{part}</kbd>
+                        </span>
+                      ))}
+                    </dt>
+                    <dd>{what}</dd>
+                  </div>
+                ))}
+            </dl>
+          </section>
+        ))}
+      </div>
+      <p className="faint small">Premi ? per aprire o chiudere questo elenco.</p>
+    </Modal>
   );
 }

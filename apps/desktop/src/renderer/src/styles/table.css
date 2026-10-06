@@ -927,3 +927,43 @@ body.dragging-window * {
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius);
 }
+.shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s4) var(--s5);
+}
+.shortcuts h4 {
+  margin: 0 0 var(--s2);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+}
+.shortcuts dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.shortcuts dl > div {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) 1fr;
+  gap: var(--s3);
+  align-items: baseline;
+  font-size: 0.86rem;
+}
+.shortcuts dd {
+  margin: 0;
+  color: var(--fg-muted);
+}
+kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--bg-elev-2);
+  font: 600 0.76rem var(--mono, ui-monospace, monospace);
+  color: var(--fg);
+  white-space: nowrap;
+}

@@ -1,7 +1,8 @@
 ## Novità
 
-- **Diario, note e riassunti come un vero foglio**: titoli, grassetto, corsivo, sottolineato, elenchi, citazioni e tabelle.
-- **Buio vero**: disegnando i muri o scegliendo Penombra/Buio la visione dinamica si attiva da sola; senza luce i giocatori non vedono niente (salvo scurovisione).
-- **Posizionamento**: anteprima degli oggetti di scena sotto il cursore; token e oggetti agganciati al quadretto o liberi (tasto G, oppure Alt mentre trascini).
-- **Bestiario**: filtri per tipo, taglia e grado di sfida; immagini per i mostri, che diventano l'immagine del token.
-- **Interfaccia**: schede del launcher riordinate (Home, Campagne, Personaggi, Diario, Compendio, Amici), pannello della selezione più largo e ordinato, pulsante Vista master/giocatori spostato in basso a destra.
+- **Backup**: in Impostazioni › Backup salvi in un file tutto quello che è sul tuo PC (account, campagne, personaggi, diari, chat, mappe e tavoli, creature, codice del gruppo) e lo ripristini su qualsiasi computer. In più, un backup automatico al giorno (gli ultimi sette).
+- **Annulla e ripeti per il master**: Ctrl+Z / Ctrl+Y (o i pulsanti nella barra degli strumenti) per token, muri, porte, oggetti, disegni, aree, nebbia e scena. Le mosse dei giocatori nel frattempo restano.
+- **Selezione multipla**: Shift+clic o Shift+trascina per selezionare più token e oggetti; trascinandone uno si spostano tutti, e puoi nasconderli o eliminarli insieme.
+- **Note e Diario**: al tavolo le note dei giocatori sono per il master o per il gruppo; gli appunti personali vanno nel Diario (quelli vecchi vengono spostati da soli).
+- **Scorciatoie**: premi ? al tavolo (o il pulsante con la tastiera) per l’elenco completo.
+- **Correzioni**: Esc ora chiude sempre le finestre di dialogo al tavolo; scrivendo in una nota, Canc non cancella più il token selezionato.
