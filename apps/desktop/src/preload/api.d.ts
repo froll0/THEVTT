@@ -30,6 +30,14 @@ export interface HostedServerStatus {
   published: 'no' | 'yes' | 'error';
 }
 
+export interface BackupSummary {
+  createdAt: string;
+  appVersion: string;
+  tables: number;
+  hasServer: boolean;
+  bytes: number;
+}
+
 export interface UpdateInfo {
   current: string;
   latest: string;
@@ -71,6 +79,16 @@ export interface DesktopBridge {
   };
   /** finds the current address of a friend's server from their group code */
   resolveGroupCode(code: string): Promise<{ url: string } | { error: string }>;
+  /** everything this PC keeps, in one file */
+  backup: {
+    create(): Promise<{ path: string; bytes: number } | { canceled: true } | { error: string }>;
+    list(): Promise<{ dir: string; backups: { name: string; createdAt: string; bytes: number }[] }>;
+    openFolder(): Promise<string>;
+    /** picks a file (or an automatic backup by name) and describes it */
+    inspect(autoName?: string): Promise<{ summary: BackupSummary } | { canceled: true } | { error: string }>;
+    /** replaces the data with the inspected backup and restarts the app */
+    restore(): Promise<{ ok: true } | { error: string }>;
+  };
   /** new versions of the app, from the project's releases */
   updates: {
     check(): Promise<UpdateCheck>;

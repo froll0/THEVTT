@@ -29,6 +29,13 @@ const bridge: DesktopBridge = {
     },
   },
   resolveGroupCode: (code) => ipcRenderer.invoke('group:resolve', code),
+  backup: {
+    create: () => ipcRenderer.invoke('backup:create'),
+    list: () => ipcRenderer.invoke('backup:list'),
+    openFolder: () => ipcRenderer.invoke('backup:open-folder'),
+    inspect: (autoName) => ipcRenderer.invoke('backup:inspect', autoName),
+    restore: () => ipcRenderer.invoke('backup:restore'),
+  },
   updates: {
     check: () => ipcRenderer.invoke('update:check'),
     install: () => ipcRenderer.invoke('update:install'),

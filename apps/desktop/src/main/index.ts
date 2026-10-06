@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, net, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, net, shell } from 'electron';
 import { spawn } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
@@ -8,6 +8,7 @@ import type { HostedServerConfig, HostedServerStatus, UpdateInfo } from '../prel
 import { DEFAULT_RENDEZVOUS, newIdentity, normalizeCode, resolve as resolveCode, type GroupIdentity } from './group-code';
 import { DEFAULT_SERVER_CONFIG, HostedServer } from './hosted-server';
 import { pickUpdate, RELEASES_API, type GithubRelease } from './updates';
+import { applyBackup, autoBackup, autoDir, BACKUP_EXT, createBackup, listAuto, readBackup, summarize, type BackupFile } from './backup';
 
 const isMac = process.platform === 'darwin';
 const devUrl = process.env.VITE_DEV_SERVER_URL;
@@ -81,6 +82,79 @@ ipcMain.handle('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.c
 ipcMain.handle('store:read', (_e, key: string) => readJson(join(dataDir(), `${safeName(key)}.json`)));
 ipcMain.handle('store:write', (_e, key: string, value: unknown) => writeJson(join(dataDir(), `${safeName(key)}.json`), value));
 ipcMain.handle('app:info', () => ({ version: app.getVersion(), dataDir: dataDir() }));
+
+// ---------- backups ----------
+
+const userData = () => app.getPath('userData');
+/** the backup chosen for restoring, waiting for the user's confirmation */
+let pendingRestore: BackupFile | null = null;
+
+ipcMain.handle('backup:create', async (e) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  const day = new Date().toISOString().slice(0, 10);
+  const opts = { defaultPath: join(app.getPath('documents'), `TheVTT-backup-${day}.${BACKUP_EXT}`), filters: [{ name: 'Backup di TheVTT', extensions: [BACKUP_EXT] }] };
+  const res = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts);
+  if (res.canceled || !res.filePath) return { canceled: true };
+  try {
+    const raw = await createBackup(userData(), app.getVersion());
+    await writeFile(res.filePath, raw);
+    return { path: res.filePath, bytes: raw.length };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Backup non riuscito' };
+  }
+});
+
+ipcMain.handle('backup:list', async () => ({ dir: autoDir(userData()), backups: await listAuto(userData()) }));
+ipcMain.handle('backup:open-folder', async () => {
+  await mkdir(autoDir(userData()), { recursive: true });
+  return shell.openPath(autoDir(userData()));
+});
+
+/** Reads a backup (picked from disk, or an automatic one by name) and describes it, without touching anything. */
+ipcMain.handle('backup:inspect', async (e, autoName?: string) => {
+  let file: string | undefined;
+  if (autoName) {
+    if (!/^[A-Za-z0-9_.-]+$/.test(autoName)) return { error: 'Backup non valido' };
+    file = join(autoDir(userData()), autoName);
+  } else {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    const opts = { properties: ['openFile' as const], filters: [{ name: 'Backup di TheVTT', extensions: [BACKUP_EXT] }] };
+    const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
+    if (res.canceled || !res.filePaths[0]) return { canceled: true };
+    file = res.filePaths[0];
+  }
+  try {
+    const raw = await readFile(file);
+    pendingRestore = readBackup(raw);
+    return { summary: summarize(pendingRestore, raw.length) };
+  } catch (err) {
+    pendingRestore = null;
+    return { error: err instanceof Error ? err.message : 'Backup illeggibile' };
+  }
+});
+
+/** Replaces the data with the inspected backup, keeping a copy of today's first, then restarts. */
+ipcMain.handle('backup:restore', async () => {
+  const b = pendingRestore;
+  if (!b) return { error: 'Nessun backup scelto' };
+  try {
+    const safety = await createBackup(userData(), app.getVersion()).catch(() => null);
+    if (safety) {
+      await mkdir(autoDir(userData()), { recursive: true });
+      await writeFile(join(autoDir(userData()), `prima-del-ripristino-${Date.now()}.${BACKUP_EXT}`), safety);
+    }
+    await hosted.stop();
+    await applyBackup(userData(), b);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Ripristino non riuscito' };
+  }
+  pendingRestore = null;
+  // start again on the restored data (the window must not save its old state over it)
+  for (const w of BrowserWindow.getAllWindows()) w.destroy();
+  app.relaunch();
+  app.exit(0);
+  return { ok: true };
+});
 
 // ---------- app updates ----------
 
@@ -228,6 +302,8 @@ app.whenReady().then(async () => {
     fetch: (u, init) => net.fetch(u, init),
     onStatus: onServerStatus,
   });
+  // a copy of yesterday's data, before anything changes today
+  await autoBackup(app.getPath('userData'), app.getVersion()).catch(() => null);
   serverConfig = sanitize({ ...DEFAULT_SERVER_CONFIG, ...((await readJson(serverConfigFile())) as Partial<HostedServerConfig> | null) });
   if (serverConfig.enabled) void hosted.start(serverConfig);
   createWindow();

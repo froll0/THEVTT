@@ -1,6 +1,7 @@
-import { Copy, ImagePlus } from 'lucide-react';
+import { Copy, FolderOpen, ImagePlus } from 'lucide-react';
+import type { BackupSummary } from '../../../preload/api';
 import { useEffect, useState } from 'react';
-import { Avatar, PageHeader, Section, Setting, squareImage, Switch, Tabs } from '../components/ui';
+import { Avatar, Modal, PageHeader, Section, Setting, squareImage, Switch, Tabs } from '../components/ui';
 import { displayServerAddress } from '../lib/address';
 import { bridge } from '../lib/platform';
 import { useApp, type SettingsSection } from '../store/app';
@@ -16,6 +17,7 @@ const SECTIONS: { id: SettingsSection; label: string; desktop?: boolean }[] = [
   { id: 'table', label: 'Tavolo' },
   { id: 'server', label: 'Server' },
   { id: 'account', label: 'Account' },
+  { id: 'backup', label: 'Backup', desktop: true },
   { id: 'advanced', label: 'Avanzate' },
 ];
 
@@ -26,7 +28,7 @@ export function SettingsView({ initial }: { initial?: SettingsSection }) {
       <PageHeader title="Impostazioni" />
       <div className="settings">
         <nav className="settings-nav">
-          {SECTIONS.map((s) => (
+          {SECTIONS.filter((s) => !s.desktop || bridge).map((s) => (
             <button key={s.id} className={section === s.id ? 'active' : ''} onClick={() => setSection(s.id)}>
               {s.label}
             </button>
@@ -37,6 +39,7 @@ export function SettingsView({ initial }: { initial?: SettingsSection }) {
           {section === 'table' && <TableSettings />}
           {section === 'server' && <ServerSettings />}
           {section === 'account' && <Account />}
+          {section === 'backup' && <BackupSettings />}
           {section === 'advanced' && <Advanced />}
         </div>
       </div>
@@ -404,6 +407,114 @@ function Account() {
         </button>
       </Setting>
     </div>
+  );
+}
+
+const sizeLabel = (bytes: number) => (bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+const dateLabel = (iso: string) => new Date(iso).toLocaleString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+function BackupSettings() {
+  const { run, toast } = useApp();
+  const [auto, setAuto] = useState<{ name: string; createdAt: string; bytes: number }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [restoring, setRestoring] = useState<BackupSummary | null>(null);
+  const hosting = useHosting((s) => s.status);
+  useEffect(() => {
+    void bridge?.backup.list().then((r) => setAuto(r.backups));
+  }, []);
+  if (!bridge) return null;
+
+  const create = () =>
+    run(async () => {
+      setBusy(true);
+      try {
+        const r = await bridge!.backup.create();
+        if ('error' in r) throw new Error(r.error);
+        if ('path' in r) toast(`Backup salvato (${sizeLabel(r.bytes)}): ${r.path}`, 'success');
+      } finally {
+        setBusy(false);
+      }
+    });
+  const inspect = (name?: string) =>
+    run(async () => {
+      const r = await bridge!.backup.inspect(name);
+      if ('error' in r) throw new Error(r.error);
+      if ('summary' in r) setRestoring(r.summary);
+    });
+  const restore = () =>
+    run(async () => {
+      setBusy(true);
+      const r = await bridge!.backup.restore();
+      // on success the app restarts by itself
+      setBusy(false);
+      if ('error' in r) throw new Error(r.error);
+    });
+
+  return (
+    <>
+      <Section title="Il tuo backup">
+        <p className="muted small">
+          Un file con tutto quello che è su questo PC: {hosting && hosting.state !== 'stopped' ? 'account, campagne, personaggi, diari e chat del gruppo che ospiti, ' : ''}mappe e tavoli, creature personalizzate e il codice del gruppo. Salvalo su una chiavetta o nel cloud: se cambi computer, lo ripristini qui e riparti da dove eri.
+        </p>
+        <div className="list">
+          <Setting title="Crea un backup" hint="Scegli dove salvare il file">
+            <button className="btn sm primary" disabled={busy} onClick={() => void create()}>
+              Crea backup
+            </button>
+          </Setting>
+          <Setting title="Ripristina da un file" hint="Sostituisce i dati di questo PC; quelli di adesso vengono messi da parte">
+            <button className="btn sm" disabled={busy} onClick={() => void inspect()}>
+              Scegli il file…
+            </button>
+          </Setting>
+        </div>
+      </Section>
+      <Section
+        title="Backup automatici"
+        action={
+          <button className="btn ghost sm" onClick={() => void bridge!.backup.openFolder()}>
+            <FolderOpen size={14} /> Apri cartella
+          </button>
+        }
+      >
+        <p className="muted small">Uno al giorno, all’avvio dell’app; tengo gli ultimi sette. Servono se qualcosa va storto su questo PC: per cambiare computer usa il backup qui sopra.</p>
+        {auto.length ? (
+          <div className="list">
+            {auto.map((b) => (
+              <Setting key={b.name} title={dateLabel(b.createdAt)} hint={sizeLabel(b.bytes)}>
+                <button className="btn ghost sm" disabled={busy} onClick={() => void inspect(b.name)}>
+                  Ripristina
+                </button>
+              </Setting>
+            ))}
+          </div>
+        ) : (
+          <p className="faint small">Ancora nessuno: il primo viene fatto al prossimo avvio.</p>
+        )}
+      </Section>
+      {restoring && (
+        <Modal
+          title="Ripristinare questo backup?"
+          onClose={() => setRestoring(null)}
+          actions={
+            <>
+              <button className="btn ghost" onClick={() => setRestoring(null)}>
+                Annulla
+              </button>
+              <button className="btn danger solid" disabled={busy} onClick={() => void restore()}>
+                Ripristina e riavvia
+              </button>
+            </>
+          }
+        >
+          <p>
+            Backup del <b>{dateLabel(restoring.createdAt)}</b> (TheVTT {restoring.appVersion}, {sizeLabel(restoring.bytes)}):{' '}
+            {restoring.hasServer ? 'campagne, account e diari del gruppo' : 'nessun gruppo ospitato'}, {restoring.tables} {restoring.tables === 1 ? 'tavolo' : 'tavoli'}.
+          </p>
+          <p className="muted small">I dati di adesso vengono salvati in un backup automatico prima del ripristino, così puoi tornare indietro. L’app si riavvia da sola.</p>
+        </Modal>
+      )}
+    </>
   );
 }
 

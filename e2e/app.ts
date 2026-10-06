@@ -12,14 +12,15 @@ export interface RunningApp {
   app: ElectronApplication;
   page: Page;
   errors: string[];
+  profile: string;
 }
 
 /**
  * Launches the built desktop app with its own profile. With `hostPort`, the
  * profile is pre-configured to host the lobby server on that port.
  */
-export async function launchApp(opts: { hostPort?: number; release?: unknown } = {}): Promise<RunningApp> {
-  const profile = mkdtempSync(join(tmpdir(), 'thevtt-e2e-'));
+export async function launchApp(opts: { hostPort?: number; release?: unknown; profile?: string } = {}): Promise<RunningApp> {
+  const profile = opts.profile ?? mkdtempSync(join(tmpdir(), 'thevtt-e2e-'));
   // tests never reach out to the router, Cloudflare or the code relay
   mkdirSync(join(profile, 'data'), { recursive: true });
   writeFileSync(join(profile, 'data', 'server-config.json'), JSON.stringify({ enabled: !!opts.hostPort, port: opts.hostPort ?? 4477, upnp: false, tunnel: false }));
@@ -38,7 +39,7 @@ export async function launchApp(opts: { hostPort?: number; release?: unknown } =
   page.on('console', (m) => {
     if (m.type() === 'error' && !/Failed to load resource|WebSocket connection/.test(m.text())) errors.push(m.text());
   });
-  return { app, page, errors };
+  return { app, page, errors, profile };
 }
 
 export async function register(page: Page, opts: { where: 'host' | { join: string }; username: string; displayName: string }) {
