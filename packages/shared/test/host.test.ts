@@ -445,3 +445,17 @@ describe('undo for the GM', () => {
     expect(host.dispatch('gm', { type: 'game.undo' })).toEqual({ ok: false, reason: 'Niente da annullare' });
   });
 });
+
+describe('player notes', () => {
+  it('are never private to a player: at most for the GM alone', () => {
+    const { host } = setup();
+    host.dispatch('p1', { type: 'note.create', note: { title: 'Per il master', shared: 'private' } });
+    const n = Object.values(host.state.notes!).find((x) => x.authorId === 'p1')!;
+    expect(n.shared).toEqual([]);
+    host.dispatch('p1', { type: 'note.update', noteId: n.id, patch: { shared: 'private' } });
+    expect(host.state.notes![n.id]!.shared).toEqual([]);
+    // the GM's own notes can still be private
+    host.dispatch('gm', { type: 'note.create', note: { title: 'Segreto', shared: 'private' } });
+    expect(Object.values(host.state.notes!).find((x) => x.authorId === 'gm')!.shared).toBe('private');
+  });
+});

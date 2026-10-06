@@ -3,7 +3,7 @@ import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
 import { plainText, RichEditor, RichView } from '../components/RichText';
-import { ChevronLeft, Copy, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
+import { BookText, ChevronLeft, Copy, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, Field, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
@@ -562,8 +562,8 @@ export function ScenePanel() {
   );
 }
 
-const sharedLabel = (n: Note, players: Record<string, { displayName: string }>) =>
-  n.shared === 'all' ? 'Tutti' : n.shared === 'private' ? 'Privata' : n.shared.map((id) => players[id]?.displayName ?? '?').join(', ') || 'Privata';
+const sharedLabel = (n: Note, players: Record<string, { displayName: string }>, isGm: boolean) =>
+  n.shared === 'all' ? 'Tutti' : n.shared === 'private' ? 'Privata' : n.shared.map((id) => players[id]?.displayName ?? '?').join(', ') || (isGm ? 'Privata' : 'Al master');
 
 /** Lines a map's own grid up with the table's: pixels per square, shift, scene size. */
 function MapAlignment({ scene }: { scene: Scene }) {
@@ -610,7 +610,7 @@ function MapAlignment({ scene }: { scene: Scene }) {
 }
 
 export function NotesPanel() {
-  const { state, dispatch, role, assets } = useTable();
+  const { state, dispatch, role, assets, campaignId } = useTable();
   const meId = useApp((s) => s.user?.id ?? '');
   const [openId, setOpenId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -638,7 +638,7 @@ export function NotesPanel() {
 
   const create = () => {
     pending.current = new Set(notes.map((n) => n.id));
-    dispatch({ type: 'note.create', note: { title: 'Nuova nota' } });
+    dispatch({ type: 'note.create', note: { title: isGm ? 'Nuova nota' : 'Per il master' } });
   };
 
   if (open) return <NoteEditor key={open.id} note={open} canEdit={isGm || open.authorId === meId} onBack={() => setOpenId(null)} image={open.image ? assets[open.image] : undefined} />;
@@ -647,13 +647,21 @@ export function NotesPanel() {
     <div className="panel-body col">
       <div className="row">
         <input className="input grow" placeholder="Cerca nelle note" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <button className="btn sm" onClick={create}>
-          <Plus size={14} /> Nuova
+        <button className="btn sm" onClick={create} title={isGm ? 'Nuova nota o dispensa' : 'Un messaggio per il master o per il gruppo'}>
+          <Plus size={14} /> {isGm ? 'Nuova' : 'Scrivi'}
         </button>
       </div>
+      {!isGm && (
+        <div className="note-diary-hint">
+          <span className="faint small">Qui le dispense del master e i messaggi per il gruppo. I tuoi appunti personali stanno nel Diario.</span>
+          <button className="btn ghost sm" onClick={() => campaignId && useWindows.getState().open('journal', campaignId, 'Diario')}>
+            <BookText size={13} /> Apri il Diario
+          </button>
+        </div>
+      )}
       {shown.length === 0 && (
         <p className="faint small">
-          {q ? 'Nessuna nota trovata.' : isGm ? 'Scrivi appunti segreti o prepara dispense (lettere, mappe, indizi) da mostrare ai giocatori quando serve.' : 'Qui trovi le dispense del master e i tuoi appunti.'}
+          {q ? 'Nessuna nota trovata.' : isGm ? 'Scrivi appunti segreti o prepara dispense (lettere, mappe, indizi) da mostrare ai giocatori quando serve.' : 'Ancora nessuna dispensa.'}
         </p>
       )}
       <div className="note-list">
@@ -666,7 +674,7 @@ export function NotesPanel() {
             </span>
             <span className={`badge ${n.shared === 'private' ? '' : 'live'}`} title="Chi può leggerla">
               {n.shared === 'private' ? <EyeOff size={10} /> : <Eye size={10} />}{' '}
-              {n.authorId !== meId ? (state.players[n.authorId]?.displayName ?? 'Master') : sharedLabel(n, state.players)}
+              {n.authorId !== meId ? (state.players[n.authorId]?.displayName ?? 'Master') : sharedLabel(n, state.players, isGm)}
             </span>
           </button>
         ))}
@@ -676,8 +684,10 @@ export function NotesPanel() {
 }
 
 function NoteEditor({ note, canEdit, onBack, image }: { note: Note; canEdit: boolean; onBack: () => void; image?: string }) {
-  const { state, dispatch } = useTable();
+  const { state, dispatch, role } = useTable();
   const meId = useApp((s) => s.user?.id ?? '');
+  const isGm = role === 'gm';
+  const [picking, setPicking] = useState(Array.isArray(note.shared) && note.shared.length > 0);
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
   const [zoom, setZoom] = useState(false);
@@ -720,17 +730,23 @@ function NoteEditor({ note, canEdit, onBack, image }: { note: Note; canEdit: boo
         <div className="col" style={{ gap: 6 }}>
           <span className="section-title">Chi può leggerla</span>
           <div className="seg">
-            <button className={note.shared === 'private' ? 'on' : ''} onClick={() => setShared('private')}>
-              <EyeOff size={12} /> Solo io
-            </button>
-            <button className={note.shared === 'all' ? 'on' : ''} onClick={() => setShared('all')}>
+            {isGm ? (
+              <button className={note.shared === 'private' ? 'on' : ''} onClick={() => { setPicking(false); setShared('private'); }}>
+                <EyeOff size={12} /> Solo io
+              </button>
+            ) : (
+              <button className={!picking && Array.isArray(note.shared) ? 'on' : ''} onClick={() => { setPicking(false); setShared([]); }}>
+                <EyeOff size={12} /> Solo il master
+              </button>
+            )}
+            <button className={note.shared === 'all' ? 'on' : ''} onClick={() => { setPicking(false); setShared('all'); }}>
               <Eye size={12} /> Tutti
             </button>
-            <button className={Array.isArray(note.shared) ? 'on' : ''} onClick={() => setShared(picked.length ? picked : [])} disabled={!players.length}>
+            <button className={picking ? 'on' : ''} onClick={() => { setPicking(true); setShared(picked); }} disabled={!players.length}>
               <UserPlus size={12} /> Alcuni
             </button>
           </div>
-          {Array.isArray(note.shared) && (
+          {picking && Array.isArray(note.shared) && (
             <div className="row wrap" style={{ gap: 4 }}>
               {players.map((p) => {
                 const on = picked.includes(p.id);

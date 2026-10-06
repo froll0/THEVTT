@@ -57,6 +57,31 @@ export function TableView({ campaignId }: { campaignId: string }) {
   useEffect(() => closeAll, [campaignId, closeAll]);
   const isGm = campaign?.gmId === user?.id;
 
+  // personal notes once written at the table move to the journal, which only their author reads
+  const notesMap = table.state?.notes;
+  const migrating = useRef(new Set<string>());
+  useEffect(() => {
+    if (isGm || !user || !notesMap) return;
+    const mine = Object.values(notesMap).filter((n) => n.authorId === user.id && n.shared === 'private' && !migrating.current.has(n.id));
+    if (!mine.length) return;
+    for (const n of mine) migrating.current.add(n.id);
+    void (async () => {
+      const { api, toast } = useApp.getState();
+      let moved = 0;
+      for (const n of mine) {
+        try {
+          await api.createJournal({ title: n.title || 'Appunti', body: n.body, campaignId });
+          // a note with a picture stays too: the journal holds only the text
+          if (!n.image) useTable.getState().dispatch({ type: 'note.delete', noteId: n.id });
+          moved++;
+        } catch {
+          migrating.current.delete(n.id);
+        }
+      }
+      if (moved) toast(`${moved === 1 ? 'Il tuo appunto personale è stato spostato' : `${moved} appunti personali sono stati spostati`} nel Diario`, 'success');
+    })();
+  }, [notesMap, isGm, user, campaignId]);
+
   useEffect(() => {
     if (!campaign) return;
     if (isGm) void useTable.getState().host(campaign);

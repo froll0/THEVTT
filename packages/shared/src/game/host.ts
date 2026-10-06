@@ -12,6 +12,7 @@ import {
   type GameState,
   type Light,
   type LogEntry,
+  type Note,
   type Prop,
   type TableCharacter,
   type TablePlayer,
@@ -97,6 +98,9 @@ const coord = (v: unknown, max: number) => Math.min(max, Math.max(0, Math.round(
 const MAX_ASSET_BYTES = 12 * 1024 * 1024;
 /** audio travels to every player, through the relay too (16MB per message): ~11MB files */
 const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
+/** A player's note is never 'private': at most it is for the GM alone. */
+const playerShared = (shared: Note['shared']): Note['shared'] => (shared === 'private' ? [] : shared);
+
 /** what players can't do while the GM has paused the game */
 const PAUSE_BLOCKED = new Set<GameAction['type']>(['token.create', 'token.move', 'token.update', 'token.delete', 'ping', 'template.create', 'drawing.create', 'wall.update']);
 const IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,/;
@@ -691,7 +695,8 @@ export class GameHost {
           title: String(n.title ?? '').slice(0, 120) || 'Nuova nota',
           body: String(n.body ?? '').slice(0, 100_000),
           image: null,
-          shared: cleanShared(n.shared, s.players),
+          // players' notes go to someone: personal ones live in their journal (the GM's PC holds every note)
+          shared: isGm ? cleanShared(n.shared, s.players) : playerShared(cleanShared(n.shared ?? [], s.players)),
           authorId: from,
           updatedAt: this.now(),
         };
@@ -705,7 +710,7 @@ export class GameHost {
         const wasShared = note.shared;
         if (p.title !== undefined) note.title = String(p.title).slice(0, 120);
         if (p.body !== undefined) note.body = String(p.body).slice(0, 100_000);
-        if (p.shared !== undefined) note.shared = cleanShared(p.shared, s.players);
+        if (p.shared !== undefined) note.shared = note.authorId === s.gmId ? cleanShared(p.shared, s.players) : playerShared(cleanShared(p.shared, s.players));
         if (p.image !== undefined) {
           if (p.image !== null && !this.assets[p.image]) return { ok: false, reason: 'Immagine sconosciuta' };
           note.image = p.image;

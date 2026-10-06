@@ -919,3 +919,11 @@ body.dragging-window * {
   cursor: default;
   background: none;
 }
+.note-diary-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}

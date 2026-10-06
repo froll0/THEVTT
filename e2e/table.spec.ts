@@ -176,7 +176,8 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await G.getByPlaceholder('Titolo').fill('Lettera del sindaco');
   await G.getByLabel('Testo della nota').fill('Venite subito alla miniera.');
   await P.getByTitle('Note e dispense').click();
-  await expect(P.getByText('Qui trovi le dispense del master')).toBeVisible();
+  await expect(P.getByText('I tuoi appunti personali stanno nel Diario')).toBeVisible();
+  await expect(P.getByRole('button', { name: 'Apri il Diario' })).toBeVisible();
   await G.getByRole('button', { name: 'Tutti' }).click();
   await expect(P.getByText('Nuova dispensa: Lettera del sindaco')).toBeVisible();
   await P.locator('.note-row', { hasText: 'Lettera del sindaco' }).click();
