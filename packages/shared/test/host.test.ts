@@ -459,3 +459,34 @@ describe('player notes', () => {
     expect(Object.values(host.state.notes!).find((x) => x.authorId === 'gm')!.shared).toBe('private');
   });
 });
+
+describe('groups', () => {
+  it('moves several things in one go, undone in one step', () => {
+    const { host, outbox } = setup();
+    host.dispatch('gm', { type: 'token.create', token: { name: 'A', x: 1, y: 1 } });
+    host.dispatch('gm', { type: 'token.create', token: { name: 'B', x: 3, y: 1 } });
+    host.dispatch('gm', { type: 'prop.create', prop: { kind: 'crate', x: 5, y: 5 } });
+    const [a, b] = Object.values(host.state.tokens);
+    const crate = Object.values(host.state.props!)[0]!;
+    const sent = outbox.length;
+    expect(
+      host.dispatch('gm', {
+        type: 'batch',
+        actions: [
+          { type: 'token.move', tokenId: a!.id, x: 2, y: 4 },
+          { type: 'token.move', tokenId: b!.id, x: 4, y: 4 },
+          { type: 'prop.update', propId: crate.id, patch: { x: 6, y: 8 } },
+        ],
+      }).ok,
+    ).toBe(true);
+    // one state per peer, not three
+    expect(outbox.slice(sent).filter((o) => o.to === 'p1' && o.msg.k === 'state')).toHaveLength(1);
+    expect(host.state.tokens[b!.id]).toMatchObject({ x: 4, y: 4 });
+    expect(host.state.history?.undo[0]).toBe('spostamento (3)');
+    host.dispatch('gm', { type: 'game.undo' });
+    expect(host.state.tokens[a!.id]).toMatchObject({ x: 1, y: 1 });
+    expect(host.state.props![crate.id]).toMatchObject({ x: 5, y: 5 });
+    // players move only their own
+    expect(host.dispatch('p1', { type: 'batch', actions: [{ type: 'token.move', tokenId: a!.id, x: 9, y: 9 }] }).ok).toBe(false);
+  });
+});

@@ -1,4 +1,4 @@
-import { blockingSegments, lineOfSight, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { blockingSegments, lineOfSight, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
 import { exploredTexture, updateExplored } from './explored';
 import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
@@ -229,7 +229,10 @@ type Gesture =
   /** wall chain: points in cells, the pointer in world px */
   | { kind: 'wall'; points: { x: number; y: number }[]; tx: number; ty: number }
   | { kind: 'room'; fx: number; fy: number; tx: number; ty: number }
-  | { kind: 'prop'; propId: string; ox: number; oy: number; wx: number; wy: number; moved: boolean };
+  | { kind: 'prop'; propId: string; ox: number; oy: number; wx: number; wy: number; moved: boolean }
+  /** a group dragged by one of its members (the anchor), which sets the snap */
+  | { kind: 'group'; anchor: { x: number; y: number; w: number; h: number }; ox: number; oy: number; wx: number; wy: number; moved: boolean }
+  | { kind: 'box'; fx: number; fy: number; tx: number; ty: number };
 
 /**
  * Overlays (ruler, areas, drawings) must read on any map: a dark theme accent on a
@@ -274,6 +277,17 @@ const drawColor = (L: { options: ToolOptions; state: { players: Record<string, {
 /** Everyone can see a token's name; HP only its owners and the GM. */
 const canControl = (t: Token, me: string, gm: boolean) => gm || t.ownerIds.includes(me);
 
+/** Deleting a group: the tokens one controls, and props for the GM. */
+export function groupDeleteActions(state: { tokens: Record<string, Token>; props?: Record<string, Prop> }, group: { tokens: string[]; props: string[] }, me: string, gm: boolean): GameAction[] {
+  const out: GameAction[] = [];
+  for (const id of group.tokens) {
+    const t = state.tokens[id];
+    if (t && canControl(t, me, gm)) out.push({ type: 'token.delete', tokenId: id });
+  }
+  if (gm) for (const id of group.props) if (state.props?.[id]) out.push({ type: 'prop.delete', propId: id });
+  return out;
+}
+
 export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolOptions; cameraRef: React.RefObject<Camera | null> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -292,6 +306,20 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       x: placeAxis((g.wx - g.ox) / CELL + t.size / 2, t.size, snapNow(L)),
       y: placeAxis((g.wy - g.oy) / CELL + t.size / 2, t.size, snapNow(L)),
     };
+  };
+  const deleteGroup = () => {
+    const L = live.current;
+    if (!L.state) return;
+    const actions = groupDeleteActions(L.state, L.group, L.me, L.isGm);
+    if (actions.length) dispatch({ type: 'batch', actions });
+    setGroup({ tokens: [], props: [] });
+  };
+  /** How far a group moves: its anchor lands on the grid (or not), the rest follows. */
+  const groupDelta = (g: { anchor: { x: number; y: number; w: number; h: number }; ox: number; oy: number; wx: number; wy: number }) => {
+    const L = live.current;
+    const nx = placeAxis((g.wx - g.ox) / CELL + g.anchor.w / 2, g.anchor.w, snapNow(L));
+    const ny = placeAxis((g.wy - g.oy) / CELL + g.anchor.h / 2, g.anchor.h, snapNow(L));
+    return { dx: nx - g.anchor.x, dy: ny - g.anchor.y };
   };
   const propDropAt = (g: { wx: number; wy: number; ox: number; oy: number }, p: { w: number; h: number }) => {
     const L = live.current;
@@ -315,14 +343,14 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
   };
 
   const me = useApp((s) => s.user?.id ?? '');
-  const { state, assets, pings, role, selectedTokenId, selectedPropId, selectedWallId, dispatch, select, selectProp, selectWall } = useTable();
+  const { state, assets, pings, role, selectedTokenId, selectedPropId, selectedWallId, group, dispatch, select, selectProp, selectWall, setGroup, toggleInGroup } = useTable();
   const board = useSettings((s) => s.board);
   const isGm = role === 'gm';
   const scene = state ? state.scenes[state.activeSceneId] : undefined;
 
   // keep latest values available to the render loop and handlers
-  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, isGm, me, tool, options, selectedTemplate });
-  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, isGm, me, tool, options, selectedTemplate };
+  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate });
+  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate };
   const hoverWall = useRef<string | null>(null);
   dirty.current = true;
 
@@ -422,9 +450,11 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       for (const p of Object.values(L.state.props ?? {})) {
         if (p.sceneId !== L.scene.id) continue;
         const pg = gesture.current;
-        const shown = pg.kind === 'prop' && pg.propId === p.id ? { ...p, ...propDropAt(pg, p) } : p;
+        const inGroup = L.group.props.includes(p.id);
+        const gd = pg.kind === 'group' && pg.moved && inGroup ? groupDelta(pg) : null;
+        const shown = pg.kind === 'prop' && pg.propId === p.id ? { ...p, ...propDropAt(pg, p) } : gd ? { ...p, x: p.x + gd.dx, y: p.y + gd.dy } : p;
         drawProp(ctx, shown, CELL, image(p.image), tnow, L.isGm);
-        if (p.id === L.selectedPropId) {
+        if (p.id === L.selectedPropId || inGroup) {
           const c = propCorners(shown);
           ctx.beginPath();
           c.forEach((q, i) => (i ? ctx.lineTo(q.x * CELL, q.y * CELL) : ctx.moveTo(q.x * CELL, q.y * CELL)));
@@ -539,6 +569,12 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
           px = g.wx - g.ox;
           py = g.wy - g.oy;
         }
+        const grouped = L.group.tokens.includes(t.id);
+        if (g.kind === 'group' && g.moved && grouped) {
+          const d = groupDelta(g);
+          px = (t.x + d.dx) * CELL;
+          py = (t.y + d.dy) * CELL;
+        }
         const size = t.size * CELL;
         const r = size / 2 - 5;
         const cx = px + size / 2;
@@ -584,8 +620,8 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
           ctx.fillText(t.name.slice(0, 2).toUpperCase(), cx, cy + 1);
         }
 
-        ctx.lineWidth = t.id === L.selectedTokenId ? 4 : 2.5;
-        ctx.strokeStyle = t.id === L.selectedTokenId ? acc : 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = t.id === L.selectedTokenId || grouped ? 4 : 2.5;
+        ctx.strokeStyle = t.id === L.selectedTokenId || grouped ? acc : 'rgba(0,0,0,0.5)';
         if (t.hidden) ctx.setLineDash([6, 5]);
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -782,6 +818,15 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
         ctx.fillText(label, g.tx + 19 / cam.zoom, g.ty);
       }
 
+      if (g.kind === 'box') {
+        ctx.beginPath();
+        ctx.rect(Math.min(g.fx, g.tx), Math.min(g.fy, g.ty), Math.abs(g.tx - g.fx), Math.abs(g.ty - g.fy));
+        ctx.fillStyle = hexToRgba(acc, 0.12);
+        ctx.fill();
+        ctx.setLineDash([6 / cam.zoom, 4 / cam.zoom]);
+        haloStroke(ctx, acc, 1.5 / cam.zoom, cam.zoom);
+        ctx.setLineDash([]);
+      }
       if (g.kind === 'measure') {
         const fx = Math.floor(g.fx / CELL);
         const fy = Math.floor(g.fy / CELL);
@@ -909,7 +954,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       endWalls();
       return;
     }
-    if (e.button === 1 || e.button === 2 || (e.button === 0 && e.shiftKey && L.tool === 'select')) {
+    if (e.button === 1 || e.button === 2) {
       gesture.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, cx: cameraRef.current.x, cy: cameraRef.current.y };
       return;
     }
@@ -984,6 +1029,22 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     }
     const t = tokenAt(w.x, w.y);
     setSelectedTemplate(null);
+    const prop0 = !t && L.isGm ? propAt(w.x, w.y) : undefined;
+    // Shift: add to (or take out of) a group, or draw a box around one
+    if (e.shiftKey && L.tool === 'select') {
+      if (t && canControl(t, L.me, L.isGm)) toggleInGroup('tokens', t.id);
+      else if (prop0) toggleInGroup('props', prop0.id);
+      else gesture.current = { kind: 'box', fx: w.x, fy: w.y, tx: w.x, ty: w.y };
+      return;
+    }
+    // a member of the group drags the whole group
+    const inGroup = (t && L.group.tokens.includes(t.id)) || (prop0 && L.group.props.includes(prop0.id));
+    if (inGroup) {
+      const a = t ? { x: t.x, y: t.y, w: t.size, h: t.size } : { x: prop0!.x, y: prop0!.y, w: prop0!.w, h: prop0!.h };
+      gesture.current = { kind: 'group', anchor: a, ox: w.x - a.x * CELL, oy: w.y - a.y * CELL, wx: w.x, wy: w.y, moved: false };
+      return;
+    }
+    if (L.group.tokens.length || L.group.props.length) setGroup({ tokens: [], props: [] });
     if (t) {
       select(t.id);
       if (canControl(t, L.me, L.isGm)) {
@@ -1041,10 +1102,14 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       g.wy = w.y;
       g.moved = true;
       dirty.current = true;
-    } else if (g.kind === 'prop') {
+    } else if (g.kind === 'prop' || g.kind === 'group') {
       g.wx = w.x;
       g.wy = w.y;
       g.moved = true;
+      dirty.current = true;
+    } else if (g.kind === 'box') {
+      g.tx = w.x;
+      g.ty = w.y;
       dirty.current = true;
     } else if (g.kind === 'wall' || g.kind === 'room') {
       g.tx = w.x;
@@ -1095,6 +1160,38 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
       const y1 = Math.floor(Math.max(g.fy, g.ty) / CELL) + 1;
       if (!L.scene.fog?.enabled) dispatch({ type: 'fog.enable', sceneId: L.scene.id, enabled: true });
       dispatch({ type: 'fog.paint', sceneId: L.scene.id, x: x0, y: y0, w: x1 - x0, h: y1 - y0, reveal: L.options.fogReveal });
+    }
+    if (g.kind === 'group' && g.moved && L.state) {
+      const { dx, dy } = groupDelta(g);
+      const r = (v: number) => Math.round(v * 100) / 100;
+      const actions: GameAction[] = [];
+      for (const id of L.group.tokens) {
+        const t = L.state.tokens[id];
+        if (t && canControl(t, L.me, L.isGm)) actions.push({ type: 'token.move', tokenId: id, x: r(t.x + dx), y: r(t.y + dy) });
+      }
+      if (L.isGm)
+        for (const id of L.group.props) {
+          const p = L.state.props?.[id];
+          if (p) actions.push({ type: 'prop.update', propId: id, patch: { x: r(p.x + dx), y: r(p.y + dy) } });
+        }
+      if (actions.length && (dx || dy)) dispatch({ type: 'batch', actions });
+    }
+    if (g.kind === 'box' && L.state && L.scene) {
+      const x0 = Math.min(g.fx, g.tx) / CELL;
+      const x1 = Math.max(g.fx, g.tx) / CELL;
+      const y0 = Math.min(g.fy, g.ty) / CELL;
+      const y1 = Math.max(g.fy, g.ty) / CELL;
+      const inside = (cx: number, cy: number) => cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1;
+      const tokens = Object.values(L.state.tokens)
+        .filter((t) => t.sceneId === L.scene!.id && canControl(t, L.me, L.isGm) && inside(t.x + t.size / 2, t.y + t.size / 2))
+        .map((t) => t.id);
+      const props = L.isGm
+        ? Object.values(L.state.props ?? {})
+            .filter((p) => p.sceneId === L.scene!.id && inside(p.x + p.w / 2, p.y + p.h / 2))
+            .map((p) => p.id)
+        : [];
+      setGroup({ tokens, props });
+      dirty.current = true;
     }
     if (g.kind === 'prop' && g.moved) {
       const p = L.state?.props?.[g.propId];
@@ -1169,10 +1266,15 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
           return;
         }
         if (e.key === 'Enter') return;
+        setGroup({ tokens: [], props: [] });
         select(null);
         selectProp(null);
         selectWall(null);
         setSelectedTemplate(null);
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && (L.group.tokens.length || L.group.props.length) && L.state) {
+        deleteGroup();
+        return;
       }
       if ((e.key === 'Delete' || e.key === 'Backspace') && L.selectedWallId && L.isGm) {
         dispatch({ type: 'wall.delete', wallId: L.selectedWallId });
@@ -1199,7 +1301,7 @@ export function Board({ tool, options, cameraRef }: { tool: Tool; options: ToolO
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [dispatch, select, selectProp, selectWall]);
+  }, [dispatch, select, selectProp, selectWall, setGroup]);
 
   const toolCursor =
     tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' || tool === 'walls' || tool === 'props' || tool === 'light'

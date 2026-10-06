@@ -43,6 +43,8 @@ interface TableStore {
   selectedTokenId: string | null;
   /** GM: scenery object being edited */
   selectedPropId: string | null;
+  /** several tokens and props picked together (Shift+click, Shift+drag) */
+  group: { tokens: string[]; props: string[] };
   /** GM: door or wall being edited */
   selectedWallId: string | null;
   /** host: route per player · player: route to the host */
@@ -59,9 +61,13 @@ interface TableStore {
   selectNextToken(): void;
   selectProp(propId: string | null): void;
   selectWall(wallId: string | null): void;
+  setGroup(group: { tokens: string[]; props: string[] }): void;
+  toggleInGroup(kind: 'tokens' | 'props', id: string): void;
 }
 
 // Session plumbing lives outside React state.
+const NO_GROUP = { tokens: [] as string[], props: [] as string[] };
+
 let host: GameHost | null = null;
 let cleanup: (() => void)[] = [];
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -227,6 +233,7 @@ export const useTable = create<TableStore>((set, get) => {
     pings: [],
     selectedTokenId: null,
     selectedPropId: null,
+    group: { tokens: [], props: [] },
     selectedWallId: null,
     routes: {},
     clockOffset: 0,
@@ -235,7 +242,7 @@ export const useTable = create<TableStore>((set, get) => {
       teardown();
       const { rt, user } = useApp.getState();
       if (!rt || !user) return;
-      set({ campaignId: campaign.id, role: 'gm', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, routes: {} });
+      set({ campaignId: campaign.id, role: 'gm', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {} });
 
       const saved = await localStore.read<SavedTable>(saveKey(campaign.id));
       const state =
@@ -299,7 +306,7 @@ export const useTable = create<TableStore>((set, get) => {
       teardown();
       const { rt } = useApp.getState();
       if (!rt) return;
-      set({ campaignId: campaign.id, role: 'player', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, routes: {} });
+      set({ campaignId: campaign.id, role: 'player', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {} });
       let hostId = campaign.session?.hostId ?? campaign.gmId;
       let retries = 0;
       let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -363,7 +370,7 @@ export const useTable = create<TableStore>((set, get) => {
 
     leave() {
       teardown();
-      set({ campaignId: null, role: null, phase: 'idle', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, routes: {} });
+      set({ campaignId: null, role: null, phase: 'idle', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {} });
     },
 
     dispatch(action) {
@@ -381,11 +388,30 @@ export const useTable = create<TableStore>((set, get) => {
       if (!direct?.send(payload)) useApp.getState().rt?.send({ t: 'relay.host', campaignId, payload });
     },
 
-    select: (selectedTokenId) => set(selectedTokenId ? { selectedTokenId, selectedPropId: null, selectedWallId: null } : { selectedTokenId }),
+    select: (selectedTokenId) => set(selectedTokenId ? { selectedTokenId, selectedPropId: null, selectedWallId: null, group: NO_GROUP } : { selectedTokenId }),
     selectNextToken: () => {
       awaitingToken = new Set(Object.keys(get().state?.tokens ?? {}));
     },
-    selectProp: (selectedPropId) => set(selectedPropId ? { selectedPropId, selectedTokenId: null, selectedWallId: null } : { selectedPropId }),
-    selectWall: (selectedWallId) => set(selectedWallId ? { selectedWallId, selectedTokenId: null, selectedPropId: null } : { selectedWallId }),
+    selectProp: (selectedPropId) => set(selectedPropId ? { selectedPropId, selectedTokenId: null, selectedWallId: null, group: NO_GROUP } : { selectedPropId }),
+    selectWall: (selectedWallId) => set(selectedWallId ? { selectedWallId, selectedTokenId: null, selectedPropId: null, group: NO_GROUP } : { selectedWallId }),
+    setGroup(group) {
+      // a group of one is just a selection
+      const n = group.tokens.length + group.props.length;
+      if (n <= 1) {
+        set({ group: NO_GROUP, selectedTokenId: group.tokens[0] ?? null, selectedPropId: group.props[0] ?? null, selectedWallId: null });
+        return;
+      }
+      set({ group, selectedTokenId: null, selectedPropId: null, selectedWallId: null });
+    },
+    toggleInGroup(kind, id) {
+      const { group, selectedTokenId, selectedPropId } = get();
+      // the single selection, if any, joins the group first
+      const base = {
+        tokens: group.tokens.length || group.props.length ? [...group.tokens] : selectedTokenId ? [selectedTokenId] : [],
+        props: group.tokens.length || group.props.length ? [...group.props] : selectedPropId ? [selectedPropId] : [],
+      };
+      base[kind] = base[kind].includes(id) ? base[kind].filter((x) => x !== id) : [...base[kind], id];
+      get().setGroup(base);
+    },
   };
 });

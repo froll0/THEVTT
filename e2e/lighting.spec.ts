@@ -51,6 +51,20 @@ test('walls, doors, props and dynamic light', async () => {
   await expect(G.locator('.toast', { hasText: 'Annullato: nuovo oggetto' })).toBeVisible();
   await G.getByRole('button', { name: 'Ripeti' }).click();
   await expect(G.locator('.toast', { hasText: 'Ripetuto: nuovo oggetto' })).toBeVisible();
+  // a box around two props, moved together and put back in one step
+  await G.getByTitle('Seleziona e sposta (V)').click();
+  let p0 = at(0.25, 0.36), p1 = at(0.36, 0.66);
+  await G.keyboard.down('Shift');
+  await G.mouse.move(p0.x, p0.y); await G.mouse.down(); await G.mouse.move(p1.x, p1.y, { steps: 5 }); await G.mouse.up();
+  await G.keyboard.up('Shift');
+  const bar = G.getByRole('region', { name: 'Selezione multipla' });
+  await expect(bar).toContainText('2 oggetti selezionati');
+  p0 = at(0.3, 0.6); p1 = at(0.34, 0.66);
+  await G.mouse.move(p0.x, p0.y); await G.mouse.down(); await G.mouse.move(p1.x, p1.y, { steps: 5 }); await G.mouse.up();
+  await G.keyboard.press('Control+z');
+  await expect(G.locator('.toast', { hasText: 'Annullato: modifica dell’oggetto (2)' })).toBeVisible();
+  await G.keyboard.press('Escape');
+  await expect(bar).toHaveCount(0);
   // monsters: one in each room
   await G.getByTitle('Bestiario').click();
   await G.locator('.rows .r', { hasText: 'Scheletro' }).getByTitle('Aggiungi al tavolo').click();

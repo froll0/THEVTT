@@ -50,6 +50,8 @@ export type GameAction =
   /** GM: take back (or redo) their last change to the map */
   | { type: 'game.undo' }
   | { type: 'game.redo' }
+  /** several actions as one (a group moved or deleted together): one step to undo */
+  | { type: 'batch'; actions: GameAction[] }
   | { type: 'music.seek'; position: number }
   | { type: 'music.loop'; loop: boolean }
   | { type: 'music.remove'; trackId: string }

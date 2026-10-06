@@ -250,9 +250,17 @@ export class GameHost {
       this.commit();
       return { ok: true };
     }
-    const scope = from === s.gmId ? UNDO_SCOPE[action.type] : undefined;
+    // a batch: every action applied, one broadcast, one step to undo
+    const list = action.type === 'batch' ? (Array.isArray(action.actions) ? action.actions.slice(0, 200) : []).filter((a) => a && !['batch', 'game.undo', 'game.redo'].includes(a.type)) : [action];
+    const scopes = from === s.gmId ? list.map((a) => UNDO_SCOPE[a.type]).filter((x) => !!x) : [];
+    const scope = scopes.length ? { cols: [...new Set(scopes.flatMap((x) => x.cols))], label: list.length > 1 ? `${scopes[0]!.label} (${list.length})` : scopes[0]!.label } : undefined;
     const before = scope ? this.capture(scope.cols) : null;
-    const res = this.apply(from, action);
+    let res: ActionResult = { ok: false, reason: 'Niente da fare' };
+    for (const a of list) {
+      const r = this.apply(from, a as Exclude<GameAction, { type: 'game.undo' } | { type: 'game.redo' } | { type: 'batch' }>);
+      // a batch goes through if anything in it did
+      if (r === COMMIT || res !== COMMIT) res = r;
+    }
     if (res === COMMIT) {
       if (scope && before) {
         const changes = this.diff(before);
@@ -331,7 +339,7 @@ export class GameHost {
     this._state.history = { undo: this.undoStack.map((st) => st.label).reverse().slice(0, 5), redo: this.redoStack.map((st) => st.label).reverse().slice(0, 5) };
   }
 
-  private apply(from: string, action: Exclude<GameAction, { type: 'game.undo' } | { type: 'game.redo' }>): ActionResult {
+  private apply(from: string, action: Exclude<GameAction, { type: 'game.undo' } | { type: 'game.redo' } | { type: 'batch' }>): ActionResult {
     const s = this._state;
     const isGm = from === s.gmId;
     const player = s.players[from];

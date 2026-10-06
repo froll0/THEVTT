@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { Armchair, ArrowLeft, BookText, Magnet, Redo2, Undo2, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Armchair, ArrowLeft, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -8,7 +8,7 @@ import { Avatar } from '../components/ui';
 import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
-import { Board, CELL, type Tool, type ToolOptions } from './Board';
+import { Board, CELL, groupDeleteActions, type Tool, type ToolOptions } from './Board';
 import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { PROP_KINDS } from './props';
@@ -445,6 +445,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
             </div>
           )}
 
+          {state && table.group.tokens.length + table.group.props.length > 1 && <GroupBar isGm={isGm} />}
           {selected && <TokenInspector token={selected} />}
           {isGm && table.selectedPropId && state?.props?.[table.selectedPropId] && <PropInspector prop={state.props[table.selectedPropId]!} />}
           {isGm && table.selectedWallId && state?.walls?.[table.selectedWallId] && <DoorInspector wall={state.walls[table.selectedWallId]!} />}
@@ -562,5 +563,49 @@ function ConnectionBadge({ isGm, onlinePlayers }: { isGm: boolean; onlinePlayers
     <span className="badge" title="Collegato al master tramite il server">
       <Server size={11} /> Via server
     </span>
+  );
+}
+
+/** What can be done to several tokens and props at once. */
+function GroupBar({ isGm }: { isGm: boolean }) {
+  const { state, group, dispatch, setGroup } = useTable();
+  const me = useApp((s) => s.user?.id ?? '');
+  if (!state) return null;
+  const tokens = group.tokens.map((id) => state.tokens[id]).filter((t) => !!t);
+  const props = group.props.map((id) => state.props?.[id]).filter((p) => !!p);
+  const anyVisible = tokens.some((t) => !t.hidden) || props.some((p) => !p.hidden);
+  const setHidden = (hidden: boolean) =>
+    dispatch({
+      type: 'batch',
+      actions: [...tokens.map((t) => ({ type: 'token.update' as const, tokenId: t.id, patch: { hidden } })), ...props.map((p) => ({ type: 'prop.update' as const, propId: p.id, patch: { hidden } }))],
+    });
+  const parts = [tokens.length && `${tokens.length} ${tokens.length === 1 ? 'token' : 'token'}`, props.length && `${props.length} ${props.length === 1 ? 'oggetto' : 'oggetti'}`].filter(Boolean);
+  return (
+    <div className="inspector glass group-bar" role="region" aria-label="Selezione multipla">
+      <div className="row between">
+        <b>{parts.join(' e ')} selezionati</b>
+        <button className="btn ghost sm icon" onClick={() => setGroup({ tokens: [], props: [] })} aria-label="Deseleziona" title="Deseleziona (Esc)">
+          <X size={14} />
+        </button>
+      </div>
+      <p className="faint small">Trascina uno di loro per spostarli insieme. Shift+clic aggiunge o toglie, Shift+trascina seleziona un’area.</p>
+      <div className="row wrap">
+        {isGm && (
+          <button className="btn sm" onClick={() => setHidden(anyVisible)}>
+            {anyVisible ? <EyeOff size={13} /> : <Eye size={13} />} {anyVisible ? 'Nascondi ai giocatori' : 'Mostra ai giocatori'}
+          </button>
+        )}
+        <button
+          className="btn sm danger"
+          onClick={() => {
+            const actions = groupDeleteActions(state, group, me, isGm);
+            if (actions.length) dispatch({ type: 'batch', actions });
+            setGroup({ tokens: [], props: [] });
+          }}
+        >
+          <Trash2 size={13} /> Elimina
+        </button>
+      </div>
+    </div>
   );
 }
