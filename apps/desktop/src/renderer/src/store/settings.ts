@@ -33,11 +33,11 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'dark',
-  accent: '#c9a227',
+  theme: 'system',
+  accent: '#0a84ff',
   font: 'sans',
   uiScale: 1,
-  radius: 8,
+  radius: 12,
   density: 'comfortable',
   glass: true,
   reduceMotion: false,
@@ -56,7 +56,9 @@ export interface ThemePreset {
 }
 
 export const PRESETS: ThemePreset[] = [
-  { id: 'default', name: 'Ossidiana', patch: { theme: 'dark', accent: '#c9a227', font: 'sans', radius: 8 } },
+  { id: 'default', name: 'Vetro', patch: { theme: 'system', accent: '#0a84ff', font: 'sans', radius: 12 } },
+  { id: 'obsidian', name: 'Ossidiana', patch: { theme: 'dark', accent: '#c9a227', font: 'sans', radius: 12 } },
+  { id: 'indigo', name: 'Indaco', patch: { theme: 'dark', accent: '#5e5ce6', font: 'sans', radius: 14 } },
   { id: 'graphite', name: 'Grafite', patch: { theme: 'dark', accent: '#e6e6e8', font: 'sans', radius: 8 } },
   { id: 'arcane', name: 'Arcano', patch: { theme: 'dark', accent: '#8b7cf6', font: 'sans', radius: 10 } },
   { id: 'forest', name: 'Foresta', patch: { theme: 'dark', accent: '#4fa37e', font: 'rounded', radius: 10 } },
@@ -85,7 +87,16 @@ export const useSettings = create<SettingsStore>()(
         set((s) => ({ ...DEFAULT_SETTINGS, ...s, ...parsed, board: { ...s.board, ...(parsed.board ?? {}) } }));
       },
     }),
-    { name: 'thevtt:settings', version: 1 },
+    {
+      name: 'thevtt:settings',
+      version: 2,
+      // v2 (the glass redesign): whoever kept the old default look gets the new one
+      migrate: (persisted, version) => {
+        const s = persisted as Partial<Settings>;
+        if (version < 2 && s && s.accent === '#c9a227' && (s.radius ?? 8) === 8 && s.theme === 'dark') return { ...s, theme: 'system', accent: '#0a84ff', radius: 12 } as Settings;
+        return s as Settings;
+      },
+    },
   ),
 );
 
@@ -95,13 +106,14 @@ export function exportSettings(s: Settings): string {
 }
 
 const FONTS: Record<FontChoice, string> = {
-  sans: '"Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif',
+  // San Francisco on a Mac, Inter (shipped with the app) elsewhere
+  sans: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif',
   rounded: '"Nunito", "SF Pro Rounded", "Varela Round", system-ui, sans-serif',
   serif: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif',
   mono: '"JetBrains Mono", "Cascadia Code", "SF Mono", Consolas, monospace',
 };
 
-/** Black or white, whichever reads better on the given color (WCAG relative luminance). */
+/** White or black text on the given colour (WCAG relative luminance), preferring white as Apple does. */
 export function readableOn(hex: string): string {
   const n = parseInt(hex.replace('#', '').padEnd(6, '0').slice(0, 6), 16);
   const lin = (c: number) => {
@@ -109,7 +121,8 @@ export function readableOn(hex: string): string {
     return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
   };
   const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
-  return (L + 0.05) / 0.05 >= 1.05 / (L + 0.05) ? '#111111' : '#ffffff';
+  // white whenever it is legible enough for button labels (like system blue), black on light accents
+  return 1.05 / (L + 0.05) >= 3 ? '#ffffff' : '#111111';
 }
 
 const DENSITY: Record<Density, number> = { compact: 0.8, comfortable: 1, spacious: 1.25 };

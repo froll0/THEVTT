@@ -1,0 +1,1017 @@
+/*
+ * The design layer: a "liquid glass" look in the spirit of Apple's latest
+ * systems. Translucent materials over a soft ambient backdrop, capsule
+ * controls, grouped rounded lists, generous radii and SF-like type.
+ * Loaded last: it refines the structural styles of the other sheets.
+ */
+
+/* ---------- tokens ---------- */
+:root {
+  --r-sm: calc(var(--radius) * 0.67);
+  --r-md: var(--radius);
+  --r-lg: calc(var(--radius) * 1.5);
+  --r-xl: calc(var(--radius) * 2);
+  --capsule: 999px;
+  --topbar: 52px;
+  --dur: 180ms;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --blur: blur(28px) saturate(180%);
+  --success: #30d158;
+  --danger: #ff453a;
+  --warning: #ff9f0a;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0b0b0e;
+  --bg-elev: #1c1c1e;
+  --bg-elev-2: #2c2c2e;
+  --bg-sunken: rgb(118 118 128 / 0.16);
+  --fg: #f5f5f7;
+  --fg-muted: rgb(235 235 245 / 0.62);
+  --fg-faint: rgb(235 235 245 / 0.32);
+  --border: rgb(255 255 255 / 0.07);
+  --border-strong: rgb(255 255 255 / 0.14);
+  --fill: rgb(118 118 128 / 0.22);
+  --fill-hover: rgb(118 118 128 / 0.32);
+  --fill-strong: rgb(118 118 128 / 0.4);
+  --material: rgb(30 30 34 / 0.62);
+  --material-thick: rgb(30 30 34 / 0.82);
+  --material-solid: #1c1c1e;
+  --edge: inset 0 0.5px 0 rgb(255 255 255 / 0.22), inset 0 0 0 0.5px rgb(255 255 255 / 0.09);
+  --selected: rgb(255 255 255 / 0.16);
+  --shadow: 0 18px 50px rgb(0 0 0 / 0.45), 0 2px 8px rgb(0 0 0 / 0.3);
+  --shadow-soft: 0 8px 28px rgb(0 0 0 / 0.32), 0 1px 3px rgb(0 0 0 / 0.25);
+  --glass-bg: var(--material);
+  --backdrop:
+    radial-gradient(70vw 60vh at 8% -10%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 70%),
+    radial-gradient(60vw 60vh at 105% 110%, rgb(94 92 230 / 0.16), transparent 70%),
+    radial-gradient(50vw 40vh at 70% 0%, rgb(100 210 255 / 0.07), transparent 70%), #0b0b0e;
+}
+
+:root[data-theme='light'] {
+  --bg: #f2f2f7;
+  --bg-elev: #ffffff;
+  --bg-elev-2: #e9e9ee;
+  --bg-sunken: rgb(118 118 128 / 0.1);
+  --fg: #1d1d1f;
+  --fg-muted: rgb(60 60 67 / 0.68);
+  --fg-faint: rgb(60 60 67 / 0.36);
+  --border: rgb(0 0 0 / 0.07);
+  --border-strong: rgb(0 0 0 / 0.13);
+  --fill: rgb(118 118 128 / 0.12);
+  --fill-hover: rgb(118 118 128 / 0.2);
+  --fill-strong: rgb(118 118 128 / 0.28);
+  --material: rgb(255 255 255 / 0.62);
+  --material-thick: rgb(250 250 252 / 0.86);
+  --material-solid: #ffffff;
+  --edge: inset 0 0.5px 0 rgb(255 255 255 / 0.9), inset 0 0 0 0.5px rgb(0 0 0 / 0.06);
+  --selected: #ffffff;
+  --shadow: 0 18px 50px rgb(0 0 0 / 0.14), 0 2px 8px rgb(0 0 0 / 0.06);
+  --shadow-soft: 0 8px 28px rgb(0 0 0 / 0.08), 0 1px 3px rgb(0 0 0 / 0.06);
+  --glass-bg: var(--material);
+  --backdrop:
+    radial-gradient(70vw 60vh at 8% -10%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 70%),
+    radial-gradient(60vw 60vh at 105% 110%, rgb(175 82 222 / 0.1), transparent 70%),
+    radial-gradient(50vw 40vh at 70% 0%, rgb(90 200 250 / 0.1), transparent 70%), #f2f2f7;
+}
+
+/* "Pannelli traslucidi" off: the same shapes, solid */
+:root[data-glass='false'] {
+  --material: var(--material-solid);
+  --material-thick: var(--material-solid);
+  --blur: none;
+}
+
+/* ---------- base ---------- */
+body {
+  background: var(--backdrop);
+  background-attachment: fixed;
+  font-feature-settings: 'cv11', 'ss01';
+  letter-spacing: -0.006em;
+  text-rendering: optimizeLegibility;
+}
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+h2 {
+  font-size: 1.22rem;
+  font-weight: 650;
+  letter-spacing: -0.018em;
+}
+h3 {
+  font-weight: 620;
+}
+::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--fill-strong);
+  border: 2.5px solid transparent;
+  background-clip: padding-box;
+}
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+/* a translucent surface, lit from above */
+.material,
+.glass {
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge), var(--shadow-soft);
+}
+:root[data-glass='true'] .glass {
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+}
+
+/* ---------- shell ---------- */
+.topbar {
+  border-bottom: 0;
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: inset 0 -0.5px 0 var(--border-strong);
+  position: relative;
+  z-index: 20;
+  gap: var(--s3);
+  font-size: 0.92rem;
+}
+.brand {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-size: 0.98rem;
+}
+.brand i {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  transform: none;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.45), transparent 55%),
+    linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #5e5ce6));
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.5), 0 2px 6px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+/* the navigation is a segmented capsule with a lifted "glass bead" on the current page */
+.nav {
+  align-self: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--capsule);
+  background: var(--fill);
+}
+.nav button {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: var(--capsule);
+  font-weight: 560;
+  font-size: 0.9rem;
+  transition:
+    color var(--dur),
+    background var(--dur) var(--ease),
+    box-shadow var(--dur);
+}
+.nav button:hover {
+  background: var(--fill);
+}
+.nav button.active {
+  background: var(--selected);
+  box-shadow: var(--edge), 0 2px 8px rgb(0 0 0 / 0.18);
+}
+.nav button.active::after {
+  display: none;
+}
+.nav .dot {
+  top: 5px;
+  right: 6px;
+}
+.nav .count {
+  margin-left: 6px;
+}
+.win-controls button {
+  width: 46px;
+}
+
+.page {
+  padding-top: var(--s6);
+  gap: calc(var(--s6) * 0.9);
+}
+.page-header h1 {
+  font-size: 2.1rem;
+}
+.page-header p {
+  font-size: 1rem;
+}
+.section-title,
+.section-head > :first-child {
+  font-size: 1.02rem;
+  font-weight: 650;
+  color: var(--fg);
+  letter-spacing: -0.012em;
+}
+
+/* ---------- controls ---------- */
+.btn {
+  height: calc(34px * var(--space));
+  padding: 0 calc(var(--s3) + 2px);
+  border: 0;
+  border-radius: var(--capsule);
+  background: var(--fill);
+  font-weight: 590;
+  transition:
+    background var(--dur),
+    transform var(--dur) var(--spring),
+    box-shadow var(--dur),
+    filter var(--dur);
+}
+.btn:hover {
+  background: var(--fill-hover);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn.primary {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.18), transparent 60%),
+    var(--accent);
+  box-shadow:
+    inset 0 0.5px 0 rgb(255 255 255 / 0.4),
+    0 2px 8px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.btn.primary:hover {
+  filter: brightness(1.08);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.22), transparent 60%),
+    var(--accent);
+}
+.btn.ghost {
+  background: transparent;
+}
+.btn.ghost:hover,
+.btn.ghost.active {
+  background: var(--fill);
+}
+.btn.danger {
+  color: var(--danger);
+}
+.btn.danger:not(.ghost):not(.solid) {
+  background: color-mix(in oklab, var(--danger) 14%, transparent);
+}
+.btn.danger.solid {
+  background: var(--danger);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.35);
+}
+.btn.icon {
+  width: calc(34px * var(--space));
+}
+.btn.sm {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+}
+.btn.sm.icon {
+  width: 28px;
+  padding: 0;
+}
+
+.input,
+.select,
+.textarea {
+  height: calc(36px * var(--space));
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--fill);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+  transition:
+    box-shadow var(--dur),
+    background var(--dur);
+}
+.input:hover,
+.select:hover,
+.textarea:hover {
+  background: var(--fill-hover);
+}
+.input:focus,
+.select:focus,
+.textarea:focus {
+  background: var(--bg-elev);
+  box-shadow:
+    0 0 0 3.5px color-mix(in oklab, var(--accent) 40%, transparent),
+    inset 0 0 0 1px var(--accent);
+}
+.input.bare,
+.input.bare:hover,
+.input.bare:focus {
+  background: transparent;
+  box-shadow: none;
+}
+.select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14' viewBox='0 0 10 14' fill='none' stroke='%238e8e93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 5l3-3 3 3M2 9l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.field > span {
+  font-size: 0.84rem;
+  font-weight: 560;
+  color: var(--fg-muted);
+}
+
+.badge {
+  border: 0;
+  background: var(--fill);
+  height: 22px;
+  padding: 0 9px;
+  font-weight: 590;
+}
+.badge.live {
+  color: var(--success);
+  background: color-mix(in oklab, var(--success) 16%, transparent);
+}
+.badge.accent {
+  background: var(--accent);
+}
+
+/* segmented controls */
+.tabs,
+.seg {
+  padding: 3px;
+  gap: 2px;
+  border: 0;
+  border-radius: var(--capsule);
+  background: var(--fill);
+}
+.tabs button,
+.seg button {
+  border: 0;
+  border-radius: var(--capsule);
+  padding: 5px 14px;
+  font-weight: 560;
+  transition:
+    background var(--dur) var(--ease),
+    box-shadow var(--dur);
+}
+.tabs button.active,
+.seg button.on {
+  background: var(--selected);
+  color: var(--fg);
+  box-shadow: var(--edge), 0 2px 6px rgb(0 0 0 / 0.16);
+}
+
+.chip {
+  border: 0;
+  background: var(--fill);
+  height: 30px;
+  padding: 0 12px;
+  font-weight: 540;
+}
+.chip:hover {
+  background: var(--fill-hover);
+}
+.chip.on {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+/* the iOS switch */
+.switch {
+  width: 42px;
+  height: 25px;
+  background: var(--fill-strong);
+  transition: background 220ms var(--ease);
+}
+.switch::after {
+  top: 2px;
+  left: 2px;
+  width: 21px;
+  height: 21px;
+  box-shadow:
+    0 2px 6px rgb(0 0 0 / 0.25),
+    0 0 0 0.5px rgb(0 0 0 / 0.04);
+  transition: transform 260ms var(--spring);
+}
+.switch.on {
+  background: var(--success);
+}
+.switch.on::after {
+  transform: translateX(17px);
+}
+input[type='range'] {
+  accent-color: var(--accent);
+}
+.swatch {
+  width: 24px;
+  height: 24px;
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.15);
+  transition: transform var(--dur) var(--spring);
+}
+.swatch:hover {
+  transform: scale(1.12);
+}
+.swatch.on {
+  box-shadow:
+    0 0 0 2.5px var(--bg-elev),
+    0 0 0 4.5px var(--accent);
+}
+
+/* ---------- grouped lists, like System Settings ---------- */
+.list {
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border-radius: var(--r-lg);
+  box-shadow: var(--edge);
+  padding: 0 var(--s4);
+  overflow: hidden;
+}
+.list-item,
+.setting {
+  border-top: 0.5px solid var(--border-strong);
+  border-bottom: 0;
+}
+.list > .list-item:first-child,
+.list > .setting:first-child {
+  border-top: 0;
+}
+.list-item:last-child,
+.setting:last-child {
+  border-bottom: 0;
+}
+.list-item.clickable {
+  margin: 0 calc(var(--s4) * -1);
+  padding-left: var(--s4);
+  padding-right: var(--s4);
+  border-radius: 0;
+}
+.list-item.clickable:hover {
+  background: var(--fill);
+}
+.empty {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--fill);
+  padding: var(--s5) var(--s4);
+  text-align: center;
+}
+.card,
+.panel-card {
+  border: 0;
+  border-radius: var(--r-xl);
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge), var(--shadow-soft);
+}
+.panel-card h3 {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-size: 0.98rem;
+  color: var(--fg);
+}
+
+/* ---------- tiles, hero ---------- */
+.tile {
+  border: 0;
+  border-radius: var(--r-xl);
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge), var(--shadow-soft);
+  transition:
+    transform 260ms var(--spring),
+    box-shadow var(--dur);
+}
+.tile.clickable:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--edge), var(--shadow);
+}
+.tile-cover {
+  margin: 6px 6px 0;
+  border-radius: calc(var(--r-xl) - 6px);
+  overflow: hidden;
+}
+.tile-title {
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.new-tile {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--fill-strong);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.new-tile:hover {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--accent);
+}
+.badge.glassy {
+  background: rgb(20 20 24 / 0.45);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.25);
+}
+.hero {
+  border: 0;
+  border-radius: calc(var(--r-xl) + 4px);
+  box-shadow: var(--shadow);
+  min-height: 240px;
+}
+.hero-content h1 {
+  font-size: 2.4rem;
+}
+.hero-tools .btn {
+  background: rgb(20 20 24 / 0.4);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.3);
+}
+.live-strip {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: color-mix(in oklab, var(--success) 12%, var(--material));
+  box-shadow: var(--edge), inset 0 0 0 1px color-mix(in oklab, var(--success) 35%, transparent);
+}
+.recap {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--material);
+  box-shadow: var(--edge);
+  padding: var(--s3) var(--s4);
+}
+
+/* ---------- overlays ---------- */
+.modal-backdrop {
+  background: rgb(0 0 0 / 0.3);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.modal {
+  border-radius: calc(var(--r-xl) + 6px);
+  background: var(--material-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge), var(--shadow);
+  padding: calc(var(--s5) + 4px);
+  animation: sheet 320ms var(--spring);
+}
+.popover {
+  border-radius: var(--r-lg);
+  background: var(--material-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge), var(--shadow);
+  padding: 6px;
+  animation: sheet 240ms var(--spring);
+}
+.popover .menu-item {
+  border-radius: var(--r-sm);
+  padding: 7px 10px;
+}
+.popover .menu-item:hover {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.popover .menu-sep {
+  height: 0.5px;
+  background: var(--border-strong);
+}
+.toast {
+  border-radius: var(--r-lg);
+  background: var(--material-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge), var(--shadow);
+  padding: 12px 16px;
+  animation: sheet 320ms var(--spring);
+}
+@keyframes sheet {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+}
+
+/* ---------- auth, settings ---------- */
+.auth-box {
+  width: 400px;
+  padding: calc(var(--s5) + 4px);
+  border-radius: calc(var(--r-xl) + 6px);
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge), var(--shadow);
+}
+.auth .logo i {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  transform: none;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.45), transparent 55%),
+    linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #5e5ce6));
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.5), 0 4px 12px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.choice button {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--fill);
+  padding: var(--s3) var(--s4);
+  transition:
+    background var(--dur),
+    box-shadow var(--dur);
+}
+.choice button:hover {
+  background: var(--fill-hover);
+}
+.choice button.on {
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.settings-nav {
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--r-lg);
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge);
+}
+.settings-nav button {
+  border-radius: var(--r-sm);
+  padding: 7px 12px;
+}
+.settings-nav button:hover {
+  background: var(--fill);
+}
+.settings-nav button.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.theme-card {
+  border: 0;
+  border-radius: var(--r-lg);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  transition: transform var(--dur) var(--spring);
+}
+.theme-card:hover {
+  transform: translateY(-2px);
+}
+.theme-card.on {
+  box-shadow: 0 0 0 2.5px var(--accent);
+}
+.theme-card span {
+  border-top: 0.5px solid var(--border);
+}
+.address,
+.callout {
+  border-radius: var(--r-md);
+}
+kbd {
+  border-radius: 6px;
+  border: 0;
+  background: var(--fill);
+  box-shadow: inset 0 -1px 0 var(--border-strong), inset 0 0 0 0.5px var(--border);
+}
+
+/* ---------- the table ---------- */
+.table-shell .topbar {
+  background: var(--material-thick);
+}
+.float {
+  border-radius: var(--r-xl);
+  padding: 5px;
+  gap: 3px;
+}
+.float.rail {
+  border-radius: var(--capsule);
+  padding: 6px 5px;
+  left: var(--s4);
+}
+.float .sep {
+  width: 18px;
+  height: 0.5px;
+  margin: 4px 0;
+}
+.tool {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--capsule);
+  transition:
+    background var(--dur),
+    color var(--dur),
+    transform var(--dur) var(--spring);
+}
+.tool:hover {
+  background: var(--fill);
+}
+.tool:active {
+  transform: scale(0.92);
+}
+.tool.active {
+  color: var(--accent-fg);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.2), transparent 60%),
+    var(--accent);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.35);
+}
+.tool.wide {
+  border-radius: var(--capsule);
+  padding: 0 12px;
+}
+.tool-options {
+  border-radius: var(--capsule) !important;
+  padding: 5px 7px !important;
+}
+.tool-options.props-palette {
+  border-radius: var(--r-xl) !important;
+}
+.dicebar {
+  border-radius: var(--capsule);
+  padding: 5px 8px;
+}
+.inspector {
+  border-radius: var(--r-xl);
+  padding: var(--s4);
+  box-shadow: var(--edge), var(--shadow);
+}
+.board-hint,
+.paused-pill,
+.light-preview {
+  border-radius: var(--capsule);
+  padding: 6px 14px;
+}
+.dock {
+  border-left: 0;
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: inset 0.5px 0 0 var(--border-strong);
+}
+.dock-left .dock {
+  border-right: 0;
+  box-shadow: inset -0.5px 0 0 var(--border-strong);
+}
+.dock-tabs {
+  padding: var(--s3) 8px;
+  gap: 4px;
+}
+.dock-tabs button {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  transition:
+    background var(--dur),
+    color var(--dur);
+}
+.dock-tabs button:hover {
+  background: var(--fill);
+}
+.dock-tabs button.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.35);
+}
+.dock-panel {
+  border-left: 0.5px solid var(--border-strong);
+}
+.dock-left .dock-panel {
+  border-right: 0.5px solid var(--border-strong);
+}
+.dock-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  padding: var(--s4) var(--s4) var(--s2);
+}
+.fwin {
+  border: 0;
+  border-radius: var(--r-xl);
+  background: var(--material-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge), 0 24px 70px rgb(0 0 0 / 0.5);
+  overflow: hidden;
+}
+.fwin-pill {
+  border-radius: var(--capsule);
+  background: var(--material-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge), var(--shadow-soft);
+}
+.stage-paused {
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+}
+.encounter,
+.bestiary-filters,
+.note-diary-hint {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--fill);
+}
+
+/* ---------- rich text and journal ---------- */
+.rt {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--bg-elev);
+  box-shadow: inset 0 0 0 0.5px var(--border-strong);
+}
+.rt:focus-within {
+  box-shadow:
+    0 0 0 3.5px color-mix(in oklab, var(--accent) 35%, transparent),
+    inset 0 0 0 1px var(--accent);
+}
+.rt-toolbar {
+  border-bottom: 0.5px solid var(--border-strong);
+  background: transparent;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: 6px;
+}
+.rt-btn {
+  border-radius: 8px;
+  min-width: 28px;
+  height: 28px;
+}
+.rt-select {
+  border: 0;
+  background: var(--fill);
+  border-radius: 8px;
+  height: 28px;
+}
+.journal-row {
+  border-radius: var(--r-md);
+}
+.journal-row.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  box-shadow: none;
+}
+.journal-row.active .faint,
+.journal-row.active .badge {
+  color: color-mix(in oklab, var(--accent-fg) 75%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal,
+  .popover,
+  .toast,
+  .tile {
+    animation: none;
+    transition: none;
+  }
+}
+:root[data-motion='reduce'] .modal,
+:root[data-motion='reduce'] .popover,
+:root[data-motion='reduce'] .toast {
+  animation: none;
+}
+
+/* over the (dark) map the glass is thicker, so it reads crisp in light mode too */
+.stage .glass,
+.stage .inspector {
+  background: var(--material-thick);
+}
+:root[data-theme='light'] .stage .glass {
+  box-shadow: var(--edge), 0 10px 30px rgb(0 0 0 / 0.35);
+}
+
+/* a list already inside a card doesn't need its own box */
+.panel-card .list,
+.modal .list,
+.inspector .list {
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  padding: 0;
+  border-radius: 0;
+}
+.campaign-chat {
+  border-radius: var(--r-xl);
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge);
+  padding: var(--s3);
+}
+
+/* ---------- character builder & sheet ---------- */
+.stepper,
+.sheet-tabs {
+  border-bottom: 0;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--capsule);
+  background: var(--fill);
+  width: fit-content;
+  max-width: 100%;
+}
+.stepper button,
+.sheet-tabs button {
+  padding: 6px 13px;
+  border-radius: var(--capsule);
+  font-weight: 560;
+  transition:
+    background var(--dur) var(--ease),
+    color var(--dur);
+}
+.stepper button:hover,
+.sheet-tabs button:hover {
+  background: var(--fill);
+}
+.stepper button.active,
+.sheet-tabs button.active {
+  background: var(--selected);
+  box-shadow: var(--edge), 0 2px 6px rgb(0 0 0 / 0.16);
+}
+.stepper button.active::after,
+.sheet-tabs button.active::after {
+  display: none;
+}
+.option {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge);
+  padding: var(--s3) var(--s4);
+  transition:
+    transform var(--dur) var(--spring),
+    box-shadow var(--dur),
+    background var(--dur);
+}
+.option:hover {
+  background: var(--material-thick);
+  transform: translateY(-1px);
+}
+.option.on {
+  background: color-mix(in oklab, var(--accent) 16%, var(--material));
+  box-shadow:
+    var(--edge),
+    inset 0 0 0 1.5px var(--accent);
+}
+.detail,
+.issues {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--material);
+  box-shadow: var(--edge);
+}
+.stat {
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--fill);
+}
+button.stat:hover {
+  background: var(--fill-hover);
+}
+.ability,
+.ab {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--material);
+  box-shadow: var(--edge);
+}
+.portrait {
+  border-radius: 50%;
+}
+.hp-bar {
+  border-radius: var(--capsule);
+  overflow: hidden;
+}
+.tag {
+  border: 0;
+  border-radius: var(--capsule);
+  background: var(--fill);
+}
+/* the steps stay on one line, scrolling sideways when the window is narrow */
+.stepper,
+.sheet-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.stepper::-webkit-scrollbar,
+.sheet-tabs::-webkit-scrollbar {
+  display: none;
+}
+.stepper button {
+  padding: 6px 11px;
+  white-space: nowrap;
+  flex: none;
+}
