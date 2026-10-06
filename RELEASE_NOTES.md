@@ -1,9 +1,17 @@
 ## Novità
 
-- **Editor di mappe integrato**: il master disegna le mappe direttamente al tavolo, senza programmi esterni. Si apre col pennello nella barra degli strumenti (tasto B).
-  - 14 terreni: pietra, legno, marmo, selciato, roccia, terra, sterrato, erba, sabbia, neve, acqua, acqua profonda, lava e abisso.
-  - Pennello in quattro misure, rettangolo per le stanze, secchiello per riempire una zona e gomma.
-  - **Muri automatici**: la roccia e i bordi delle stanze diventano muri veri che bloccano vista e movimento. Le porte messe con lo strumento Muri si aprono il loro spazio da sole.
-  - I giocatori vedono la mappa aggiornarsi mentre la dipingi. Ogni pennellata si annulla con Ctrl+Z.
-- **Le mappe generate si possono ritoccare**: dungeon, caverne e radure del generatore sono mappe dipinte, modificabili col pennello.
-- Corretto: con una sola scena al tavolo, annullare una modifica della scena (nebbia, nome, dimensioni) non aveva effetto.
+- **Modalità editor della mappa**: tutti gli strumenti per costruire una mappa in un unico posto. Si apre col pulsante "Editor mappa" o col tasto E, e mostra solo ciò che serve: terreno, muri e porte, oggetti, luci, scritte e impostazioni della scena.
+  - **Lavori in privato**: puoi modificare qualsiasi scena, anche una che i giocatori non vedono, e mostrargliela quando è pronta con "Mostra ai giocatori".
+  - **Nuova scena** vuota, tutta roccia, a prato o di pietra; c'è anche il generatore.
+  - **Esporta come immagine PNG**.
+- **Strumenti nuovi**:
+  - per il terreno: **Linea**, **Ellisse** e **Contagocce**, con pennello da 1 a 9 caselle;
+  - porte e finestre **sul lato** di una casella, con un solo clic;
+  - oggetti **ruotabili** prima di posarli (tasto R), con catalogo a miniature e ricerca;
+  - **preset di luce**: candela, torcia, lanterna, incantesimo Luce, luce diurna.
+- **Anteprime ovunque**, prima di cliccare:
+  - il terreno appare sotto il cursore con la sua texture vera;
+  - forme, muri e stanze mostrano le misure in caselle e in metri;
+  - il secchiello mostra la zona che riempirà;
+  - gli oggetti appaiono come sagoma già ruotata;
+  - le luci mostrano fin dove arrivano.
