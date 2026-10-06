@@ -350,6 +350,11 @@ export class GameHost {
     const player = s.players[from];
     if (!isGm && !player) return { ok: false, reason: 'Non fai parte di questo tavolo' };
     const gmOnly = (): ActionResult | null => (isGm ? null : { ok: false, reason: 'Solo il master può farlo' });
+    /** the scene an action is for: the GM may name one, otherwise the one being played */
+    const target = (): string => {
+      const id = isGm && 'sceneId' in action && typeof action.sceneId === 'string' ? action.sceneId : null;
+      return id && s.scenes[id] ? id : s.activeSceneId;
+    };
     if (s.paused && !isGm && PAUSE_BLOCKED.has(action.type)) return { ok: false, reason: 'Il gioco è in pausa' };
 
     switch (action.type) {
@@ -758,7 +763,7 @@ export class GameHost {
       case 'wall.create': {
         const denied = gmOnly();
         if (denied) return denied;
-        const scene = s.scenes[s.activeSceneId]!;
+        const scene = s.scenes[target()]!;
         const count = Object.values(s.walls!).filter((w) => w.sceneId === scene.id && !w.auto).length;
         const list = Array.isArray(action.walls) ? action.walls.slice(0, 500) : [];
         if (count + list.length > MAX_WALLS) return { ok: false, reason: 'Troppi muri in questa scena' };
@@ -819,15 +824,16 @@ export class GameHost {
         const denied = gmOnly();
         if (denied) return denied;
         // the walls of the painted map stay: they go with the map
-        for (const w of Object.values(s.walls!)) if (w.sceneId === s.activeSceneId && !w.auto) delete s.walls![w.id];
-        this.refreshAutoWalls(s.activeSceneId);
+        const sceneId = target();
+        for (const w of Object.values(s.walls!)) if (w.sceneId === sceneId && !w.auto) delete s.walls![w.id];
+        this.refreshAutoWalls(sceneId);
         break;
       }
       case 'prop.create':
       case 'prop.update': {
         const denied = gmOnly();
         if (denied) return denied;
-        const scene = s.scenes[s.activeSceneId]!;
+        const scene = s.scenes[target()]!;
         let p: Prop;
         if (action.type === 'prop.create') {
           if (Object.values(s.props!).filter((x) => x.sceneId === scene.id).length >= MAX_PROPS) return { ok: false, reason: 'Troppi oggetti in questa scena' };
@@ -867,12 +873,13 @@ export class GameHost {
         const pts = Array.isArray(action.points) ? action.points.slice(0, 4000).map((v) => Math.round((Number(v) || 0) * 100) / 100) : [];
         const text = typeof action.text === 'string' ? action.text.trim().slice(0, 200) : '';
         if (text ? pts.length < 2 : pts.length < 4 || pts.length % 2) return { ok: false, reason: 'Tratto non valido' };
-        const onScene = Object.values(s.drawings!).filter((d) => d.sceneId === s.activeSceneId);
+        const sceneId = target();
+        const onScene = Object.values(s.drawings!).filter((d) => d.sceneId === sceneId);
         if (onScene.length >= MAX_DRAWINGS) return { ok: false, reason: 'Troppi disegni: cancellane qualcuno' };
         const id = newId();
         s.drawings![id] = {
           id,
-          sceneId: s.activeSceneId,
+          sceneId,
           points: pts,
           color: typeof action.color === 'string' ? action.color.slice(0, 20) : player?.color ?? '#ffffff',
           width: text ? Math.min(3, Math.max(0.2, Number(action.width) || 0.5)) : Math.min(2, Math.max(0.02, Number(action.width) || 0.08)),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { brushCells, cleanTerrain, createInitialState, floodCells, GameHost, paintCells, rectCells, resizeTerrain, terrainWalls, type Wall } from '../src';
+import { brushCells, cleanTerrain, ellipseCells, lineCells, createInitialState, floodCells, GameHost, paintCells, rectCells, resizeTerrain, terrainWalls, type Wall } from '../src';
 
 const key = (w: { x1: number; y1: number; x2: number; y2: number }) => `${w.x1},${w.y1},${w.x2},${w.y2}`;
 
@@ -46,6 +46,17 @@ describe('painted map', () => {
     expect(paintCells(map, [3, 4], 'g')).toBe('ggggggggg');
   });
 
+  it('paints straight lines and ellipses', () => {
+    expect(lineCells(10, 10, 0.5, 2.5, 4.5, 2.5, 1).sort((a, b) => a - b)).toEqual([20, 21, 22, 23, 24]);
+    // a 5×3 ellipse: full middle row, no corners
+    const e = ellipseCells(10, 10, 0, 0, 4, 2);
+    expect(e).toContain(10);
+    expect(e).toContain(14);
+    expect(e).not.toContain(0);
+    expect(e).not.toContain(24);
+    expect(ellipseCells(10, 10, 3, 3, 3, 3)).toEqual([33]);
+  });
+
   it('the GM paints, the walls follow, one undo takes it back', () => {
     const host = table();
     const empty = '.'.repeat(24);
@@ -89,5 +100,34 @@ describe('painted map', () => {
   it('players cannot paint', () => {
     const host = table();
     expect(host.dispatch('p1', { type: 'terrain.set', sceneId: 's1', terrain: 's'.repeat(24) }).ok).toBe(false);
+  });
+});
+
+describe('working on a scene the players are not on', () => {
+  it('puts walls, props and labels where the GM says, players stay where they are', () => {
+    const host = table();
+    host.dispatch('gm', { type: 'scene.create', name: 'Prossima', id: 'next-scene' });
+    host.dispatch('gm', { type: 'wall.create', sceneId: 'next-scene', walls: [{ x1: 0, y1: 0, x2: 2, y2: 0, kind: 'door' }] });
+    host.dispatch('gm', { type: 'prop.create', sceneId: 'next-scene', prop: { kind: 'chest', x: 1, y: 1 } });
+    host.dispatch('gm', { type: 'drawing.create', sceneId: 'next-scene', points: [1, 1], color: '#fff', width: 0.5, text: 'Cripta' });
+    host.dispatch('gm', { type: 'terrain.set', sceneId: 'next-scene', terrain: 'r'.repeat(600) });
+    const on = (id: string) => (x: { sceneId: string }) => x.sceneId === id;
+    expect(Object.values(host.state.walls!).filter(on('next-scene')).length).toBeGreaterThan(0);
+    expect(Object.values(host.state.props!).filter(on('next-scene'))).toHaveLength(1);
+    expect(Object.values(host.state.drawings!).filter(on('next-scene'))).toHaveLength(1);
+    expect(host.state.activeSceneId).toBe('s1');
+    expect(Object.values(host.state.props!).filter(on('s1'))).toHaveLength(0);
+    // clearing walls there leaves the played scene alone
+    host.dispatch('gm', { type: 'wall.create', walls: [{ x1: 0, y1: 0, x2: 1, y2: 0, kind: 'wall' }] });
+    host.dispatch('gm', { type: 'wall.clear', sceneId: 'next-scene' });
+    expect(Object.values(host.state.walls!).filter((w) => w.sceneId === 'next-scene' && !w.auto)).toHaveLength(0);
+    expect(Object.values(host.state.walls!).filter(on('s1'))).toHaveLength(1);
+  });
+
+  it('a player naming another scene still draws on the played one', () => {
+    const host = table();
+    host.dispatch('gm', { type: 'scene.create', name: 'Prossima', id: 'next-scene' });
+    expect(host.dispatch('p1', { type: 'drawing.create', sceneId: 'next-scene', points: [0, 0, 1, 1], color: '#fff', width: 0.1 }).ok).toBe(true);
+    expect(Object.values(host.state.drawings!)[0]!.sceneId).toBe('s1');
   });
 });

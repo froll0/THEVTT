@@ -3,6 +3,10 @@ import type { AreaTemplate, ChatCard, GameState, Note, Prop, Scene, Token, Wall 
 export type TokenPatch = Partial<Omit<Token, 'id' | 'sceneId'>>;
 export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog' | 'terrain'>>;
 
+/**
+ * `sceneId` on wall, prop and drawing actions: the GM working on a scene the
+ * players are not on (the map editor). Without it, the scene being played.
+ */
 export type GameAction =
   /** id: optional, chosen by the GM's app to fill the new scene in the same batch */
   | { type: 'scene.create'; name: string; id?: string }
@@ -37,14 +41,14 @@ export type GameAction =
   | { type: 'note.create'; note?: Partial<Pick<Note, 'title' | 'body' | 'shared'>> }
   | { type: 'note.update'; noteId: string; patch: Partial<Pick<Note, 'title' | 'body' | 'shared' | 'image'>> }
   | { type: 'note.delete'; noteId: string }
-  | { type: 'wall.create'; walls: (Pick<Wall, 'x1' | 'y1' | 'x2' | 'y2' | 'kind'> & Partial<Pick<Wall, 'open' | 'locked'>>)[] }
+  | { type: 'wall.create'; sceneId?: string; walls: (Pick<Wall, 'x1' | 'y1' | 'x2' | 'y2' | 'kind'> & Partial<Pick<Wall, 'open' | 'locked'>>)[] }
   | { type: 'wall.update'; wallId: string; patch: Partial<Pick<Wall, 'kind' | 'open' | 'locked'>> }
   | { type: 'wall.delete'; wallId: string }
-  | { type: 'wall.clear' }
-  | { type: 'prop.create'; prop: Partial<Omit<Prop, 'id' | 'sceneId'>> & { kind: string } }
+  | { type: 'wall.clear'; sceneId?: string }
+  | { type: 'prop.create'; sceneId?: string; prop: Partial<Omit<Prop, 'id' | 'sceneId'>> & { kind: string } }
   | { type: 'prop.update'; propId: string; patch: Partial<Omit<Prop, 'id' | 'sceneId'>> }
   | { type: 'prop.delete'; propId: string }
-  | { type: 'drawing.create'; points: number[]; color: string; width: number; text?: string }
+  | { type: 'drawing.create'; sceneId?: string; points: number[]; color: string; width: number; text?: string }
   | { type: 'drawing.delete'; drawingId: string }
   | { type: 'drawing.clear' }
   | { type: 'music.play'; trackId?: string; position?: number }

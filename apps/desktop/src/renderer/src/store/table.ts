@@ -51,6 +51,9 @@ interface TableStore {
   routes: Record<string, Route>;
   /** host clock minus local clock (ms), to follow the shared music */
   clockOffset: number;
+  /** GM: the map editor is open on this scene (null: playing) */
+  editorSceneId: string | null;
+  setEditor(sceneId: string | null): void;
 
   host(campaign: Campaign): Promise<void>;
   join(campaign: Campaign): void;
@@ -235,6 +238,8 @@ export const useTable = create<TableStore>((set, get) => {
     selectedPropId: null,
     group: { tokens: [], props: [] },
     selectedWallId: null,
+    editorSceneId: null,
+    setEditor: (editorSceneId) => set({ editorSceneId, selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: NO_GROUP }),
     routes: {},
     clockOffset: 0,
 
@@ -242,7 +247,7 @@ export const useTable = create<TableStore>((set, get) => {
       teardown();
       const { rt, user } = useApp.getState();
       if (!rt || !user) return;
-      set({ campaignId: campaign.id, role: 'gm', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {} });
+      set({ campaignId: campaign.id, role: 'gm', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {}, editorSceneId: null });
 
       const saved = await localStore.read<SavedTable>(saveKey(campaign.id));
       const state =
@@ -306,7 +311,7 @@ export const useTable = create<TableStore>((set, get) => {
       teardown();
       const { rt } = useApp.getState();
       if (!rt) return;
-      set({ campaignId: campaign.id, role: 'player', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {} });
+      set({ campaignId: campaign.id, role: 'player', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {}, editorSceneId: null });
       let hostId = campaign.session?.hostId ?? campaign.gmId;
       let retries = 0;
       let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -370,7 +375,7 @@ export const useTable = create<TableStore>((set, get) => {
 
     leave() {
       teardown();
-      set({ campaignId: null, role: null, phase: 'idle', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {} });
+      set({ campaignId: null, role: null, phase: 'idle', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {}, editorSceneId: null });
     },
 
     dispatch(action) {

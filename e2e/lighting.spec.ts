@@ -19,27 +19,30 @@ test('walls, doors, props and dynamic light', async () => {
   await expect(G.getByTitle('Aggiungi token')).toBeVisible();
   // close the dock to have room
   const box = (await G.locator('.board canvas').boundingBox())!;
-  // GM: a room with walls via "Stanza", and a door
-  await G.getByTitle('Muri e porte (W)').click();
-  await G.getByRole('button', { name: 'Stanza' }).click();
+  // GM: the map editor, a room with walls via "Stanza", and a door
+  await G.keyboard.press('w');
+  const ed = G.getByRole('complementary', { name: 'Editor mappa' });
+  await expect(ed).toBeVisible();
+  await ed.getByRole('radio', { name: 'Stanza' }).click();
   const at = (fx: number, fy: number) => ({ x: box.x + box.width * fx, y: box.y + box.height * fy });
   let a = at(0.2, 0.2), b = at(0.6, 0.75);
   await G.mouse.move(a.x, a.y); await G.mouse.down(); await G.mouse.move(b.x, b.y, { steps: 5 }); await G.mouse.up();
   // an inner wall with a door
-  await G.getByRole('button', { name: 'Linea' }).click();
+  await ed.getByRole('radio', { name: 'Linea' }).click();
   a = at(0.4, 0.2); b = at(0.4, 0.45);
   await G.mouse.click(a.x, a.y); await G.mouse.click(b.x, b.y); await G.keyboard.press('Escape');
-  await G.getByRole('button', { name: 'Porta' }).click();
-  await G.getByLabel('Nuove porte').selectOption('locked');
+  await ed.getByRole('radio', { name: 'Porta' }).click();
+  await ed.getByRole('radio', { name: 'A chiave' }).click();
+  await ed.getByRole('radio', { name: 'Linea' }).click();
   a = at(0.4, 0.45); b = at(0.4, 0.55);
   await G.mouse.click(a.x, a.y); await G.mouse.click(b.x, b.y); await G.keyboard.press('Escape');
-  await G.getByRole('button', { name: 'Muro', exact: true }).click();
+  await ed.getByRole('radio', { name: 'Muro', exact: true }).click();
   a = at(0.4, 0.55); b = at(0.4, 0.75);
   await G.mouse.click(a.x, a.y); await G.mouse.click(b.x, b.y); await G.keyboard.press('Escape');
   // props
-  await G.getByTitle('Oggetti di scena (O)').click();
+  await G.keyboard.press('o');
   for (const [name, fx, fy] of [['Falò', 0.5, 0.35], ['Colonna', 0.3, 0.6], ['Tavolo', 0.28, 0.3], ['Forziere', 0.55, 0.65], ['Albero', 0.75, 0.4], ['Barile', 0.32, 0.4]] as const) {
-    await G.locator('.props-palette').getByRole('button', { name, exact: true }).click();
+    await ed.getByRole('radio', { name, exact: true }).click();
     const p = at(fx, fy);
     await G.mouse.click(p.x, p.y);
   }
@@ -62,6 +65,13 @@ test('walls, doors, props and dynamic light', async () => {
   await expect(G.locator('.toast', { hasText: 'Annullato: modifica dell’oggetto (2)' })).toBeVisible();
   await G.keyboard.press('Escape');
   await expect(bar).toHaveCount(0);
+  // lights and vision, still in the editor: the walls turned dynamic vision on by themselves
+  await G.keyboard.press('l');
+  await expect(ed.getByRole('switch', { name: 'Visione dinamica' })).toHaveAttribute('aria-checked', 'true');
+  await ed.getByRole('radio', { name: 'Buio', exact: true }).click();
+  // back to the game
+  await G.getByRole('button', { name: 'Fine', exact: true }).click();
+  await expect(ed).toHaveCount(0);
   // monsters: one in each room
   await G.getByTitle('Bestiario').click();
   await G.locator('.rows .r', { hasText: 'Scheletro' }).getByTitle('Aggiungi al tavolo').click();
@@ -74,11 +84,6 @@ test('walls, doors, props and dynamic light', async () => {
   await G.getByLabel('Testo sulla mappa').fill('Cripta di Varos');
   await G.getByLabel('Testo sulla mappa').press('Enter');
   await expect(G.getByLabel('Testo sulla mappa')).toHaveCount(0);
-  // lights and vision from their own tool
-  await G.getByTitle('Luci e visione (L)').click();
-  // walls turned dynamic vision on by themselves
-  await expect(G.getByRole('button', { name: /Visione dinamica attiva/ })).toBeVisible();
-  await G.getByRole('button', { name: 'Buio', exact: true }).click();
   await G.getByTitle('Seleziona e sposta (V)').click();
   await G.getByRole('button', { name: /Vista master/ }).click();
   await expect(G.getByRole('button', { name: /Vista giocatori/ })).toBeVisible();

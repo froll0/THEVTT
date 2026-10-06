@@ -27,8 +27,9 @@ test('the GM generates a playable map', async () => {
   await expect(dialog).toHaveCount(0);
   // the new scene is the active one, dark and walled
   await expect(G.locator('.table-title')).toContainText('Dungeon 1');
-  await G.getByTitle('Luci e visione (L)').click();
-  await expect(G.getByRole('button', { name: /Visione dinamica attiva/ })).toBeVisible();
+  await G.keyboard.press('l');
+  await expect(G.getByRole('complementary', { name: 'Editor mappa' }).getByRole('switch', { name: 'Visione dinamica' })).toHaveAttribute('aria-checked', 'true');
+  await G.keyboard.press('e');
   // one step to undo the whole generation
   await G.keyboard.press('Control+z');
   await expect(G.locator('.toast', { hasText: /Annullato/ })).toBeVisible();

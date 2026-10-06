@@ -173,3 +173,29 @@ export function rectCells(w: number, h: number, x0: number, y0: number, x1: numb
     for (let x = Math.max(0, Math.min(x0, x1)); x <= Math.min(w - 1, Math.max(x0, x1)); x++) out.push(y * w + x);
   return out;
 }
+
+/** Cells along a straight stroke from (fx, fy) to (tx, ty), in cells, with a brush of `size`. */
+export function lineCells(w: number, h: number, fx: number, fy: number, tx: number, ty: number, size: number): number[] {
+  const out = new Set<number>();
+  const steps = Math.max(1, Math.ceil(Math.hypot(tx - fx, ty - fy) * 2));
+  for (let i = 0; i <= steps; i++) for (const c of brushCells(w, h, fx + ((tx - fx) * i) / steps, fy + ((ty - fy) * i) / steps, size)) out.add(c);
+  return [...out];
+}
+
+/** Cells inside the ellipse that fits the box of cells (x0, y0)–(x1, y1), corners included. */
+export function ellipseCells(w: number, h: number, x0: number, y0: number, x1: number, y1: number): number[] {
+  const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)];
+  const [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
+  const cx = (ax + bx + 1) / 2;
+  const cy = (ay + by + 1) / 2;
+  const rx = (bx - ax + 1) / 2;
+  const ry = (by - ay + 1) / 2;
+  const out: number[] = [];
+  for (let y = Math.max(0, ay); y <= Math.min(h - 1, by); y++)
+    for (let x = Math.max(0, ax); x <= Math.min(w - 1, bx); x++) {
+      const dx = (x + 0.5 - cx) / rx;
+      const dy = (y + 0.5 - cy) / ry;
+      if (dx * dx + dy * dy <= 1.0001) out.push(y * w + x);
+    }
+  return out;
+}

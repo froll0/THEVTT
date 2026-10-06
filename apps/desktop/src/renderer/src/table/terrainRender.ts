@@ -435,3 +435,19 @@ export class TerrainLayer {
     }
   }
 }
+
+const samples = new Map<string, HTMLCanvasElement>();
+/** A tile of one ground, 4 × 4 cells at 32 px: the texture of previews and palettes. */
+export function terrainSample(code: string): HTMLCanvasElement {
+  let c = samples.get(code);
+  if (!c) {
+    // painted on a bigger map and cut out of the middle, so the tile has no edges
+    const big = renderTerrain(code.repeat(64), 8, 8, 11, 32);
+    c = document.createElement('canvas');
+    c.width = 128;
+    c.height = 128;
+    c.getContext('2d')!.drawImage(big, 64, 64, 128, 128, 0, 0, 128, 128);
+    samples.set(code, c);
+  }
+  return c;
+}

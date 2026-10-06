@@ -572,7 +572,7 @@ const sharedLabel = (n: Note, players: Record<string, { displayName: string }>, 
   n.shared === 'all' ? 'Tutti' : n.shared === 'private' ? 'Privata' : n.shared.map((id) => players[id]?.displayName ?? '?').join(', ') || (isGm ? 'Privata' : 'Al master');
 
 /** Lines a map's own grid up with the table's: pixels per square, shift, scene size. */
-function MapAlignment({ scene }: { scene: Scene }) {
+export function MapAlignment({ scene }: { scene: Scene }) {
   const { dispatch, assets } = useTable();
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const src = scene.background ? assets[scene.background] : undefined;

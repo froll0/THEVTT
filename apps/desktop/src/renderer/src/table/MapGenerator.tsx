@@ -23,7 +23,7 @@ const SCENE_UNITS = { cellDistance: 1.5, unit: 'm' as const };
 const randomSeed = () => Math.floor(Math.random() * 2 ** 31);
 
 /** The GM picks a kind of place and gets a playable scene: picture, walls, doors, lights and scenery. */
-export function MapGenerator({ onClose }: { onClose: () => void }) {
+export function MapGenerator({ onClose, activate = true, onCreated }: { onClose: () => void; activate?: boolean; onCreated?: (sceneId: string) => void }) {
   const { dispatch, state } = useTable();
   const [kind, setKind] = useState<MapKind>('dungeon');
   const [size, setSize] = useState<(typeof SIZES)[number]['id']>('m');
@@ -76,7 +76,7 @@ export function MapGenerator({ onClose }: { onClose: () => void }) {
     const id = sceneId;
     const actions: GameAction[] = [
       { type: 'scene.create', name: sceneName, id },
-      { type: 'scene.activate', sceneId: id },
+      ...(activate ? [{ type: 'scene.activate' as const, sceneId: id }] : []),
       {
         type: 'scene.update',
         sceneId: id,
@@ -86,14 +86,15 @@ export function MapGenerator({ onClose }: { onClose: () => void }) {
       { type: 'terrain.set', sceneId: id, terrain },
     ];
     const doors = map.walls.filter((w) => w.kind === 'door');
-    if (doors.length) actions.push({ type: 'wall.create', walls: doors.map((w) => ({ ...w })) });
+    if (doors.length) actions.push({ type: 'wall.create', sceneId: id, walls: doors.map((w) => ({ ...w })) });
     for (const p of map.props) {
       const k = propKind(p.kind);
       if (!k) continue;
       const light = k.light ? { bright: metresToCells(SCENE_UNITS, k.light.bright), dim: metresToCells(SCENE_UNITS, k.light.dim), color: k.light.color } : null;
-      actions.push({ type: 'prop.create', prop: { kind: k.id, x: p.x, y: p.y, w: k.w, h: k.h, light, blocksVision: !!k.blocksVision } });
+      actions.push({ type: 'prop.create', sceneId: id, prop: { kind: k.id, x: p.x, y: p.y, w: k.w, h: k.h, light, blocksVision: !!k.blocksVision } });
     }
     dispatch({ type: 'batch', actions });
+    onCreated?.(id);
     onClose();
   };
 
@@ -162,7 +163,7 @@ export function MapGenerator({ onClose }: { onClose: () => void }) {
             )}
           </div>
           <p className="faint tiny">
-            {map.width} × {map.height} caselle · {map.walls.filter((w) => w.kind === 'wall').length} muri · {map.walls.filter((w) => w.kind === 'door').length} porte · {map.props.length} oggetti. La scena nuova diventa quella attiva e si può ritoccare col pennello (B).
+            {map.width} × {map.height} caselle · {map.walls.filter((w) => w.kind === 'wall').length} muri · {map.walls.filter((w) => w.kind === 'door').length} porte · {map.props.length} oggetti. {activate ? 'La scena nuova diventa quella attiva. ' : ''}Si può ritoccare nell’editor.
           </p>
         </div>
       </div>
