@@ -257,6 +257,8 @@ export interface GameState {
   props?: Record<string, Prop>;
   /** set by the GM: players can talk and roll, but not touch the map */
   paused?: boolean;
+  /** what the GM can undo/redo right now (labels of the steps, latest first) */
+  history?: { undo: string[]; redo: string[] };
 }
 
 export function emptyMusic(): MusicState {
@@ -344,6 +346,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     walls: Object.fromEntries(Object.entries(state.walls ?? {}).filter(([, w]) => w.sceneId === state.activeSceneId)),
     props: Object.fromEntries(Object.entries(state.props ?? {}).filter(([, p]) => p.sceneId === state.activeSceneId && !p.hidden)),
     gmNotes: '',
+    history: undefined,
   });
 }
 

@@ -20,6 +20,44 @@ import {
 
 export type ActionResult = { ok: true } | { ok: false; reason: string };
 
+/** The map collections a GM action may change, for undo. */
+type UndoCol = 'tokens' | 'walls' | 'props' | 'drawings' | 'templates' | 'scenes';
+const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: string }>> = {
+  'token.create': { cols: ['tokens'], label: 'nuovo token' },
+  'token.move': { cols: ['tokens'], label: 'spostamento' },
+  'token.update': { cols: ['tokens'], label: 'modifica del token' },
+  'token.delete': { cols: ['tokens'], label: 'token eliminato' },
+  'wall.create': { cols: ['walls', 'scenes'], label: 'muri' },
+  'wall.update': { cols: ['walls'], label: 'porta' },
+  'wall.delete': { cols: ['walls'], label: 'muro eliminato' },
+  'wall.clear': { cols: ['walls'], label: 'muri eliminati' },
+  'prop.create': { cols: ['props'], label: 'nuovo oggetto' },
+  'prop.update': { cols: ['props'], label: 'modifica dell’oggetto' },
+  'prop.delete': { cols: ['props'], label: 'oggetto eliminato' },
+  'drawing.create': { cols: ['drawings'], label: 'disegno' },
+  'drawing.delete': { cols: ['drawings'], label: 'disegno cancellato' },
+  'drawing.clear': { cols: ['drawings'], label: 'disegni cancellati' },
+  'template.create': { cols: ['templates'], label: 'area' },
+  'template.delete': { cols: ['templates'], label: 'area eliminata' },
+  'template.clear': { cols: ['templates'], label: 'aree eliminate' },
+  'fog.enable': { cols: ['scenes'], label: 'nebbia' },
+  'fog.paint': { cols: ['scenes'], label: 'nebbia' },
+  'fog.fill': { cols: ['scenes'], label: 'nebbia' },
+  'scene.update': { cols: ['scenes'], label: 'modifica della scena' },
+};
+const HISTORY_LIMIT = 50;
+/** what `apply` returns when the state changed and must go out */
+const COMMIT: ActionResult = { ok: true };
+/**
+ * One step: each changed entity and what it was before. A whole value for
+ * things created or deleted (undefined: it didn't exist), only the changed
+ * fields otherwise, so whatever else changed meanwhile (a player's move) stays.
+ */
+interface Step {
+  label: string;
+  changes: { col: UndoCol; id: string; value?: unknown; fields?: Record<string, unknown> }[];
+}
+
 export interface GameHostOptions {
   state: GameState;
   assets?: Record<string, string>;
@@ -192,7 +230,104 @@ export class GameHost {
     }
   }
 
+  private undoStack: Step[] = [];
+  private redoStack: Step[] = [];
+
   dispatch(from: string, action: GameAction): ActionResult {
+    const s = this._state;
+    if (action.type === 'game.undo' || action.type === 'game.redo') {
+      if (from !== s.gmId) return { ok: false, reason: 'Solo il master può farlo' };
+      const from_ = action.type === 'game.undo' ? this.undoStack : this.redoStack;
+      const to = action.type === 'game.undo' ? this.redoStack : this.undoStack;
+      const step = from_.pop();
+      if (!step) return { ok: false, reason: action.type === 'game.undo' ? 'Niente da annullare' : 'Niente da ripetere' };
+      to.push(this.applyStep(step));
+      this.syncHistory();
+      this.commit();
+      return { ok: true };
+    }
+    const scope = from === s.gmId ? UNDO_SCOPE[action.type] : undefined;
+    const before = scope ? this.capture(scope.cols) : null;
+    const res = this.apply(from, action);
+    if (res === COMMIT) {
+      if (scope && before) {
+        const changes = this.diff(before);
+        if (changes.length) {
+          this.undoStack.push({ label: scope.label, changes });
+          if (this.undoStack.length > HISTORY_LIMIT) this.undoStack.shift();
+          this.redoStack = [];
+          this.syncHistory();
+        }
+      }
+      this.commit();
+      return { ok: true };
+    }
+    return res;
+  }
+
+  private collection(col: UndoCol): Record<string, unknown> {
+    const s = this._state as unknown as Record<UndoCol, Record<string, unknown> | undefined>;
+    return (s[col] ??= {});
+  }
+
+  /** The current value of each entity in these collections, frozen as JSON. */
+  private capture(cols: UndoCol[]): Map<UndoCol, Map<string, string>> {
+    const out = new Map<UndoCol, Map<string, string>>();
+    for (const col of cols) out.set(col, new Map(Object.entries(this.collection(col)).map(([id, v]) => [id, JSON.stringify(v)])));
+    return out;
+  }
+
+  private diff(before: Map<UndoCol, Map<string, string>>): Step['changes'] {
+    const changes: Step['changes'] = [];
+    for (const [col, prev] of before) {
+      const now = this.collection(col);
+      for (const [id, json] of prev) {
+        if (!(id in now)) changes.push({ col, id, value: JSON.parse(json) });
+        else if (JSON.stringify(now[id]) !== json) {
+          const was = JSON.parse(json) as Record<string, unknown>;
+          const is = now[id] as Record<string, unknown>;
+          const fields: Record<string, unknown> = {};
+          for (const k of new Set([...Object.keys(was), ...Object.keys(is)])) if (JSON.stringify(was[k]) !== JSON.stringify(is[k])) fields[k] = was[k];
+          changes.push({ col, id, fields });
+        }
+      }
+      for (const id of Object.keys(now)) if (!prev.has(id)) changes.push({ col, id, value: undefined });
+    }
+    return changes;
+  }
+
+  /** Puts the values of a step back, returning the step that reverses it. */
+  private applyStep(step: Step): Step {
+    const inverse: Step = { label: step.label, changes: [] };
+    for (const c of step.changes) {
+      const col = this.collection(c.col);
+      // a scene deleted since then stays deleted: its things would float nowhere
+      if (c.col !== 'scenes' && c.value && !this._state.scenes[(c.value as { sceneId: string }).sceneId]) continue;
+      if (c.col === 'scenes' && !col[c.id]) continue;
+      if (c.fields) {
+        const cur = col[c.id] as Record<string, unknown> | undefined;
+        if (!cur) continue;
+        const back: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(c.fields)) {
+          back[k] = cur[k] === undefined ? undefined : structuredClone(cur[k]);
+          if (v === undefined) delete cur[k];
+          else cur[k] = structuredClone(v);
+        }
+        inverse.changes.push({ col: c.col, id: c.id, fields: back });
+        continue;
+      }
+      inverse.changes.push({ col: c.col, id: c.id, value: col[c.id] === undefined ? undefined : structuredClone(col[c.id]) });
+      if (c.value === undefined) delete col[c.id];
+      else col[c.id] = structuredClone(c.value);
+    }
+    return inverse;
+  }
+
+  private syncHistory(): void {
+    this._state.history = { undo: this.undoStack.map((st) => st.label).reverse().slice(0, 5), redo: this.redoStack.map((st) => st.label).reverse().slice(0, 5) };
+  }
+
+  private apply(from: string, action: Exclude<GameAction, { type: 'game.undo' } | { type: 'game.redo' }>): ActionResult {
     const s = this._state;
     const isGm = from === s.gmId;
     const player = s.players[from];
@@ -794,8 +929,7 @@ export class GameHost {
         return { ok: false, reason: `Azione sconosciuta ${(_exhaustive as { type: string }).type}` };
       }
     }
-    this.commit();
-    return { ok: true };
+    return COMMIT;
   }
 
   addAsset(dataUrl: string): string {

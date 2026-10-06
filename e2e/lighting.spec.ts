@@ -46,6 +46,11 @@ test('walls, doors, props and dynamic light', async () => {
     const p = at(fx, fy);
     await G.mouse.click(p.x, p.y);
   }
+  // the GM takes back the last barrel, then puts it back
+  await G.keyboard.press('Control+z');
+  await expect(G.locator('.toast', { hasText: 'Annullato: nuovo oggetto' })).toBeVisible();
+  await G.getByRole('button', { name: 'Ripeti' }).click();
+  await expect(G.locator('.toast', { hasText: 'Ripetuto: nuovo oggetto' })).toBeVisible();
   // monsters: one in each room
   await G.getByTitle('Bestiario').click();
   await G.locator('.rows .r', { hasText: 'Scheletro' }).getByTitle('Aggiungi al tavolo').click();

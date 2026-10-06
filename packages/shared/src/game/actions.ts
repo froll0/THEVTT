@@ -47,6 +47,9 @@ export type GameAction =
   | { type: 'music.play'; trackId?: string; position?: number }
   | { type: 'music.pause' }
   | { type: 'game.pause'; paused: boolean }
+  /** GM: take back (or redo) their last change to the map */
+  | { type: 'game.undo' }
+  | { type: 'game.redo' }
   | { type: 'music.seek'; position: number }
   | { type: 'music.loop'; loop: boolean }
   | { type: 'music.remove'; trackId: string }

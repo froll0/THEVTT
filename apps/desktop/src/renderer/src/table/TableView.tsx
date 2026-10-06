@@ -1,5 +1,5 @@
 import { getSystem } from '@thevtt/systems';
-import { Armchair, ArrowLeft, BookText, Magnet, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Armchair, ArrowLeft, BookText, Magnet, Redo2, Undo2, Pause, Play, Lightbulb, Type, ArrowLeftRight, BrickWall, DoorOpen, Eraser, Eye, Library, Music, Pencil, RectangleHorizontal, Spline, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -46,6 +46,13 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const [dockOpen, setDockOpen] = useState(true);
   const cameraRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
   const { windows, open: openWindow, closeAll } = useWindows();
+  const undoRedo = (which: 'undo' | 'redo') => {
+    const t = useTable.getState();
+    const label = t.state?.history?.[which][0];
+    if (!label) return;
+    t.dispatch({ type: which === 'undo' ? 'game.undo' : 'game.redo' });
+    useApp.getState().toast(`${which === 'undo' ? 'Annullato' : 'Ripetuto'}: ${label}`);
+  };
   // windows belong to this table
   useEffect(() => closeAll, [campaignId, closeAll]);
   const isGm = campaign?.gmId === user?.id;
@@ -59,7 +66,16 @@ export function TableView({ campaignId }: { campaignId: string }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest('input, textarea, select')) return;
+      if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return;
+      // the GM takes back changes to the map
+      if ((e.ctrlKey || e.metaKey) && useTable.getState().role === 'gm') {
+        const k = e.key.toLowerCase();
+        if (k === 'z' || k === 'y') {
+          e.preventDefault();
+          undoRedo(k === 'y' || e.shiftKey ? 'redo' : 'undo');
+        }
+        return;
+      }
       if (e.key === 'v') setTool('select');
       if (e.key === 'm') setTool('measure');
       if (e.key === 'p') setTool('ping');
@@ -220,6 +236,13 @@ export function TableView({ campaignId }: { campaignId: string }) {
                     }}
                   >
                     <UserRoundPlus size={16} />
+                  </button>
+                  <span className="sep" />
+                  <button className="tool" disabled={!state.history?.undo.length} onClick={() => undoRedo('undo')} title={state.history?.undo.length ? `Annulla: ${state.history.undo[0]} (Ctrl+Z)` : 'Niente da annullare'} aria-label="Annulla">
+                    <Undo2 size={16} />
+                  </button>
+                  <button className="tool" disabled={!state.history?.redo.length} onClick={() => undoRedo('redo')} title={state.history?.redo.length ? `Ripeti: ${state.history.redo[0]} (Ctrl+Y)` : 'Niente da ripetere'} aria-label="Ripeti">
+                    <Redo2 size={16} />
                   </button>
                 </>
               )}

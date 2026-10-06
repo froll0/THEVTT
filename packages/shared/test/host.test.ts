@@ -410,3 +410,38 @@ describe('monster pictures', () => {
     expect(Object.values(host.state.tokens).find((t) => t.name === 'Lia')!.image).toBeNull();
   });
 });
+
+describe('undo for the GM', () => {
+  it('takes back the GM’s last changes, step by step, and redoes them', () => {
+    const { host, lastState } = setup();
+    host.dispatch('gm', { type: 'wall.create', walls: [{ x1: 0, y1: 0, x2: 4, y2: 0, kind: 'wall' }, { x1: 4, y1: 0, x2: 4, y2: 4, kind: 'wall' }] });
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Orco', x: 2, y: 2 } });
+    const orc = Object.values(host.state.tokens)[0]!;
+    host.dispatch('gm', { type: 'token.move', tokenId: orc.id, x: 6, y: 6 });
+    host.dispatch('gm', { type: 'wall.clear' });
+    expect(Object.keys(host.state.walls!)).toHaveLength(0);
+    expect(host.state.history?.undo[0]).toBe('muri eliminati');
+
+    expect(host.dispatch('gm', { type: 'game.undo' }).ok).toBe(true);
+    expect(Object.keys(host.state.walls!)).toHaveLength(2);
+    host.dispatch('gm', { type: 'game.undo' });
+    expect(host.state.tokens[orc.id]).toMatchObject({ x: 2, y: 2 });
+    host.dispatch('gm', { type: 'game.redo' });
+    expect(host.state.tokens[orc.id]).toMatchObject({ x: 6, y: 6 });
+    // players can't, and never see the history
+    expect(host.dispatch('p1', { type: 'game.undo' }).ok).toBe(false);
+    expect(lastState('p1').history).toBeUndefined();
+  });
+
+  it('leaves the players’ moves alone', () => {
+    const { host } = setup();
+    host.dispatch('p1', { type: 'token.create', token: { name: 'Lia', characterId: 'ch1', x: 1, y: 1 } });
+    const lia = Object.values(host.state.tokens)[0]!;
+    host.dispatch('gm', { type: 'token.update', tokenId: lia.id, patch: { conditions: ['Prono'] } });
+    host.dispatch('p1', { type: 'token.move', tokenId: lia.id, x: 3, y: 1 });
+    host.dispatch('gm', { type: 'game.undo' });
+    // the GM's change is gone, the player's move stays
+    expect(host.state.tokens[lia.id]).toMatchObject({ conditions: [], x: 3 });
+    expect(host.dispatch('gm', { type: 'game.undo' })).toEqual({ ok: false, reason: 'Niente da annullare' });
+  });
+});

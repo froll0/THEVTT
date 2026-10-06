@@ -914,3 +914,8 @@ body.dragging-window * {
   flex: 1;
   width: auto;
 }
+.tool:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: none;
+}
