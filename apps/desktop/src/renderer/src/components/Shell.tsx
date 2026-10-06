@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Bell, Check, LogOut, Maximize2, Minus, Radio, Settings, X } from 'lucide-react';
+import { ArrowDownToLine, Bell, CloudOff, Check, LogOut, Maximize2, Minus, Radio, Settings, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { bridge } from '../lib/platform';
 import { unreadOf, useChat } from '../store/chat';
@@ -199,7 +199,7 @@ function HostingIndicator() {
 
 /** Window top bar. With children (table), nav is replaced by them. */
 export function TopBar({ children, nav = true }: { children?: ReactNode; nav?: boolean }) {
-  const { route, go, user, status, sessions } = useApp();
+  const { route, go, user, status, sessions, offlineSince } = useApp();
   const mac = bridge?.platform === 'darwin';
   const live = Object.keys(sessions).length > 0;
   const unread = useChat((s) => s.unread);
@@ -226,10 +226,20 @@ export function TopBar({ children, nav = true }: { children?: ReactNode; nav?: b
       <div className="spacer" />
       {user && (
         <div className="actions">
-          {status !== 'online' && (
-            <span className="row small muted" title="Connessione al server">
-              <span className={`status-dot ${status}`} /> {status === 'connecting' ? 'Connessione…' : 'Offline'}
+          {offlineSince !== null ? (
+            <span
+              className="offline-pill"
+              role="status"
+              title="Il server del gruppo non è raggiungibile (il PC del master è spento?). Stai vedendo l’ultima copia salvata su questo computer. Nel Diario puoi continuare a scrivere: le pagine partono da sole appena il server torna."
+            >
+              <CloudOff size={13} /> Copia locale · {new Date(offlineSince).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
             </span>
+          ) : (
+            status !== 'online' && (
+              <span className="row small muted" title="Connessione al server">
+                <span className={`status-dot ${status}`} /> {status === 'connecting' ? 'Connessione…' : 'Offline'}
+              </span>
+            )
           )}
           <UpdateButton />
           <HostingIndicator />

@@ -1,8 +1,5 @@
 ## Novità
 
-- **Backup**: in Impostazioni › Backup salvi in un file tutto quello che è sul tuo PC (account, campagne, personaggi, diari, chat, mappe e tavoli, creature, codice del gruppo) e lo ripristini su qualsiasi computer. In più, un backup automatico al giorno (gli ultimi sette).
-- **Annulla e ripeti per il master**: Ctrl+Z / Ctrl+Y (o i pulsanti nella barra degli strumenti) per token, muri, porte, oggetti, disegni, aree, nebbia e scena. Le mosse dei giocatori nel frattempo restano.
-- **Selezione multipla**: Shift+clic o Shift+trascina per selezionare più token e oggetti; trascinandone uno si spostano tutti, e puoi nasconderli o eliminarli insieme.
-- **Note e Diario**: al tavolo le note dei giocatori sono per il master o per il gruppo; gli appunti personali vanno nel Diario (quelli vecchi vengono spostati da soli).
-- **Scorciatoie**: premi ? al tavolo (o il pulsante con la tastiera) per l’elenco completo.
-- **Correzioni**: Esc ora chiude sempre le finestre di dialogo al tavolo; scrivendo in una nota, Canc non cancella più il token selezionato.
+- **Nuovo stile "Vetro"**: un aspetto ispirato agli ultimi sistemi Apple, con pannelli in vetro traslucido, controlli a capsula, liste raggruppate come nelle Impostazioni di macOS, animazioni morbide e un nuovo carattere (San Francisco su Mac, Inter altrove). Segue il tema chiaro o scuro del sistema; gli altri temi restano disponibili in Impostazioni › Aspetto.
+- **Copia locale per i giocatori**: se il PC del master è spento, l'app mostra l'ultima copia salvata di campagne, personaggi, riassunti, chat e diario (in alto compare "Copia locale"). Il diario resta scrivibile: le pagine si inviano da sole quando il master torna online.
+- **Correzione**: avviare l'app con il server del master spento non scollega più l'account.

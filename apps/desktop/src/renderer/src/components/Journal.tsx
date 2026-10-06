@@ -42,6 +42,16 @@ export function Journal({ campaignId, narrow }: { campaignId?: string | null; na
     };
   }, [api]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // pages written offline reach the server: reload, and follow the open one to its new id
+  useEffect(() => {
+    const onSynced = () => {
+      setOpenId((id) => (id ? api.journalId(id) : id));
+      void api.journal().then(setEntries).catch(() => undefined);
+    };
+    window.addEventListener('thevtt:journal-synced', onSynced);
+    return () => window.removeEventListener('thevtt:journal-synced', onSynced);
+  }, [api]);
+
   const saved = useCallback((e: JournalEntry) => setEntries((list) => (list ?? []).map((x) => (x.id === e.id ? e : x)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))), []);
 
   const create = () =>

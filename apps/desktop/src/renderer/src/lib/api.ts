@@ -14,6 +14,8 @@ import type {
   UserPublic,
 } from '@thevtt/shared';
 
+import { isLocalId, type OfflineCache } from './offline';
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -24,6 +26,9 @@ export class ApiError extends Error {
 }
 
 export class Api {
+  private cache: OfflineCache | null = null;
+  private onReach: ((offlineSince: number | null) => void) | null = null;
+
   constructor(
     readonly baseUrl: string,
     private token: string | null = null,
@@ -32,6 +37,12 @@ export class Api {
 
   setToken(token: string | null): void {
     this.token = token;
+  }
+
+  /** Keeps a local copy of what the server says, and answers from it when the server can't. */
+  useOfflineCache(cache: OfflineCache, onReach: (offlineSince: number | null) => void): void {
+    this.cache = cache;
+    this.onReach = onReach;
   }
 
   get wsUrl(): string {
@@ -50,12 +61,25 @@ export class Api {
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
     } catch {
-      throw new ApiError(0, `Server non raggiungibile (${this.baseUrl})`);
+      // the GM's computer is off: what we saw last time, if we have it
+      if (method === 'GET' && this.cache && this.token) {
+        await this.cache.ready;
+        const hit = this.cache.get<T>(path);
+        if (hit) {
+          this.onReach?.(hit.savedAt);
+          return hit.value;
+        }
+      }
+      throw new ApiError(0, method === 'GET' ? `Server non raggiungibile (${this.baseUrl})` : 'Il server del gruppo non è raggiungibile: la modifica non è stata salvata');
     }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       if (res.status === 401 && this.token) this.onUnauthorized?.();
       throw new ApiError(res.status, (data as { message?: string }).message ?? `Errore ${res.status}`);
+    }
+    if (this.cache && this.token) {
+      if (method === 'GET' && this.cache.keeps(path)) this.cache.put(path, data);
+      this.onReach?.(null);
     }
     return data as T;
   }
@@ -109,8 +133,73 @@ export class Api {
   deleteRecap = (campaignId: string, id: string) => this.req('DELETE', `/campaigns/${campaignId}/recaps/${id}`);
 
   journal = () => this.req<JournalEntry[]>('GET', '/journal');
-  createJournal = (body: { title?: string; body?: string; campaignId?: string | null }) => this.req<JournalEntry>('POST', '/journal', body);
-  updateJournal = (id: string, patch: { title?: string; body?: string; campaignId?: string | null }) =>
-    this.req<JournalEntry>('PATCH', `/journal/${id}`, patch);
-  deleteJournal = (id: string) => this.req('DELETE', `/journal/${id}`);
+  /** a page's current id: pages written offline get the server's id once sent */
+  journalId = (id: string) => this.cache?.realId(id) ?? id;
+
+  // the journal can be written offline: pages wait in the outbox
+  private offlineOr<T>(online: () => Promise<T>, offline: () => T, local = false): Promise<T> {
+    if (local && this.cache) return Promise.resolve(offline());
+    return online().catch((e: unknown) => {
+      if (e instanceof ApiError && e.status === 0 && this.cache) return offline();
+      throw e;
+    });
+  }
+  createJournal = (body: { title?: string; body?: string; campaignId?: string | null }) =>
+    this.offlineOr(
+      () => this.req<JournalEntry>('POST', '/journal', body),
+      () => this.cache!.queueCreate(body),
+    );
+  updateJournal = (pageId: string, patch: { title?: string; body?: string; campaignId?: string | null }) => {
+    const id = this.cache?.realId(pageId) ?? pageId;
+    return this.offlineOr(
+      () => this.req<JournalEntry>('PATCH', `/journal/${id}`, patch),
+      () => this.cache!.queueUpdate(id, patch),
+      isLocalId(id),
+    );
+  };
+  deleteJournal = (pageId: string) => {
+    const id = this.cache?.realId(pageId) ?? pageId;
+    return this.offlineOr(
+      () => this.req('DELETE', `/journal/${id}`),
+      () => this.cache!.queueDelete(id),
+      isLocalId(id),
+    );
+  };
+
+  /** Sends the journal pages written offline. Returns how many changes went out. */
+  async syncOutbox(): Promise<number> {
+    const cache = this.cache;
+    if (!cache?.pending) return 0;
+    const ops = cache.outbox();
+    const realIds = new Map<string, string>();
+    let sent = 0;
+    let i = 0;
+    for (; i < ops.length; i++) {
+      const o = ops[i]!;
+      try {
+        if (o.op === 'create') {
+          const real = (await this.req<JournalEntry>('POST', '/journal', o.body)).id;
+          realIds.set(o.localId, real);
+          cache.mapId(o.localId, real);
+        } else {
+          const id = realIds.get(o.id) ?? cache.realId(o.id);
+          if (isLocalId(id)) continue;
+          if (o.op === 'update') await this.req('PATCH', `/journal/${id}`, o.patch);
+          else await this.req('DELETE', `/journal/${id}`);
+        }
+        sent++;
+      } catch (e) {
+        // still offline: the rest waits; any other refusal (a page deleted elsewhere) is dropped
+        if (e instanceof ApiError && e.status === 0) break;
+      }
+    }
+    // whatever was written while sending stays in line after what's left
+    const added = cache.outbox().filter((o) => !ops.includes(o));
+    cache.setOutbox([...ops.slice(i), ...added]);
+    if (sent) {
+      await this.journal().catch(() => undefined);
+      window.dispatchEvent(new CustomEvent('thevtt:journal-synced'));
+    }
+    return sent;
+  }
 }

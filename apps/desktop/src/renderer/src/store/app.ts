@@ -1,6 +1,7 @@
 import type { Campaign, CampaignInvite, CharacterRecord, FriendEntry, Notification, SessionInfo, UserPublic } from '@thevtt/shared';
 import { create } from 'zustand';
-import { Api } from '../lib/api';
+import { Api, ApiError } from '../lib/api';
+import { offlineCache } from '../lib/offline';
 import { bridge } from '../lib/platform';
 import { Realtime, type ConnectionStatus } from '../lib/realtime';
 
@@ -38,6 +39,8 @@ interface AppState {
   rt: Realtime | null;
   status: ConnectionStatus;
   user: UserPublic | null;
+  /** the group's server can't be reached: when the copy on screen was saved */
+  offlineSince: number | null;
   booting: boolean;
   route: Route;
   friends: FriendEntry[];
@@ -71,7 +74,18 @@ async function lookupGroup(code: string): Promise<string | null> {
 }
 
 export const useApp = create<AppState>((set, get) => {
-  const makeApi = (url: string, token: string | null) => new Api(url, token, () => void get().logout());
+  const makeApi = (url: string, token: string | null) => {
+    const api = new Api(url, token, () => void get().logout());
+    // the copy lives with the group code when there is one: its address changes, the group doesn't
+    api.useOfflineCache(offlineCache(localStorage.getItem(GROUP_KEY) ?? url), (since) => {
+      const was = get().offlineSince;
+      if (since === null && was !== null) {
+        set({ offlineSince: null });
+        void api.syncOutbox().then((n) => n && get().toast(n === 1 ? 'Diario sincronizzato' : `Diario sincronizzato: ${n} modifiche inviate`, 'success'));
+      } else if (since !== null && (was === null || since < was)) set({ offlineSince: since });
+    });
+    return api;
+  };
 
   /** The GM restarted and got a new address: follow it, keeping the session. */
   const followGroup = async () => {
@@ -188,6 +202,7 @@ export const useApp = create<AppState>((set, get) => {
     rt: null,
     status: 'offline',
     user: null,
+    offlineSince: null,
     booting: true,
     route: { name: 'home' },
     friends: [],
@@ -206,9 +221,12 @@ export const useApp = create<AppState>((set, get) => {
         set({ user });
         connect();
         await get().refresh();
-      } catch {
-        localStorage.removeItem(TOKEN_KEY);
-        get().api.setToken(null);
+      } catch (e) {
+        // only a refused login signs out: an unreachable server (the GM's PC is off) doesn't
+        if (e instanceof ApiError && e.status === 401) {
+          localStorage.removeItem(TOKEN_KEY);
+          get().api.setToken(null);
+        } else connect();
       } finally {
         set({ booting: false });
       }
