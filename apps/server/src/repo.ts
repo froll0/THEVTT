@@ -69,7 +69,19 @@ export class Repo {
     return rows.map((r) => this.toUser(r));
   }
 
-  // ---------- friends ----------
+  // ---------- participants ----------
+
+  /** Everyone on this server (it is the group's own), online first. */
+  participants(userId: string): UserPublic[] {
+    const rows = this.db.prepare('SELECT * FROM users WHERE id != ? ORDER BY display_name COLLATE NOCASE').all(userId) as Row[];
+    return rows.map((r) => this.toUser(r)).sort((a, b) => Number(!!b.online) - Number(!!a.online));
+  }
+
+  allUserIds(): string[] {
+    return (this.db.prepare('SELECT id FROM users').all() as Row[]).map((r) => r.id as string);
+  }
+
+  // ---------- friends (kept for older clients) ----------
 
   friends(userId: string): FriendEntry[] {
     const rows = this.db
@@ -242,7 +254,8 @@ export class Repo {
       return { key: `c:${id}`, members: this.memberIds(id) };
     }
     if (kind === 'dm' && id && id !== userId) {
-      if (!this.areFriends(userId, id)) throw forbidden('Puoi scrivere solo ai tuoi amici');
+      // everyone on the group's server can write to everyone
+      this.user(id);
       const [a, b] = pair(userId, id);
       return { key: `d:${a}:${b}`, members: [userId, id] };
     }
@@ -406,7 +419,7 @@ export class Repo {
   }
 
   createInvite(campaignId: string, fromId: string, toId: string): void {
-    if (!this.areFriends(fromId, toId)) throw forbidden('Puoi invitare solo i tuoi amici');
+    this.user(toId);
     if (this.role(campaignId, toId)) throw conflict('È già nella campagna');
     try {
       this.db

@@ -8,13 +8,12 @@ import { useApp } from '../store/app';
 import { formatSession, relativeDay } from './Campaign';
 
 export function HomeView() {
-  const { user, campaigns, characters, invites, friends, api, run, refresh, go, upsertCampaign } = useApp();
+  const { user, campaigns, characters, invites, participants, api, run, refresh, go, upsertCampaign } = useApp();
   const live = campaigns.filter((c) => c.session);
   const upcoming = campaigns
     .filter((c) => c.nextSession && new Date(c.nextSession).getTime() > Date.now() - 6 * 3600_000 && !c.session)
     .sort((a, b) => a.nextSession!.localeCompare(b.nextSession!));
-  const requests = friends.filter((f) => f.status === 'pending_in');
-  const onlineFriends = friends.filter((f) => f.status === 'accepted' && f.user.online);
+  const onlinePeople = participants.filter((p) => p.online);
   const hour = new Date().getHours();
   const greeting = hour < 6 ? 'Buona notte' : hour < 13 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
 
@@ -120,7 +119,7 @@ export function HomeView() {
           </Section>
         </div>
         <aside className="dash-side">
-          {(invites.length > 0 || requests.length > 0) && (
+          {invites.length > 0 && (
             <div className="panel-card">
               <h3>Da fare</h3>
               <div className="list">
@@ -160,57 +159,25 @@ export function HomeView() {
                     </button>
                   </div>
                 ))}
-                {requests.map((f) => (
-                  <div className="list-item" key={f.user.id}>
-                    <Avatar user={f.user} size={28} presence />
-                    <div className="grow">
-                      <div className="title">{f.user.displayName}</div>
-                      <div className="meta">vuole essere tuo amico</div>
-                    </div>
-                    <button
-                      className="btn primary sm"
-                      onClick={() =>
-                        run(async () => {
-                          await api.acceptFriend(f.user.id);
-                          await refresh(['friends']);
-                        })
-                      }
-                    >
-                      <Check size={14} /> Accetta
-                    </button>
-                    <button
-                      className="btn ghost sm icon"
-                      aria-label="Rifiuta"
-                      onClick={() =>
-                        run(async () => {
-                          await api.removeFriend(f.user.id);
-                          await refresh(['friends']);
-                        })
-                      }
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
               </div>
             </div>
           )}
 
           <div className="panel-card">
             <h3>
-              Amici online <span className="faint">{onlineFriends.length}</span>
+              Partecipanti online <span className="faint">{onlinePeople.length}</span>
             </h3>
-            {onlineFriends.length ? (
+            {onlinePeople.length ? (
               <div className="col" style={{ gap: 'var(--s2)' }}>
-                {onlineFriends.map((f) => (
-                  <div key={f.user.id} className="row small">
-                    <Avatar user={f.user} size={22} presence /> {f.user.displayName}
+                {onlinePeople.map((p) => (
+                  <div key={p.id} className="row small">
+                    <Avatar user={p} size={22} presence /> {p.displayName}
                   </div>
                 ))}
               </div>
             ) : (
               <p className="faint small">
-                Nessuno online. <a onClick={() => go({ name: 'friends' })}>Amici</a>
+                Nessuno online. <a onClick={() => go({ name: 'participants' })}>Partecipanti</a>
               </p>
             )}
           </div>

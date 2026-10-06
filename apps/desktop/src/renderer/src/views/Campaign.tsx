@@ -9,7 +9,7 @@ import { Avatar, Empty, Field, Modal, Popover, readImage, Section } from '../com
 import { useApp } from '../store/app';
 
 export function CampaignView({ id }: { id: string }) {
-  const { campaigns, user, friends, characters, api, run, go, upsertCampaign, refresh } = useApp();
+  const { campaigns, user, participants, characters, api, run, go, upsertCampaign, refresh } = useApp();
   const campaign = campaigns.find((c) => c.id === id);
   const [seated, setSeated] = useState<CharacterRecord[]>([]);
   const [editing, setEditing] = useState(false);
@@ -46,7 +46,7 @@ export function CampaignView({ id }: { id: string }) {
   const me = campaign.members.find((m) => m.user.id === user.id);
   const memberIds = new Set(campaign.members.map((m) => m.user.id));
   const invitedIds = new Set(campaign.pendingInvites.map((i) => i.user.id));
-  const invitable = friends.filter((f) => f.status === 'accepted' && !memberIds.has(f.user.id) && !invitedIds.has(f.user.id));
+  const invitable = participants.filter((p) => !memberIds.has(p.id) && !invitedIds.has(p.id));
   const myCharacters = characters.filter((c) => c.systemId === campaign.systemId);
   const live = !!campaign.session;
   const gm = campaign.members.find((m) => m.role === 'gm');
@@ -259,19 +259,15 @@ export function CampaignView({ id }: { id: string }) {
               <h3>Invita</h3>
               {invitable.length ? (
                 <div className="row wrap">
-                  {invitable.map((f) => (
-                    <button
-                      key={f.user.id}
-                      className="chip"
-                      onClick={() => run(async () => upsertCampaign(await api.invite(campaign.id, f.user.id)), `Invito inviato a ${f.user.displayName}`)}
-                    >
-                      <Avatar user={f.user} size={18} presence /> {f.user.displayName} <Plus size={13} />
+                  {invitable.map((p) => (
+                    <button key={p.id} className="chip" onClick={() => run(async () => upsertCampaign(await api.invite(campaign.id, p.id)), `Invito inviato a ${p.displayName}`)}>
+                      <Avatar user={p} size={18} presence /> {p.displayName} <Plus size={13} />
                     </button>
                   ))}
                 </div>
               ) : (
                 <p className="muted small">
-                  Nessun amico da invitare. <a onClick={() => go({ name: 'friends' })}>Aggiungi amici</a>
+                  {participants.length ? 'Tutti i partecipanti sono già in questa campagna.' : 'Nessun altro partecipante su questo server: condividi il codice del gruppo per farli entrare.'}
                 </p>
               )}
             </div>

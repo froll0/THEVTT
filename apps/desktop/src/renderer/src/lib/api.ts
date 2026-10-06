@@ -5,7 +5,6 @@ import type {
   CharacterRecord,
   ChatMessage,
   CreateCampaignRequest,
-  FriendEntry,
   JournalEntry,
   SessionRecap,
   RsvpAnswer,
@@ -93,11 +92,8 @@ export class Api {
   me = () => this.req<UserPublic>('GET', '/me');
   updateMe = (patch: { displayName?: string; avatarColor?: string; avatar?: string | null }) => this.req<UserPublic>('PATCH', '/me', patch);
 
-  searchUsers = (q: string) => this.req<UserPublic[]>('GET', `/users/search?q=${encodeURIComponent(q)}`);
-  friends = () => this.req<FriendEntry[]>('GET', '/friends');
-  requestFriend = (username: string) => this.req<{ status: string }>('POST', '/friends/requests', { username });
-  acceptFriend = (userId: string) => this.req('POST', `/friends/${userId}/accept`);
-  removeFriend = (userId: string) => this.req('DELETE', `/friends/${userId}`);
+  /** everyone on the group's server */
+  participants = () => this.req<UserPublic[]>('GET', '/participants');
 
   invites = () => this.req<CampaignInvite[]>('GET', '/invites');
   acceptInvite = (id: string) => this.req<Campaign>('POST', `/invites/${id}/accept`);

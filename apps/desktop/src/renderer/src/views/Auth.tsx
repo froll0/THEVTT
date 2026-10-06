@@ -181,7 +181,7 @@ export function AuthView() {
           {mode === 'login' ? 'Entra' : 'Crea account'}
         </button>
         <p className="faint tiny">
-          Ogni gruppo usa un solo server: account, amici e campagne vivono lì. Chi ospita deve tenere TheVTT aperto mentre si gioca.
+          Ogni gruppo usa un solo server: account, partecipanti e campagne vivono lì. Chi ospita deve tenere TheVTT aperto mentre si gioca.
         </p>
       </form>
     </div>

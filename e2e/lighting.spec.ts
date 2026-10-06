@@ -6,10 +6,7 @@ test('walls, doors, props and dynamic light', async () => {
   const G = gm.page, P = pl.page;
   await register(G, { where: 'host', username: 'master', displayName: 'Marco' });
   await register(P, { where: { join: 'localhost:4592' }, username: 'giulia', displayName: 'Giulia' });
-  const gmUser = await apiCall<{ id: string }>(G, 'GET', '/me');
   const plUser = await apiCall<{ id: string }>(P, 'GET', '/me');
-  await apiCall(G, 'POST', '/friends/requests', { username: 'giulia' });
-  await apiCall(P, 'POST', `/friends/${gmUser.id}/accept`);
   const camp = await apiCall<{ id: string }>(G, 'POST', '/campaigns', { name: 'Cripta', systemId: 'dnd5e-2024' });
   await apiCall(G, 'POST', `/campaigns/${camp.id}/invites`, { userId: plUser.id });
   const [inv] = await apiCall<{ id: string }[]>(P, 'GET', '/invites');

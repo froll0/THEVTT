@@ -13,7 +13,7 @@ import { CampaignView } from './views/Campaign';
 import { CampaignsView } from './views/Campaigns';
 import { CharacterEditor } from './views/CharacterEditor';
 import { CharactersView } from './views/Characters';
-import { FriendsView } from './views/Friends';
+import { ParticipantsView } from './views/Participants';
 import { HomeView } from './views/Home';
 import { JournalView } from './views/JournalView';
 import { SettingsView } from './views/Settings';
@@ -78,7 +78,7 @@ export function App() {
           {route.name === 'campaign' && <CampaignView key={route.id} id={route.id} />}
           {route.name === 'characters' && <CharactersView />}
           {route.name === 'character' && <CharacterEditor key={route.id ?? 'new'} id={route.id} systemId={route.systemId} assignTo={route.assignTo} />}
-          {route.name === 'friends' && <FriendsView />}
+          {route.name === 'participants' && <ParticipantsView />}
           {route.name === 'compendium' && <CompendiumView />}
           {route.name === 'journal' && <JournalView />}
           {route.name === 'settings' && <SettingsView initial={route.section} />}

@@ -78,7 +78,11 @@ describe('lobby server', () => {
     // campaign + invites
     const camp = (await api('POST', '/campaigns', gm.token, { name: 'La Miniera Perduta', systemId: 'dnd5e-2024' })).body;
     expect(camp.members).toHaveLength(1);
-    expect((await api('POST', `/campaigns/${camp.id}/invites`, gm.token, { userId: stranger.user.id })).status).toBe(403);
+    // everyone on the server is a participant: no friendship needed to invite
+    expect((await api('POST', `/campaigns/${camp.id}/invites`, gm.token, { userId: 'nobody' })).status).toBe(404);
+    const people = (await api('GET', '/participants', gm.token)).body as { id: string }[];
+    expect(people.map((p) => p.id)).toContain(stranger.user.id);
+    expect(people.map((p) => p.id)).not.toContain(gm.user.id);
     expect((await api('POST', `/campaigns/${camp.id}/invites`, gm.token, { userId: pl.user.id })).status).toBe(200);
     const invites = (await api('GET', '/invites', pl.token)).body;
     expect(invites[0].campaign.name).toBe('La Miniera Perduta');
@@ -165,7 +169,9 @@ describe('chat and scheduling', () => {
 
     // outsiders can't read or write
     expect((await api('GET', `/chat/campaign:${camp.id}`, stranger.token)).status).toBe(404);
-    expect((await api('POST', `/chat/dm:${gm.user.id}`, stranger.token, { text: 'spam' })).status).toBe(403);
+    // any participant can write privately to any other
+    expect((await api('POST', `/chat/dm:${gm.user.id}`, stranger.token, { text: 'ciao' })).status).toBe(200);
+    expect((await api('POST', '/chat/dm:nobody', stranger.token, { text: 'x' })).status).toBe(404);
     expect((await api('POST', `/chat/nonsense`, gm.token, { text: 'x' })).status).toBe(400);
     peer.ws.close();
   });

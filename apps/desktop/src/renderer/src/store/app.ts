@@ -1,4 +1,4 @@
-import type { Campaign, CampaignInvite, CharacterRecord, FriendEntry, Notification, SessionInfo, UserPublic } from '@thevtt/shared';
+import type { Campaign, CampaignInvite, CharacterRecord, Notification, SessionInfo, UserPublic } from '@thevtt/shared';
 import { create } from 'zustand';
 import { Api, ApiError } from '../lib/api';
 import { offlineCache } from '../lib/offline';
@@ -11,7 +11,7 @@ export type Route =
   | { name: 'campaign'; id: string }
   | { name: 'characters' }
   | { name: 'character'; id: string | null; systemId?: string; assignTo?: string }
-  | { name: 'friends' }
+  | { name: 'participants' }
   | { name: 'compendium' }
   | { name: 'journal' }
   | { name: 'settings'; section?: SettingsSection }
@@ -43,7 +43,8 @@ interface AppState {
   offlineSince: number | null;
   booting: boolean;
   route: Route;
-  friends: FriendEntry[];
+  /** everyone on the group's server but me, online first */
+  participants: UserPublic[];
   invites: CampaignInvite[];
   campaigns: Campaign[];
   characters: CharacterRecord[];
@@ -57,7 +58,7 @@ interface AppState {
   go(route: Route): void;
   toast(text: string, tone?: Toast['tone']): void;
   dismissToast(id: number): void;
-  refresh(what?: ('friends' | 'invites' | 'campaigns' | 'characters')[]): Promise<void>;
+  refresh(what?: ('participants' | 'invites' | 'campaigns' | 'characters')[]): Promise<void>;
   upsertCampaign(c: Campaign): void;
   upsertCharacter(c: CharacterRecord): void;
   setUser(u: UserPublic): void;
@@ -124,8 +125,12 @@ export const useApp = create<AppState>((set, get) => {
           break;
         case 'presence':
           set((s) => ({
-            friends: s.friends.map((f) => (f.user.id === msg.userId ? { ...f, user: { ...f.user, online: msg.online } } : f)),
+            participants: s.participants
+              .map((p) => (p.id === msg.userId ? { ...p, online: msg.online } : p))
+              .sort((a, b) => Number(!!b.online) - Number(!!a.online) || a.displayName.localeCompare(b.displayName)),
           }));
+          // someone new on the server
+          if (msg.online && msg.userId !== get().user?.id && !get().participants.some((p) => p.id === msg.userId)) void get().refresh(['participants']);
           break;
         case 'session.state':
           set((s) => {
@@ -151,21 +156,21 @@ export const useApp = create<AppState>((set, get) => {
     switch (n.kind) {
       case 'friend.request':
         toast(`${n.from.displayName} ti ha chiesto l'amicizia`);
-        void refresh(['friends']);
+        void refresh(['participants']);
         break;
       case 'friend.accepted':
         toast(`${n.by.displayName} ha accettato l'amicizia`, 'success');
-        void refresh(['friends']);
+        void refresh(['participants']);
         break;
       case 'friend.removed':
-        void refresh(['friends']);
+        void refresh(['participants']);
         break;
       case 'chat.message':
         void import('./chat').then(({ useChat }) => {
           useChat.getState().receive(n.message);
           // a toast only when the conversation isn't already on screen
           if (useChat.getState().open !== n.message.channel) {
-            const author = get().friends.find((f) => f.user.id === n.message.authorId)?.user.displayName
+            const author = get().participants.find((p) => p.id === n.message.authorId)?.displayName
               ?? get().campaigns.flatMap((c) => c.members).find((m) => m.user.id === n.message.authorId)?.user.displayName
               ?? 'Nuovo messaggio';
             toast(`${author}: ${n.message.text.slice(0, 80)}`);
@@ -205,7 +210,7 @@ export const useApp = create<AppState>((set, get) => {
     offlineSince: null,
     booting: true,
     route: { name: 'home' },
-    friends: [],
+    participants: [],
     invites: [],
     campaigns: [],
     characters: [],
@@ -259,7 +264,7 @@ export const useApp = create<AppState>((set, get) => {
       await api.logout().catch(() => undefined);
       localStorage.removeItem(TOKEN_KEY);
       api.setToken(null);
-      set({ user: null, rt: null, friends: [], invites: [], campaigns: [], characters: [], sessions: {}, route: { name: 'home' } });
+      set({ user: null, rt: null, participants: [], invites: [], campaigns: [], characters: [], sessions: {}, route: { name: 'home' } });
     },
 
     go: (route) => set({ route }),
@@ -271,10 +276,10 @@ export const useApp = create<AppState>((set, get) => {
     },
     dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
-    async refresh(what = ['friends', 'invites', 'campaigns', 'characters']) {
+    async refresh(what = ['participants', 'invites', 'campaigns', 'characters']) {
       const { api } = get();
       const tasks = what.map(async (w) => {
-        if (w === 'friends') set({ friends: await api.friends() });
+        if (w === 'participants') set({ participants: await api.participants() });
         if (w === 'invites') set({ invites: await api.invites() });
         if (w === 'characters') set({ characters: await api.characters() });
         if (w === 'campaigns') {

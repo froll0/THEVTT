@@ -24,13 +24,17 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await register(G, { where: 'host', username: 'master', displayName: 'Marco' });
   await register(P, { where: { join: `localhost:${PORT}` }, username: 'giulia', displayName: 'Giulia' });
 
-  // friendship through the notification bell
-  await nav(G, 'Amici');
-  await G.getByPlaceholder('Cerca per nome utente').fill('giul');
-  await G.getByRole('button', { name: 'Aggiungi' }).click();
-  await P.getByRole('button', { name: 'Notifiche' }).click();
-  await P.locator('.popover').getByRole('button', { name: 'Accetta' }).click();
-  await expect(G.getByText('1 online')).toBeVisible();
+  // everyone on the server is a participant: no friend requests, private messages for all
+  await nav(G, 'Partecipanti');
+  await expect(G.getByText('Online · 1')).toBeVisible();
+  await G.getByRole('button', { name: 'Scrivi a Giulia' }).click();
+  await G.locator('.modal').getByLabel('Messaggio').fill('Benvenuta al tavolo!');
+  await G.locator('.modal').getByLabel('Messaggio').press('Enter');
+  await G.keyboard.press('Escape');
+  await nav(P, 'Partecipanti');
+  await P.getByRole('button', { name: 'Scrivi a Marco' }).click();
+  await expect(P.locator('.modal').getByText('Benvenuta al tavolo!')).toBeVisible();
+  await P.keyboard.press('Escape');
 
   // campaign + invite
   await nav(G, 'Campagne');

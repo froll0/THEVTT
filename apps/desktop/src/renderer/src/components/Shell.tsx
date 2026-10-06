@@ -30,13 +30,12 @@ const NAV: { route: Route; label: string; match: Route['name'][] }[] = [
   { route: { name: 'characters' }, label: 'Personaggi', match: ['characters', 'character'] },
   { route: { name: 'journal' }, label: 'Diario', match: ['journal'] },
   { route: { name: 'compendium' }, label: 'Compendio', match: ['compendium'] },
-  { route: { name: 'friends' }, label: 'Amici', match: ['friends'] },
+  { route: { name: 'participants' }, label: 'Partecipanti', match: ['participants'] },
 ];
 
 function Notifications() {
-  const { invites, friends, api, run, refresh, go, upsertCampaign } = useApp();
-  const requests = friends.filter((f) => f.status === 'pending_in');
-  const total = invites.length + requests.length;
+  const { invites, api, run, refresh, go, upsertCampaign } = useApp();
+  const total = invites.length;
   return (
     <Popover
       width={320}
@@ -74,20 +73,6 @@ function Notifications() {
                   <Check size={14} />
                 </button>
                 <button className="btn sm icon ghost" aria-label="Rifiuta" onClick={() => run(async () => { await api.declineInvite(inv.id); await refresh(['invites']); close(); })}>
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-            {requests.map((f) => (
-              <div key={f.user.id} className="menu-head row">
-                <Avatar user={f.user} size={26} />
-                <div className="grow small">
-                  <b>{f.user.displayName}</b> vuole essere tuo amico
-                </div>
-                <button className="btn sm icon primary" aria-label="Accetta" onClick={() => run(async () => { await api.acceptFriend(f.user.id); await refresh(['friends']); close(); })}>
-                  <Check size={14} />
-                </button>
-                <button className="btn sm icon ghost" aria-label="Rifiuta" onClick={() => run(async () => { await api.removeFriend(f.user.id); await refresh(['friends']); close(); })}>
                   <X size={14} />
                 </button>
               </div>
@@ -217,7 +202,7 @@ export function TopBar({ children, nav = true }: { children?: ReactNode; nav?: b
               {n.label}
               {n.route.name === 'campaigns' && live && !unreadCampaigns && <span className="dot" aria-hidden title="Un tavolo è aperto" />}
               {n.route.name === 'campaigns' && unreadCampaigns > 0 && <span className="count" aria-hidden>{unreadCampaigns}</span>}
-              {n.route.name === 'friends' && unreadDms > 0 && <span className="count" aria-hidden>{unreadDms}</span>}
+              {n.route.name === 'participants' && unreadDms > 0 && <span className="count" aria-hidden>{unreadDms}</span>}
             </button>
           ))}
         </nav>

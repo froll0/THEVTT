@@ -8,6 +8,8 @@ export function socialRoutes(app: FastifyInstance, { repo, hub }: Ctx): void {
     return repo.searchUsers(q, req.userId);
   });
 
+  app.get('/participants', async (req) => repo.participants(req.userId));
+
   app.get('/friends', async (req) => repo.friends(req.userId));
 
   app.post('/friends/requests', async (req) => {

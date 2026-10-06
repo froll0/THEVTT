@@ -244,7 +244,7 @@ function ServerSettings() {
       <Section title="Server del gruppo">
         <p className="muted small">
           Sei collegato a <b className="mono">{displayServerAddress(serverUrl)}</b>
-          {connectedHere ? ', cioè al server ospitato su questo PC.' : '.'} Account, amici e campagne vivono su questo server.{' '}
+          {connectedHere ? ', cioè al server ospitato su questo PC.' : '.'} Account, partecipanti e campagne vivono su questo server.{' '}
           <a onClick={() => void logout()}>Cambia server</a>
         </p>
       </Section>
@@ -366,7 +366,7 @@ function Account() {
           Salva
         </button>
       </Setting>
-      <Setting title="Immagine del profilo" hint="La vedono amici e compagni di gioco, anche in chat">
+      <Setting title="Immagine del profilo" hint="La vedono gli altri partecipanti, anche in chat">
         <Avatar user={user} size={40} />
         <label className="btn sm">
           <ImagePlus size={14} /> {user.avatar ? 'Cambia' : 'Carica'}

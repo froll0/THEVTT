@@ -104,7 +104,8 @@ export class Hub implements Presence {
     set.add(ws);
 
     this.send(ws, { t: 'hello', user: this.repo.user(userId) });
-    if (firstSocket) for (const f of this.repo.friendIds(userId)) this.sendUser(f, { t: 'presence', userId, online: true });
+    // everyone on the server sees who's around
+    if (firstSocket) for (const other of this.sockets.keys()) if (other !== userId) this.sendUser(other, { t: 'presence', userId, online: true });
     for (const cid of this.repo.campaignIdsFor(userId)) {
       const session = this.session(cid);
       if (session) this.send(ws, { t: 'session.state', campaignId: cid, session });
@@ -206,7 +207,7 @@ export class Hub implements Presence {
     set?.delete(ws);
     if (set && set.size === 0) {
       this.sockets.delete(userId);
-      for (const f of this.repo.friendIds(userId)) this.sendUser(f, { t: 'presence', userId, online: false });
+      for (const other of this.sockets.keys()) this.sendUser(other, { t: 'presence', userId, online: false });
     }
     for (const s of [...this.sessions.values()]) {
       if (s.host === ws) this.endSession(s.campaignId);
