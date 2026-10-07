@@ -1,17 +1,11 @@
 ## Novità
 
-- **Modalità editor della mappa**: tutti gli strumenti per costruire una mappa in un unico posto. Si apre col pulsante "Editor mappa" o col tasto E, e mostra solo ciò che serve: terreno, muri e porte, oggetti, luci, scritte e impostazioni della scena.
-  - **Lavori in privato**: puoi modificare qualsiasi scena, anche una che i giocatori non vedono, e mostrargliela quando è pronta con "Mostra ai giocatori".
-  - **Nuova scena** vuota, tutta roccia, a prato o di pietra; c'è anche il generatore.
-  - **Esporta come immagine PNG**.
-- **Strumenti nuovi**:
-  - per il terreno: **Linea**, **Ellisse** e **Contagocce**, con pennello da 1 a 9 caselle;
-  - porte e finestre **sul lato** di una casella, con un solo clic;
-  - oggetti **ruotabili** prima di posarli (tasto R), con catalogo a miniature e ricerca;
-  - **preset di luce**: candela, torcia, lanterna, incantesimo Luce, luce diurna.
-- **Anteprime ovunque**, prima di cliccare:
-  - il terreno appare sotto il cursore con la sua texture vera;
-  - forme, muri e stanze mostrano le misure in caselle e in metri;
-  - il secchiello mostra la zona che riempirà;
-  - gli oggetti appaiono come sagoma già ruotata;
-  - le luci mostrano fin dove arrivano.
+- **Voce e video al tavolo**: una chat vocale e video integrata, senza Discord né altri programmi. Dalla barra in alto si entra con **"Voce"** o direttamente con la videocamera.
+  - Voce e video vanno **dirette da computer a computer**, senza passare dal server.
+  - **Riquadri sopra la mappa** con la camera di ognuno, o la sua foto; si possono ingrandire o chiudere.
+  - **Chi parla** ha un anello verde, e anche il suo **token si illumina sulla mappa**.
+  - **Volume per persona**, scelta di microfono, camera e altoparlanti con indicatore del livello del microfono.
+  - **Ctrl+Maiusc+M** accende e spegne il microfono.
+- **Ponte per voce e video** (Impostazioni → Server): un server TURN facoltativo per i gruppi le cui reti non si raggiungono direttamente.
+- La barra in alto del tavolo è più compatta: editor, pausa e diario sono icone.
+- Su macOS l'app chiede il permesso per microfono e videocamera spiegando a cosa servono.
