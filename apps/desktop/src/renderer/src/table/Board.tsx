@@ -1,4 +1,4 @@
-import { blockingSegments, brushCells, ellipseCells, moveCost, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { blockingSegments, brushCells, copyPiece, ellipseCells, moveCost, pasteActions, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type MapPiece, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
 import { exploredTexture, updateExplored } from './explored';
 import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
@@ -13,7 +13,7 @@ import { useCall } from '../store/call';
 import { tokenSpeed } from '../lib/combat';
 
 export const CELL = 70;
-export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props' | 'light' | 'terrain';
+export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props' | 'light' | 'terrain' | 'copy';
 
 export interface ToolOptions {
   fogReveal: boolean;
@@ -46,6 +46,8 @@ export interface ToolOptions {
   lightKind: string;
   /** tokens drawn on the board (the map editor can hide them) */
   showTokens: boolean;
+  /** the copy tool: take a piece of the map, or put the copied one down */
+  pieceMode: 'copy' | 'paste';
 }
 
 /** A light preset as placed by the light tool, in cells for a scene. */
@@ -74,6 +76,9 @@ function shapeCells(mode: ToolOptions['terrainMode'], w: number, h: number, f: {
   const [x0, y0, x1, y1] = [Math.floor(f.x), Math.floor(f.y), Math.floor(t.x), Math.floor(t.y)];
   return mode === 'ellipse' ? ellipseCells(w, h, x0, y0, x1, y1) : rectCells(w, h, x0, y0, x1, y1);
 }
+
+/** Where a piece of map lands under the pointer (world px): centred on it, on the grid. */
+const pieceAt = (p: MapPiece, wx: number, wy: number) => ({ x: Math.round(wx / CELL - p.w / 2), y: Math.round(wy / CELL - p.h / 2) });
 
 /** A small dark tag with text, at a point in world px, readable at any zoom. */
 function tag(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, zoom: number) {
@@ -303,7 +308,9 @@ type Gesture =
   /** painting the map: the map as it will be, the last brush point in cells, or the rectangle in world px */
   | { kind: 'paint'; terrain: string; lx: number; ly: number }
   /** a terrain line, rectangle or ellipse being dragged (world px) */
-  | { kind: 'paintShape'; fx: number; fy: number; tx: number; ty: number };
+  | { kind: 'paintShape'; fx: number; fy: number; tx: number; ty: number }
+  /** the copy tool's rectangle (world px) */
+  | { kind: 'copyRect'; fx: number; fy: number; tx: number; ty: number };
 
 /**
  * Overlays (ruler, areas, drawings) must read on any map: a dark theme accent on a
@@ -359,7 +366,20 @@ export function groupDeleteActions(state: { tokens: Record<string, Token>; props
   return out;
 }
 
-export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool; options: ToolOptions; cameraRef: React.RefObject<Camera | null>; onPickTerrain?: (code: string) => void }) {
+export function Board({
+  tool,
+  options,
+  cameraRef,
+  onPickTerrain,
+  onCopied,
+}: {
+  tool: Tool;
+  options: ToolOptions;
+  cameraRef: React.RefObject<Camera | null>;
+  onPickTerrain?: (code: string) => void;
+  /** a piece of map was copied: the copy tool turns to pasting it */
+  onCopied?: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<Gesture>({ kind: 'none' });
@@ -429,11 +449,13 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
   // keep latest values available to the render loop and handlers
   const speaking = useCall((s) => s.speaking);
   const pendingArea = useTable((s) => s.pendingArea);
+  const clipboard = useTable((s) => s.clipboard);
+  const setClipboard = useTable((s) => s.setClipboard);
   const setPendingArea = useTable((s) => s.setPendingArea);
   /** a cone or line with no caster on the map: its point, set by a first click */
   const areaOrigin = useRef<{ x: number; y: number } | null>(null);
-  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea });
-  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea };
+  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard });
+  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard };
   const hoverWall = useRef<string | null>(null);
   dirty.current = true;
 
@@ -612,6 +634,8 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
         const gd = pg.kind === 'group' && pg.moved && inGroup ? groupDelta(pg) : null;
         const shown = pg.kind === 'prop' && pg.propId === p.id ? { ...p, ...propDropAt(pg, p) } : gd ? { ...p, x: p.x + gd.dx, y: p.y + gd.dy } : p;
         drawProp(ctx, shown, CELL, image(p.image), tnow, L.isGm);
+        // the GM sees where a passage leads
+        if (L.isGm && p.link && L.state.scenes[p.link]) tag(ctx, `→ ${L.state.scenes[p.link]!.name}`, shown.x * CELL + shown.w * CELL - 10 / cam.zoom, shown.y * CELL + 6 / cam.zoom, cam.zoom);
         if (p.id === L.selectedPropId || inGroup) {
           const c = propCorners(shown);
           ctx.beginPath();
@@ -679,6 +703,66 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
           ctx.setLineDash([6 / cam.zoom, 4 / cam.zoom]);
           haloStroke(ctx, accentColor(), 1.5 / cam.zoom, cam.zoom);
           ctx.setLineDash([]);
+        }
+      }
+
+      // the copy tool: the zone being copied, or the piece about to be put down
+      if (L.isGm && L.tool === 'copy') {
+        const hwc = hoverWorld.current;
+        const gq = gesture.current;
+        if (gq.kind === 'copyRect') {
+          const x0 = Math.floor(Math.min(gq.fx, gq.tx) / CELL);
+          const y0 = Math.floor(Math.min(gq.fy, gq.ty) / CELL);
+          const x1 = Math.floor(Math.max(gq.fx, gq.tx) / CELL) + 1;
+          const y1 = Math.floor(Math.max(gq.fy, gq.ty) / CELL) + 1;
+          ctx.fillStyle = hexToRgba(accentColor(), 0.18);
+          ctx.fillRect(x0 * CELL, y0 * CELL, (x1 - x0) * CELL, (y1 - y0) * CELL);
+          ctx.beginPath();
+          ctx.rect(x0 * CELL, y0 * CELL, (x1 - x0) * CELL, (y1 - y0) * CELL);
+          ctx.setLineDash([8 / cam.zoom, 5 / cam.zoom]);
+          haloStroke(ctx, accentColor(), 2 / cam.zoom, cam.zoom);
+          ctx.setLineDash([]);
+          tag(ctx, `Copia ${x1 - x0} × ${y1 - y0}`, gq.tx, gq.ty, cam.zoom);
+        } else if (L.options.pieceMode === 'paste' && L.clipboard && hwc) {
+          const pc = L.clipboard;
+          const at = pieceAt(pc, hwc.x, hwc.y);
+          ctx.save();
+          ctx.globalAlpha = 0.85;
+          for (let py = 0; py < pc.h; py++)
+            for (let px = 0; px < pc.w; px++) {
+              const code = pc.terrain[py * pc.w + px];
+              if (!code || code === EMPTY_TERRAIN) continue;
+              let pat = patterns.current.get(code);
+              if (pat === undefined) {
+                pat = ctx.createPattern(terrainSample(code), 'repeat');
+                patterns.current.set(code, pat);
+              }
+              pat?.setTransform(new DOMMatrix().scale(CELL / 32));
+              ctx.fillStyle = pat ?? '#888';
+              ctx.fillRect((at.x + px) * CELL, (at.y + py) * CELL, CELL, CELL);
+            }
+          ctx.globalAlpha = 0.75;
+          for (const p of pc.props) drawProp(ctx, { ...p, id: 'piece', sceneId: L.scene.id, rotation: p.rotation ?? 0, light: null, blocksVision: false, hidden: false, image: p.image ?? null, x: at.x + p.x, y: at.y + p.y }, CELL, image(p.image ?? null), tnow, true);
+          ctx.restore();
+          ctx.lineCap = 'round';
+          for (const wl of pc.walls) {
+            ctx.beginPath();
+            ctx.moveTo((at.x + wl.x1) * CELL, (at.y + wl.y1) * CELL);
+            ctx.lineTo((at.x + wl.x2) * CELL, (at.y + wl.y2) * CELL);
+            haloStroke(ctx, WALL_COLORS[wl.kind], 4 / cam.zoom, cam.zoom);
+          }
+          ctx.lineCap = 'butt';
+          for (const l of pc.labels) {
+            ctx.font = `600 ${l.width * CELL}px Inter, system-ui, sans-serif`;
+            ctx.fillStyle = l.color;
+            ctx.fillText(l.text, (at.x + l.x) * CELL, (at.y + l.y) * CELL);
+          }
+          ctx.beginPath();
+          ctx.rect(at.x * CELL, at.y * CELL, pc.w * CELL, pc.h * CELL);
+          ctx.setLineDash([8 / cam.zoom, 5 / cam.zoom]);
+          haloStroke(ctx, accentColor(), 2 / cam.zoom, cam.zoom);
+          ctx.setLineDash([]);
+          tag(ctx, `${pc.name ?? 'Incolla'} · ${pc.w} × ${pc.h}`, (at.x + pc.w) * CELL, at.y * CELL, cam.zoom);
         }
       }
 
@@ -1186,8 +1270,11 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
       .filter((t) => t.sceneId === L.scene!.id && L.options.showTokens !== false)
       .sort((a, b) => a.size - b.size)
       .find((t) => {
-        const r = (t.size * CELL) / 2;
-        return Math.hypot(wx - (t.x * CELL + r), wy - (t.y * CELL + r)) <= r;
+        // the whole square of the token, not just its disc: corners are easy to grab
+        const x0 = t.x * CELL;
+        const y0 = t.y * CELL;
+        const side = t.size * CELL;
+        return wx >= x0 && wy >= y0 && wx <= x0 + side && wy <= y0 + side;
       });
   };
 
@@ -1294,6 +1381,15 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
       dirty.current = true;
       return;
     }
+    if (L.tool === 'copy' && L.isGm && L.scene) {
+      if (L.options.pieceMode === 'paste' && L.clipboard && L.state) {
+        const at = pieceAt(L.clipboard, w.x, w.y);
+        const actions = pasteActions(L.state, L.scene.id, L.clipboard, at.x, at.y);
+        if (actions.length) dispatch({ type: 'batch', actions });
+      } else gesture.current = { kind: 'copyRect', fx: w.x, fy: w.y, tx: w.x, ty: w.y };
+      dirty.current = true;
+      return;
+    }
     if (L.tool === 'terrain' && L.isGm && L.scene) {
       const { widthCells: sw, heightCells: sh } = L.scene;
       const base = L.scene.terrain ?? emptyTerrain(sw, sh);
@@ -1335,6 +1431,7 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
           rotation: L.tool === 'props' ? L.options.propRotation : 0,
           light,
           blocksVision: !!kind.blocksVision,
+          hidden: !!kind.hiddenByDefault,
         },
       });
       return;
@@ -1422,7 +1519,7 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
     const w = toWorld(e.clientX, e.clientY);
     altDown.current = e.altKey;
     const Lm = live.current;
-    if (Lm.tool === 'props' || Lm.tool === 'light' || Lm.tool === 'terrain' || Lm.tool === 'walls' || Lm.pendingArea) {
+    if (Lm.tool === 'props' || Lm.tool === 'light' || Lm.tool === 'terrain' || Lm.tool === 'walls' || Lm.tool === 'copy' || Lm.pendingArea) {
       hoverWorld.current = w;
       dirty.current = true;
     }
@@ -1436,6 +1533,12 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
       g.terrain = paintCells(g.terrain, cells, Lm.options.terrain);
       g.lx = cx;
       g.ly = cy;
+      dirty.current = true;
+      return;
+    }
+    if (g.kind === 'copyRect') {
+      g.tx = w.x;
+      g.ty = w.y;
       dirty.current = true;
       return;
     }
@@ -1571,6 +1674,13 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
     if (g.kind === 'paint' && L.scene && g.terrain !== (L.scene.terrain ?? emptyTerrain(L.scene.widthCells, L.scene.heightCells))) {
       dispatch({ type: 'terrain.set', sceneId: L.scene.id, terrain: g.terrain });
     }
+    if (g.kind === 'copyRect' && L.scene && L.state) {
+      const piece = copyPiece(L.state, L.scene.id, Math.floor(g.fx / CELL), Math.floor(g.fy / CELL), Math.floor(g.tx / CELL), Math.floor(g.ty / CELL));
+      if (piece) {
+        setClipboard(piece);
+        onCopied?.();
+      }
+    }
     if (g.kind === 'paintShape' && L.scene) {
       const { widthCells: sw, heightCells: sh } = L.scene;
       const base = L.scene.terrain ?? emptyTerrain(sw, sh);
@@ -1673,7 +1783,7 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
   }, [dispatch, select, selectProp, selectWall, setGroup]);
 
   const toolCursor =
-    tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' || tool === 'walls' || tool === 'props' || tool === 'light' || tool === 'terrain'
+    tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' || tool === 'walls' || tool === 'props' || tool === 'light' || tool === 'terrain' || tool === 'copy' || pendingArea
       ? 'crosshair'
       : tool === 'ping'
         ? 'cell'

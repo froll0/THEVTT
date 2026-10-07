@@ -965,6 +965,21 @@ export function PropInspector({ prop }: { prop: Prop }) {
         <span className="small">Nascosto ai giocatori</span>
         <Switch on={prop.hidden} onChange={(hidden) => upd({ hidden })} />
       </div>
+      {(kind?.passage || prop.link) && (
+        <Field label="Porta a (un altro piano)">
+          <select className="select" value={prop.link ?? ''} onChange={(e) => upd({ link: e.target.value || null })} aria-label="Porta a">
+            <option value="">Da nessuna parte</option>
+            {Object.values(state.scenes)
+              .filter((sc) => sc.id !== prop.sceneId)
+              .map((sc) => (
+                <option key={sc.id} value={sc.id}>
+                  {sc.name}
+                </option>
+              ))}
+          </select>
+        </Field>
+      )}
+      {prop.link && <p className="faint tiny">Un token che ci finisce sopra va su «{state.scenes[prop.link]?.name}», accanto al passaggio che riporta qui. Quando tutto il gruppo è passato, la scena lo segue.</p>}
       <div className="row wrap">
         <label className="btn sm">
           <ImagePlus size={14} /> Immagine

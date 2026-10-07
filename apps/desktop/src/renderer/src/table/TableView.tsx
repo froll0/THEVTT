@@ -1,3 +1,4 @@
+import { rotatePiece } from '@thevtt/shared';
 import { getSystem } from '@thevtt/systems';
 import { PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -51,8 +52,11 @@ export function TableView({ campaignId }: { campaignId: string }) {
     propRotation: 0,
     lightKind: 'torch',
     showTokens: true,
+    pieceMode: 'copy',
   });
   const [editorTool, setEditorTool] = useState<EditorTool>('terrain');
+  const editorToolRef = useRef(editorTool);
+  editorToolRef.current = editorTool;
   const [tab, setTab] = useState<DockTab>('chat');
   const [dockOpen, setDockOpen] = useState(true);
   const [showKeys, setShowKeys] = useState(false);
@@ -127,12 +131,17 @@ export function TableView({ campaignId }: { campaignId: string }) {
       const t = useTable.getState();
       const gm = t.role === 'gm';
       // map tools live in the editor: their keys open it
-      const editorKeys: Record<string, EditorTool> = { v: 'select', b: 'terrain', w: 'walls', o: 'props', l: 'light', t: 'labels' };
+      const editorKeys: Record<string, EditorTool> = { v: 'select', b: 'terrain', w: 'walls', o: 'props', l: 'light', t: 'labels', c: 'copy' };
       if (gm && t.editorSceneId) {
         if (editorKeys[e.key]) setEditorTool(editorKeys[e.key]!);
         if (e.key === 'e') t.setEditor(null);
         if (e.key === '[' || e.key === ']') setOptions((o) => ({ ...o, brushSize: Math.min(9, Math.max(1, o.brushSize + (e.key === ']' ? 1 : -1))) }));
-        if (e.key === 'r') setOptions((o) => ({ ...o, propRotation: (o.propRotation + 90) % 360 }));
+        if (e.key === 'r') {
+          // the copy tool turns the piece; elsewhere, the next prop
+          const clip = t.clipboard;
+          if (editorToolRef.current === 'copy' && clip) t.setClipboard(rotatePiece(clip));
+          else setOptions((o) => ({ ...o, propRotation: (o.propRotation + 90) % 360 }));
+        }
         if (e.key === 'g') setOptions((o) => ({ ...o, snap: !o.snap }));
         if (e.key === '?') setShowKeys((v) => !v);
         return;
@@ -290,7 +299,9 @@ export function TableView({ campaignId }: { campaignId: string }) {
           {state && scene ? (
             <>
               <CallTiles people={people} />
-              <Board tool={boardTool} options={boardOptions} cameraRef={cameraRef} onPickTerrain={(code) => setOptions((o) => ({ ...o, terrain: code, terrainMode: 'brush' }))} />
+              <Board tool={boardTool} options={boardOptions} cameraRef={cameraRef} onPickTerrain={(code) => setOptions((o) => ({ ...o, terrain: code, terrainMode: 'brush' }))}
+                onCopied={() => setOptions((o) => ({ ...o, pieceMode: 'paste' }))}
+              />
               <DiceLayer />
             </>
           ) : (

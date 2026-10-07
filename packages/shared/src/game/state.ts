@@ -90,6 +90,8 @@ export interface Prop {
   /** GM only */
   hidden: boolean;
   label?: string;
+  /** stairs, ladders, trapdoors: a token that steps on it goes to this scene (another floor) */
+  link?: string | null;
 }
 
 export type TemplateShape = 'circle' | 'cone' | 'line' | 'square';

@@ -8,6 +8,7 @@ export * from './game/sight';
 export * from './game/mapgen';
 export * from './game/terrain';
 export * from './game/library';
+export * from './game/piece';
 export * from './macros';
 export * from './game/actions';
 export * from './game/host';

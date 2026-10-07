@@ -4,6 +4,7 @@ import {
   newId,
   type Campaign,
   type GameAction,
+  type MapPiece,
   type GameState,
   type HostToPlayer,
   type PlayerToHost,
@@ -55,6 +56,9 @@ interface TableStore {
   /** GM: the map editor is open on this scene (null: playing) */
   editorSceneId: string | null;
   /** a spell's area waiting to be placed on the map (size in cells) */
+  /** GM: a piece of map copied (or a ready-made room) waiting to be put down */
+  clipboard: MapPiece | null;
+  setClipboard(p: MapPiece | null): void;
   pendingArea: { shape: 'circle' | 'cone' | 'line' | 'square'; size: number; label: string; originTokenId: string | null } | null;
   setPendingArea(a: TableStore['pendingArea']): void;
   setEditor(sceneId: string | null): void;
@@ -243,6 +247,8 @@ export const useTable = create<TableStore>((set, get) => {
     group: { tokens: [], props: [] },
     selectedWallId: null,
     editorSceneId: null,
+    clipboard: null,
+    setClipboard: (clipboard) => set({ clipboard }),
     pendingArea: null,
     setPendingArea: (pendingArea) => set({ pendingArea }),
     setEditor: (editorSceneId) => set({ editorSceneId, selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: NO_GROUP }),

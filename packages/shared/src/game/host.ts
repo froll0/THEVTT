@@ -548,6 +548,12 @@ export class GameHost {
         }
         t.x = nx;
         t.y = ny;
+        // onto stairs, a ladder, a trapdoor leading elsewhere: down (or up) it goes
+        const half = t.size / 2;
+        const gate = Object.values(s.props!).find(
+          (p) => p.sceneId === t.sceneId && p.link && s.scenes[p.link] && t.x + half >= p.x && t.x + half <= p.x + p.w && t.y + half >= p.y && t.y + half <= p.y + p.h,
+        );
+        if (gate) this.travel(t, gate);
         break;
       }
       case 'token.update': {
@@ -984,6 +990,7 @@ export class GameHost {
         if (patch.light !== undefined) p.light = cleanLight(patch.light);
         if (patch.blocksVision !== undefined) p.blocksVision = !!patch.blocksVision;
         if (patch.hidden !== undefined) p.hidden = !!patch.hidden;
+        if (patch.link !== undefined) p.link = patch.link && s.scenes[patch.link] && patch.link !== p.sceneId ? patch.link : null;
         if (patch.image !== undefined) {
           if (patch.image !== null && !this.assets[patch.image]) return { ok: false, reason: 'Immagine sconosciuta' };
           p.image = patch.image;
@@ -1137,6 +1144,31 @@ export class GameHost {
       known.add(assetId);
     }
     this.opts.send(userId, { k: 'state', state: view, rev: ++this.rev, now: this.now() });
+  }
+
+  /**
+   * A token goes through a passage to another scene: it comes out next to the
+   * passage leading back, or in the middle. When the whole party has gone,
+   * the table follows them.
+   */
+  private travel(t: Token, gate: Prop): void {
+    const s = this._state;
+    const from = s.scenes[t.sceneId]!;
+    const to = s.scenes[gate.link!]!;
+    const back = Object.values(s.props!).find((p) => p.sceneId === to.id && p.link === from.id);
+    const want = back ? { x: Math.round(back.x + back.w), y: Math.round(back.y) } : { x: Math.floor(to.widthCells / 2), y: Math.floor(to.heightCells / 2) };
+    const spot = this.freeSpot(to.id, Math.max(0, Math.min(to.widthCells - t.size, want.x)), Math.max(0, Math.min(to.heightCells - t.size, want.y)), t.size);
+    t.sceneId = to.id;
+    t.x = spot.x;
+    t.y = spot.y;
+    delete t.moved;
+    if (!t.hidden) this.system(`${t.name} va su «${to.name}»`);
+    // everyone's characters went through: the table goes with them
+    const party = Object.values(s.tokens).filter((x) => x.ownerIds.length > 0 && (x.sceneId === from.id || x.sceneId === to.id));
+    if (t.ownerIds.length && from.id === s.activeSceneId && party.length && party.every((x) => x.sceneId === to.id)) {
+      s.activeSceneId = to.id;
+      this.system(`Il gruppo è su «${to.name}»`);
+    }
   }
 
   /** A token takes damage; if it was keeping a spell up, it must try to hold on. */

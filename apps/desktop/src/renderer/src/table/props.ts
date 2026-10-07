@@ -11,6 +11,10 @@ export interface PropKind {
   h: number;
   light?: Light;
   blocksVision?: boolean;
+  /** placed hidden from the players (traps) */
+  hiddenByDefault?: boolean;
+  /** leads somewhere: it can take tokens to another scene (another floor) */
+  passage?: boolean;
   /** draws in a unit box centred on 0,0 (from -0.5 to 0.5 on both axes) */
   draw?: (c: CanvasRenderingContext2D, t: number) => void;
 }
@@ -377,6 +381,181 @@ export const PROP_KINDS: PropKind[] = [
       c.arc(0, 0, 0.3, 0, Math.PI * 2);
       c.fillStyle = '#1d2a36';
       c.fill();
+    },
+  },
+  {
+    id: 'stairs',
+    name: 'Scale',
+    w: 1,
+    h: 2,
+    passage: true,
+    draw: (c) => {
+      rr(c, -0.5, -0.5, 1, 1, 0.04);
+      c.fillStyle = '#6f6a62';
+      c.fill();
+      outline(c);
+      // steps getting darker as they go down
+      for (let i = 0; i < 8; i++) {
+        const y = -0.5 + i / 8;
+        c.fillStyle = `rgba(0,0,0,${0.06 + i * 0.07})`;
+        c.fillRect(-0.46, y + 0.01, 0.92, 1 / 8 - 0.02);
+        c.fillStyle = 'rgba(255,255,255,0.18)';
+        c.fillRect(-0.46, y + 0.01, 0.92, 0.012);
+      }
+    },
+  },
+  {
+    id: 'ladder',
+    name: 'Scala a pioli',
+    w: 0.5,
+    h: 1,
+    passage: true,
+    draw: (c) => {
+      c.strokeStyle = WOOD;
+      c.lineWidth = 0.09;
+      c.beginPath();
+      c.moveTo(-0.32, -0.48);
+      c.lineTo(-0.32, 0.48);
+      c.moveTo(0.32, -0.48);
+      c.lineTo(0.32, 0.48);
+      for (let i = 0; i < 5; i++) {
+        const y = -0.38 + i * 0.19;
+        c.moveTo(-0.32, y);
+        c.lineTo(0.32, y);
+      }
+      c.stroke();
+    },
+  },
+  {
+    id: 'trapdoor',
+    name: 'Botola',
+    w: 1,
+    h: 1,
+    passage: true,
+    draw: (c) => {
+      rr(c, -0.42, -0.42, 0.84, 0.84, 0.04);
+      c.fillStyle = WOOD_DARK;
+      c.fill();
+      outline(c);
+      c.strokeStyle = 'rgba(0,0,0,0.45)';
+      c.lineWidth = 0.03;
+      for (const x of [-0.14, 0.14]) {
+        c.beginPath();
+        c.moveTo(x, -0.42);
+        c.lineTo(x, 0.42);
+        c.stroke();
+      }
+      c.beginPath();
+      c.arc(0.28, 0, 0.06, 0, Math.PI * 2);
+      c.strokeStyle = '#c9b27a';
+      c.lineWidth = 0.035;
+      c.stroke();
+    },
+  },
+  {
+    id: 'bridge',
+    name: 'Ponte',
+    w: 1,
+    h: 3,
+    draw: (c) => {
+      rr(c, -0.45, -0.5, 0.9, 1, 0.02);
+      c.fillStyle = WOOD;
+      c.fill();
+      c.strokeStyle = WOOD_DARK;
+      c.lineWidth = 0.015;
+      for (let i = 1; i < 12; i++) {
+        c.beginPath();
+        c.moveTo(-0.45, -0.5 + i / 12);
+        c.lineTo(0.45, -0.5 + i / 12);
+        c.stroke();
+      }
+      c.fillStyle = WOOD_DARK;
+      c.fillRect(-0.5, -0.5, 0.08, 1);
+      c.fillRect(0.42, -0.5, 0.08, 1);
+    },
+  },
+  {
+    id: 'cart',
+    name: 'Carro',
+    w: 2,
+    h: 3,
+    draw: (c) => {
+      c.fillStyle = '#2b2b2f';
+      for (const [x, y] of [[-0.5, -0.3], [0.38, -0.3], [-0.5, 0.18], [0.38, 0.18]] as const) c.fillRect(x, y, 0.12, 0.16);
+      rr(c, -0.4, -0.42, 0.8, 0.84, 0.03);
+      c.fillStyle = WOOD;
+      c.fill();
+      outline(c);
+      c.strokeStyle = WOOD_DARK;
+      c.lineWidth = 0.02;
+      c.strokeRect(-0.32, -0.34, 0.64, 0.68);
+      c.beginPath();
+      c.moveTo(-0.05, -0.42);
+      c.lineTo(-0.05, -0.5);
+      c.moveTo(0.05, -0.42);
+      c.lineTo(0.05, -0.5);
+      c.lineWidth = 0.03;
+      c.stroke();
+    },
+  },
+  {
+    id: 'tent',
+    name: 'Tenda',
+    w: 2,
+    h: 2,
+    blocksVision: true,
+    draw: (c) => {
+      c.beginPath();
+      c.moveTo(-0.45, -0.4);
+      c.lineTo(0.45, -0.4);
+      c.lineTo(0.45, 0.4);
+      c.lineTo(-0.45, 0.4);
+      c.closePath();
+      c.fillStyle = '#b89a6a';
+      c.fill();
+      outline(c);
+      c.beginPath();
+      c.moveTo(-0.45, 0);
+      c.lineTo(0.45, 0);
+      c.strokeStyle = 'rgba(80,60,30,0.7)';
+      c.lineWidth = 0.04;
+      c.stroke();
+      c.fillStyle = 'rgba(0,0,0,0.12)';
+      c.fillRect(-0.45, 0, 0.9, 0.4);
+    },
+  },
+  {
+    id: 'fence',
+    name: 'Staccionata',
+    w: 3,
+    h: 0.5,
+    draw: (c) => {
+      c.fillStyle = WOOD;
+      c.fillRect(-0.5, -0.12, 1, 0.24);
+      c.fillStyle = WOOD_DARK;
+      for (let i = 0; i < 4; i++) c.fillRect(-0.5 + i * 0.32, -0.35, 0.05, 0.7);
+    },
+  },
+  {
+    id: 'trap',
+    name: 'Trappola',
+    w: 1,
+    h: 1,
+    hiddenByDefault: true,
+    draw: (c) => {
+      c.beginPath();
+      c.arc(0, 0, 0.38, 0, Math.PI * 2);
+      c.fillStyle = 'rgba(40,40,44,0.85)';
+      c.fill();
+      c.strokeStyle = '#b8bcc6';
+      c.lineWidth = 0.05;
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        c.beginPath();
+        c.moveTo(Math.cos(a) * 0.12, Math.sin(a) * 0.12);
+        c.lineTo(Math.cos(a) * 0.36, Math.sin(a) * 0.36);
+        c.stroke();
+      }
     },
   },
 ];

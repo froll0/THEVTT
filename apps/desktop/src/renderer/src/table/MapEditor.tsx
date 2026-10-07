@@ -1,8 +1,10 @@
-import { brushCells, EMPTY_TERRAIN, packScene, TERRAINS, type Ambient, type GameState, type Prop, type Scene, type WallKind } from '@thevtt/shared';
+import { brushCells, EMPTY_TERRAIN, packScene, rotatePiece, TERRAINS, type MapPiece, type Ambient, type GameState, type Prop, type Scene, type WallKind } from '@thevtt/shared';
 import {
   Armchair,
   BrickWall,
   Check,
+  ClipboardPaste,
+  Copy,
   Circle,
   Download,
   Eraser,
@@ -37,10 +39,11 @@ import { MapLibrary } from './MapLibrary';
 import { MapAlignment } from './Panels';
 import { drawProp, LIGHT_PRESETS, PROP_KINDS, propKind } from './props';
 import { download, renderPackage } from './sceneImage';
-import { terrainSample } from './terrainRender';
+import { STAMPS } from './stamps';
+import { renderTerrain, terrainSample } from './terrainRender';
 
 /** What the GM works with in the map editor. Labels are text drawn on the map. */
-export type EditorTool = 'select' | 'terrain' | 'walls' | 'props' | 'light' | 'labels';
+export type EditorTool = 'select' | 'terrain' | 'walls' | 'props' | 'light' | 'labels' | 'copy';
 
 export const EDITOR_TOOLS: { id: EditorTool; label: string; key: string; icon: typeof Paintbrush }[] = [
   { id: 'select', label: 'Seleziona e sposta', key: 'V', icon: MousePointer2 },
@@ -49,6 +52,7 @@ export const EDITOR_TOOLS: { id: EditorTool; label: string; key: string; icon: t
   { id: 'props', label: 'Oggetti di scena', key: 'O', icon: Armchair },
   { id: 'light', label: 'Luci', key: 'L', icon: Lightbulb },
   { id: 'labels', label: 'Scritte sulla mappa', key: 'T', icon: Type },
+  { id: 'copy', label: 'Copia, incolla e stanze pronte', key: 'C', icon: Copy },
 ];
 
 const TERRAIN_MODES: { id: ToolOptions['terrainMode']; label: string; hint: string; icon: typeof Paintbrush }[] = [
@@ -69,9 +73,11 @@ const TERRAIN_GROUPS: { title: string; codes: string[] }[] = [
 
 const PROP_GROUPS: { title: string; ids: string[] }[] = [
   { title: 'Arredi', ids: ['table', 'chair', 'bed', 'bookshelf', 'rug', 'crate', 'barrel', 'chest'] },
+  { title: 'Passaggi tra i piani', ids: ['stairs', 'ladder', 'trapdoor'] },
   { title: 'Pietra', ids: ['pillar', 'statue', 'altar', 'well'] },
-  { title: 'Natura', ids: ['tree', 'bush', 'rock'] },
+  { title: 'All’aperto', ids: ['tree', 'bush', 'rock', 'bridge', 'cart', 'tent', 'fence'] },
   { title: 'Fuochi', ids: ['campfire', 'torch', 'brazier'] },
+  { title: 'Trappole (nascoste ai giocatori)', ids: ['trap'] },
 ];
 
 const LABEL_SIZES = [
@@ -386,6 +392,8 @@ export function EditorPanel({ tool, options, setOptions }: { tool: EditorTool; o
 
       {tool === 'props' && <PropPalette options={options} set={set} />}
 
+      {tool === 'copy' && <PiecePanel options={options} set={set} />}
+
       {tool === 'light' && (
         <>
           <div className="ed-lights" role="radiogroup" aria-label="Luce da posare">
@@ -636,5 +644,108 @@ function NewScene({ onClose }: { onClose: () => void }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** A piece of map as a small picture, for the copy tool's panel. */
+function PiecePreview({ piece }: { piece: MapPiece }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const cv = ref.current;
+    if (!cv) return;
+    const px = Math.max(6, Math.min(28, Math.floor(300 / Math.max(piece.w, piece.h))));
+    cv.width = piece.w * px;
+    cv.height = piece.h * px;
+    const c = cv.getContext('2d')!;
+    c.clearRect(0, 0, cv.width, cv.height);
+    if (/[^.]/.test(piece.terrain)) c.drawImage(renderTerrain(piece.terrain, piece.w, piece.h, 3, px), 0, 0);
+    for (const p of piece.props) drawProp(c, { ...p, id: 'p', sceneId: 'p', rotation: p.rotation ?? 0, light: null, blocksVision: false, hidden: false, image: null }, px, null, 0.4, true);
+    c.lineCap = 'round';
+    for (const w of piece.walls) {
+      c.strokeStyle = w.kind === 'door' ? '#5ec8ff' : w.kind === 'window' ? '#9be7c4' : '#ffb347';
+      c.lineWidth = 3;
+      c.beginPath();
+      c.moveTo(w.x1 * px, w.y1 * px);
+      c.lineTo(w.x2 * px, w.y2 * px);
+      c.stroke();
+    }
+  }, [piece]);
+  return <canvas ref={ref} className="piece-preview" aria-label="Anteprima del pezzo da incollare" />;
+}
+
+const stampThumbs = new Map<string, string>();
+function stampThumb(p: MapPiece): string {
+  let u = stampThumbs.get(p.name ?? '');
+  if (!u) {
+    const px = Math.floor(96 / Math.max(p.w, p.h));
+    const cv = document.createElement('canvas');
+    cv.width = p.w * px;
+    cv.height = p.h * px;
+    const c = cv.getContext('2d')!;
+    c.drawImage(renderTerrain(p.terrain.replace(/\./g, 'g'), p.w, p.h, 5, px), 0, 0);
+    for (const pr of p.props) drawProp(c, { ...pr, id: 'p', sceneId: 'p', rotation: pr.rotation ?? 0, light: null, blocksVision: false, hidden: false, image: null }, px, null, 0.4, true);
+    u = cv.toDataURL();
+    stampThumbs.set(p.name ?? '', u);
+  }
+  return u;
+}
+
+/** Copy a zone of the map and put it down elsewhere, or use a ready-made room. */
+function PiecePanel({ options, set }: { options: ToolOptions; set: (p: Partial<ToolOptions>) => void }) {
+  const { clipboard, setClipboard } = useTable();
+  return (
+    <>
+      <div className="ed-modes" role="radiogroup" aria-label="Copia o incolla">
+        <button role="radio" aria-checked={options.pieceMode === 'copy'} className={`ed-mode ${options.pieceMode === 'copy' ? 'on' : ''}`} onClick={() => set({ pieceMode: 'copy' })}>
+          <Copy size={16} />
+          <span>Copia una zona</span>
+        </button>
+        <button role="radio" aria-checked={options.pieceMode === 'paste'} disabled={!clipboard} className={`ed-mode ${options.pieceMode === 'paste' ? 'on' : ''}`} onClick={() => set({ pieceMode: 'paste' })}>
+          <ClipboardPaste size={16} />
+          <span>Incolla</span>
+        </button>
+      </div>
+      <p className="faint tiny">
+        {options.pieceMode === 'copy'
+          ? 'Trascina sulla mappa: terreno, muri e porte, oggetti e scritte di quella zona vengono copiati.'
+          : 'Clic sulla mappa per incollarlo dove vedi l’anteprima (anche più volte). R lo ruota. Un Ctrl+Z lo toglie.'}
+      </p>
+      {clipboard && (
+        <div className="col piece-box">
+          <PiecePreview piece={clipboard} />
+          <div className="row between">
+            <span className="small">
+              {clipboard.name ?? 'Zona copiata'} · {clipboard.w} × {clipboard.h}
+            </span>
+            <div className="row" style={{ gap: 4 }}>
+              <button className="btn sm" onClick={() => setClipboard(rotatePiece(clipboard))} title="Ruota di un quarto (R)">
+                <RotateCw size={13} /> Ruota
+              </button>
+              <button className="btn sm ghost icon" onClick={() => (setClipboard(null), set({ pieceMode: 'copy' }))} aria-label="Svuota" title="Svuota">
+                <X size={13} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <span className="ed-group">Stanze pronte</span>
+      <div className="ed-grid three" role="list" aria-label="Stanze pronte">
+        {STAMPS.map((st) => (
+          <button
+            key={st.name}
+            role="listitem"
+            aria-label={st.name}
+            className={`ed-tile ${clipboard?.name === st.name ? 'on' : ''}`}
+            onClick={() => {
+              setClipboard(st);
+              set({ pieceMode: 'paste' });
+            }}
+          >
+            <img className="ed-swatch stamp" src={stampThumb(st)} alt="" />
+            <span className="ed-name">{st.name}</span>
+          </button>
+        ))}
+      </div>
+    </>
   );
 }

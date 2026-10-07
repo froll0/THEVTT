@@ -1737,3 +1737,34 @@ img.ed-swatch {
   margin: 0;
   color: var(--fg-muted);
 }
+.piece-box {
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--fill);
+}
+.piece-preview {
+  max-width: 100%;
+  align-self: center;
+  border-radius: 8px;
+  image-rendering: auto;
+}
+img.ed-swatch.stamp {
+  object-fit: contain;
+  background: #1c1c1e;
+  padding: 2px;
+}
+.cond-timers {
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: var(--fill);
+}
+.move-line {
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: var(--fill);
+}
+.move-line.over {
+  color: #ff453a;
+}
