@@ -1,10 +1,10 @@
 ## Novità
 
-- **Libreria di mappe condivisa tra campagne**: salva le scene che prepari e riusale in tutte le tue campagne. Si apre dall'editor o dal pannello Scene.
-  - Ogni mappa porta con sé terreno, muri, porte e finestre, oggetti, luci, scritte e immagini; a scelta anche **mostri e PNG** (mai i personaggi dei giocatori).
-  - **"Usa qui"** la trasforma in una nuova scena e la apre nell'editor in privato. Un solo Ctrl+Z la toglie.
-  - Miniature, ricerca, rinomina ed eliminazione.
-  - **Scambio tra master**: esporta una mappa come file `.thevtt-map` e importa quelle ricevute da altri.
-  - La libreria resta sul tuo PC ed entra nei backup.
-- Le mappe dipinte mantengono lo stesso aspetto ovunque le usi.
-- Corretto: eliminando una scena restavano le sue scritte e i suoi disegni.
+- **Muri attorno agli edifici**: pietra, legno e marmo sono pavimenti di un edificio. Dove toccano erba, terra, acqua o una strada, il muro nasce da solo, e le porte gli aprono il passaggio.
+  - Il selciato ora è una strada: niente muri.
+  - Si può spegnere in ogni scena dall'editor.
+- **Macro**: ciò che scriveresti in chat, in un clic. Stanno in una barra sopra i dadi e si lanciano coi tasti **1–9 e 0**.
+  - Comandi: tiri (anche nascosti e alla cieca), messaggi, **danni** e **cure** sui token selezionati, **condizioni**, **iniziativa**.
+  - `?{Domanda|valore}` chiede un valore prima di partire; `@for`, `@comp`, `@livello`… prendono i numeri dalla tua scheda.
+  - L'editor mostra **cosa farà** ogni riga e dove c'è un errore, con esempi pronti e un pulsante "Prova".
+  - Le macro restano sul tuo PC, uguali in tutte le campagne.
