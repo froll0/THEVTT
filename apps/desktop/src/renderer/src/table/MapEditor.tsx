@@ -1,4 +1,4 @@
-import { brushCells, EMPTY_TERRAIN, TERRAINS, type Ambient, type GameState, type Prop, type Scene, type WallKind } from '@thevtt/shared';
+import { brushCells, EMPTY_TERRAIN, packScene, TERRAINS, type Ambient, type GameState, type Prop, type Scene, type WallKind } from '@thevtt/shared';
 import {
   Armchair,
   BrickWall,
@@ -8,6 +8,7 @@ import {
   Eraser,
   Eye,
   ImagePlus,
+  Library,
   Lightbulb,
   MousePointer2,
   Paintbrush,
@@ -32,9 +33,11 @@ import { Field, readImage, Switch } from '../components/ui';
 import { useTable } from '../store/table';
 import type { ToolOptions } from './Board';
 import { MapGenerator } from './MapGenerator';
+import { MapLibrary } from './MapLibrary';
 import { MapAlignment } from './Panels';
 import { drawProp, LIGHT_PRESETS, PROP_KINDS, propKind } from './props';
-import { renderTerrain, terrainCellPx, terrainSample, terrainSeed } from './terrainRender';
+import { download, renderPackage } from './sceneImage';
+import { terrainSample } from './terrainRender';
 
 /** What the GM works with in the map editor. Labels are text drawn on the map. */
 export type EditorTool = 'select' | 'terrain' | 'walls' | 'props' | 'light' | 'labels';
@@ -125,59 +128,10 @@ function BrushPreview({ code, size }: { code: string; size: number }) {
   return <canvas ref={ref} className="ed-brush-preview" aria-hidden />;
 }
 
-/** The scene as a picture: map image, painted ground, scenery and labels. */
+/** The scene as a PNG: map image, painted ground, scenery and labels. */
 async function exportScene(state: GameState, scene: Scene, assets: Record<string, string>) {
-  const scale = Math.min(70, Math.floor(8000 / Math.max(scene.widthCells, scene.heightCells)));
-  const W = scene.widthCells * scale;
-  const H = scene.heightCells * scale;
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const c = canvas.getContext('2d')!;
-  c.fillStyle = '#1c1c1e';
-  c.fillRect(0, 0, W, H);
-  const load = (src: string) =>
-    new Promise<HTMLImageElement | null>((res) => {
-      const img = new Image();
-      img.onload = () => res(img);
-      img.onerror = () => res(null);
-      img.src = src;
-    });
-  if (scene.background && assets[scene.background]) {
-    const bg = await load(assets[scene.background]!);
-    if (bg) {
-      const px = scene.bgCellPx;
-      if (px) c.drawImage(bg, (scene.bgOffsetX ?? 0) * scale, (scene.bgOffsetY ?? 0) * scale, (bg.naturalWidth / px) * scale, (bg.naturalHeight / px) * scale);
-      else c.drawImage(bg, 0, 0, W, H);
-    }
-  }
-  if (scene.terrain) c.drawImage(renderTerrain(scene.terrain, scene.widthCells, scene.heightCells, terrainSeed(scene.id), terrainCellPx(scene.widthCells, scene.heightCells)), 0, 0, W, H);
-  if (scene.showGrid) {
-    c.strokeStyle = 'rgba(0,0,0,0.18)';
-    c.lineWidth = 1;
-    c.beginPath();
-    for (let x = 0; x <= scene.widthCells; x++) (c.moveTo(x * scale, 0), c.lineTo(x * scale, H));
-    for (let y = 0; y <= scene.heightCells; y++) (c.moveTo(0, y * scale), c.lineTo(W, y * scale));
-    c.stroke();
-  }
-  for (const p of Object.values(state.props ?? {})) {
-    if (p.sceneId !== scene.id || p.hidden) continue;
-    const img = p.image && assets[p.image] ? await load(assets[p.image]!) : null;
-    drawProp(c, p, scale, img, 0, false);
-  }
-  for (const d of Object.values(state.drawings ?? {})) {
-    if (d.sceneId !== scene.id || !d.text) continue;
-    c.font = `600 ${d.width * scale}px Inter, system-ui, sans-serif`;
-    c.fillStyle = d.color;
-    c.strokeStyle = 'rgba(0,0,0,0.6)';
-    c.lineWidth = Math.max(2, d.width * scale * 0.12);
-    c.strokeText(d.text, d.points[0]! * scale, d.points[1]! * scale);
-    c.fillText(d.text, d.points[0]! * scale, d.points[1]! * scale);
-  }
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/png');
-  a.download = `${scene.name.replace(/[\\/:*?"<>|]/g, '') || 'mappa'}.png`;
-  a.click();
+  const canvas = await renderPackage(packScene(state, scene.id, assets), 8000);
+  download(canvas.toDataURL('image/png'), `${scene.name}.png`);
 }
 
 /** The left rail of the editor: only the tools that make a map. */
@@ -248,6 +202,7 @@ export function EditorPanel({ tool, options, setOptions }: { tool: EditorTool; o
   const { state, assets, editorSceneId, setEditor, dispatch } = useTable();
   const [generating, setGenerating] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [library, setLibrary] = useState(false);
   if (!state || !editorSceneId) return null;
   const scene = state.scenes[editorSceneId];
   if (!scene) return null;
@@ -271,7 +226,11 @@ export function EditorPanel({ tool, options, setOptions }: { tool: EditorTool; o
         <button className="btn sm icon" onClick={() => setGenerating(true)} title="Genera una mappa" aria-label="Genera una mappa">
           <Wand2 size={14} />
         </button>
+        <button className="btn sm icon" onClick={() => setLibrary(true)} title="Libreria di mappe: salva questa, o usane una già pronta" aria-label="Libreria di mappe">
+          <Library size={14} />
+        </button>
       </div>
+      {library && <MapLibrary sceneId={scene.id} onClose={() => setLibrary(false)} onUsed={(id) => setEditor(id)} />}
       {creating && <NewScene onClose={() => setCreating(false)} />}
       {generating && <MapGenerator onClose={() => setGenerating(false)} activate={false} onCreated={(id) => setEditor(id)} />}
 

@@ -1,7 +1,8 @@
+import type { MapPackage } from './library';
 import type { AreaTemplate, ChatCard, GameState, Note, Prop, Scene, Token, Wall } from './state';
 
 export type TokenPatch = Partial<Omit<Token, 'id' | 'sceneId'>>;
-export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog' | 'terrain'>>;
+export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog' | 'terrain' | 'seed'>>;
 
 /**
  * `sceneId` on wall, prop and drawing actions: the GM working on a scene the
@@ -13,6 +14,8 @@ export type GameAction =
   | { type: 'scene.update'; sceneId: string; patch: ScenePatch }
   /** the painted map of a scene (null: none); its walls follow */
   | { type: 'terrain.set'; sceneId: string; terrain: string | null }
+  /** a map from the library becomes a new scene (id: chosen by the GM's app, to open it right away) */
+  | { type: 'scene.import'; pkg: MapPackage; id?: string; name?: string }
   | { type: 'scene.activate'; sceneId: string }
   | { type: 'scene.delete'; sceneId: string }
   | { type: 'token.create'; token: Partial<Omit<Token, 'id'>> & { name: string } }

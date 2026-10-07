@@ -2,6 +2,7 @@ import { cryptoRng, DiceError, roll, type Rng } from '../dice';
 import { newId } from '../id';
 import type { GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
 import { emptyMask, paintRect, resizeMask } from './fog';
+import { isMapPackage } from './library';
 import { cleanTerrain, resizeTerrain, terrainWalls } from './terrain';
 import { lineOfSight } from './vision';
 import {
@@ -47,6 +48,7 @@ const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: s
   'fog.fill': { cols: ['scenes'], label: 'nebbia' },
   'scene.update': { cols: ['scenes', 'walls'], label: 'modifica della scena' },
   'terrain.set': { cols: ['scenes', 'walls'], label: 'mappa' },
+  'scene.import': { cols: ['scenes', 'walls', 'props', 'drawings', 'tokens'], label: 'mappa dalla libreria' },
 };
 const HISTORY_LIMIT = 50;
 /** what `apply` returns when the state changed and must go out */
@@ -408,6 +410,49 @@ export class GameHost {
         }
         break;
       }
+      case 'scene.import': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const pkg = action.pkg;
+        if (!isMapPackage(pkg)) return { ok: false, reason: 'Questa mappa non si può leggere' };
+        type Single = Exclude<GameAction, { type: 'game.undo' } | { type: 'game.redo' } | { type: 'batch' }>;
+        const run = (a: Single) => this.apply(from, a);
+        // its pictures join the table's, under new ids
+        const ids: Record<string, string> = {};
+        for (const [key, url] of Object.entries(pkg.assets).slice(0, 300)) {
+          if (typeof url === 'string' && IMAGE_DATA_URL.test(url) && url.length <= MAX_ASSET_BYTES) ids[key] = this.addAsset(url);
+        }
+        const asset = (key: string | null | undefined) => (key && ids[key]) || null;
+        const id = typeof action.id === 'string' && /^[A-Za-z0-9_-]{6,40}$/.test(action.id) && !s.scenes[action.id] ? action.id : newId();
+        const sc = pkg.scene;
+        run({ type: 'scene.create', name: String(action.name ?? pkg.name), id });
+        if (!s.scenes[id]) return { ok: false, reason: 'Scena non creata' };
+        if (typeof sc.seed === 'string') s.scenes[id]!.seed = sc.seed.slice(0, 60);
+        run({ type: 'scene.update', sceneId: id, patch: { widthCells: sc.widthCells, heightCells: sc.heightCells } });
+        if (sc.terrain) run({ type: 'terrain.set', sceneId: id, terrain: sc.terrain });
+        for (let i = 0; i < Math.min(pkg.walls.length, MAX_WALLS); i += 500) run({ type: 'wall.create', sceneId: id, walls: pkg.walls.slice(i, i + 500) });
+        for (const p of pkg.props.slice(0, MAX_PROPS)) run({ type: 'prop.create', sceneId: id, prop: { ...p, image: asset(p.image) } });
+        for (const d of pkg.drawings.slice(0, MAX_DRAWINGS)) run({ type: 'drawing.create', sceneId: id, points: d.points, color: d.color, width: d.width, text: d.text });
+        for (const t of pkg.tokens.slice(0, 200)) run({ type: 'token.create', token: { ...t, sceneId: id, image: asset(t.image), ownerIds: [], characterId: null } });
+        // last, so what the map says wins over what walls switch on by themselves
+        run({
+          type: 'scene.update',
+          sceneId: id,
+          patch: {
+            cellDistance: sc.cellDistance,
+            unit: sc.unit,
+            showGrid: sc.showGrid,
+            vision: sc.vision,
+            ambient: sc.ambient,
+            autoWalls: sc.autoWalls,
+            bgCellPx: sc.bgCellPx,
+            bgOffsetX: sc.bgOffsetX,
+            bgOffsetY: sc.bgOffsetY,
+            background: asset(sc.background),
+          },
+        });
+        break;
+      }
       case 'terrain.set': {
         const denied = gmOnly();
         if (denied) return denied;
@@ -436,6 +481,7 @@ export class GameHost {
         for (const t of Object.values(s.templates ?? {})) if (t.sceneId === action.sceneId) delete s.templates![t.id];
         for (const w of Object.values(s.walls ?? {})) if (w.sceneId === action.sceneId) delete s.walls![w.id];
         for (const p of Object.values(s.props ?? {})) if (p.sceneId === action.sceneId) delete s.props![p.id];
+        for (const d of Object.values(s.drawings ?? {})) if (d.sceneId === action.sceneId) delete s.drawings![d.id];
         if (s.activeSceneId === action.sceneId) s.activeSceneId = Object.keys(s.scenes)[0]!;
         break;
       }

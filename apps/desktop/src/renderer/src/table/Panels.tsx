@@ -3,8 +3,9 @@ import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
 import { MapGenerator } from './MapGenerator';
+import { MapLibrary } from './MapLibrary';
 import { plainText, RichEditor, RichView } from '../components/RichText';
-import { BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
+import { Library, BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, Field, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
@@ -459,6 +460,8 @@ export function ScenePanel() {
   const { state, dispatch } = useTable();
   const [newName, setNewName] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [library, setLibrary] = useState(false);
+  const setEditor = useTable((s) => s.setEditor);
   if (!state) return null;
   const active = state.scenes[state.activeSceneId]!;
 
@@ -468,6 +471,10 @@ export function ScenePanel() {
         <Wand2 size={15} /> Genera una mappa
       </button>
       {generating && <MapGenerator onClose={() => setGenerating(false)} />}
+      <button className="btn block" onClick={() => setLibrary(true)}>
+        <Library size={15} /> Libreria di mappe
+      </button>
+      {library && <MapLibrary sceneId={state.activeSceneId} onClose={() => setLibrary(false)} onUsed={(id) => setEditor(id)} />}
       <div className="section-title">Scene</div>
       <div className="initiative">
         {Object.values(state.scenes).map((s) => (

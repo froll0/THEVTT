@@ -35,6 +35,8 @@ export interface Scene {
   terrain?: string | null;
   /** rock and rooms of the painted map get their walls by themselves (default on) */
   autoWalls?: boolean;
+  /** where the painting's little details come from (the scene's id unless it came from the library) */
+  seed?: string;
 }
 
 export type Ambient = 'bright' | 'dim' | 'dark';
