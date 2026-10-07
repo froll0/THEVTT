@@ -30,6 +30,14 @@ export interface Settings {
     hpBars: boolean;
   };
   customCss: string;
+  /** voice and video: chosen devices (empty = the system's), volume per person 0..1, video tiles */
+  call: {
+    micId: string;
+    camId: string;
+    outId: string;
+    volumes: Record<string, number>;
+    tiles: 'small' | 'large' | 'hidden';
+  };
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -47,6 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dice3d: true,
   board: { background: '#0d0e10', gridColor: '#ffffff', gridOpacity: 0.12, tokenNames: 'hover', hpBars: true },
   customCss: '',
+  call: { micId: '', camId: '', outId: '', volumes: {}, tiles: 'small' },
 };
 
 export interface ThemePreset {
@@ -81,7 +90,7 @@ export const useSettings = create<SettingsStore>()(
       ...DEFAULT_SETTINGS,
       set: (patch) => set(patch),
       setBoard: (patch) => set((s) => ({ board: { ...s.board, ...patch } })),
-      reset: () => set(DEFAULT_SETTINGS),
+      reset: () => set((s) => ({ ...DEFAULT_SETTINGS, call: s.call })),
       importJson: (json) => {
         const parsed = JSON.parse(json) as Partial<Settings>;
         set((s) => ({ ...DEFAULT_SETTINGS, ...s, ...parsed, board: { ...s.board, ...(parsed.board ?? {}) } }));
@@ -95,6 +104,11 @@ export const useSettings = create<SettingsStore>()(
         const s = persisted as Partial<Settings>;
         if (version < 2 && s && s.accent === '#c9a227' && (s.radius ?? 8) === 8 && s.theme === 'dark') return { ...s, theme: 'system', accent: '#0a84ff', radius: 12 } as Settings;
         return s as Settings;
+      },
+      // settings saved before a field existed get its default
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<Settings>;
+        return { ...current, ...p, board: { ...current.board, ...(p.board ?? {}) }, call: { ...current.call, ...(p.call ?? {}) } };
       },
     },
   ),

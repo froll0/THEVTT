@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, net, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, net, shell, systemPreferences } from 'electron';
 import { spawn } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
@@ -20,6 +20,11 @@ if (!process.env.THEVTT_USER_DATA && !app.requestSingleInstanceLock()) app.quit(
 // 3D dice need WebGL: on PCs whose GPU is blocklisted Chromium falls back to its
 // software renderer only when allowed. The page is our own code, not the web.
 app.commandLine.appendSwitch('enable-unsafe-swiftshader');
+// automated tests: a fake camera and microphone, no permission prompt
+if (process.env.THEVTT_FAKE_MEDIA) {
+  app.commandLine.appendSwitch('use-fake-device-for-media-stream');
+  app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
+}
 
 // Everything the GM hosts (table state, maps) is kept on this machine.
 const dataDir = () => join(app.getPath('userData'), 'data');
@@ -82,6 +87,12 @@ ipcMain.handle('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.c
 ipcMain.handle('store:read', (_e, key: string) => readJson(join(dataDir(), `${safeName(key)}.json`)));
 ipcMain.handle('store:write', (_e, key: string, value: unknown) => writeJson(join(dataDir(), `${safeName(key)}.json`), value));
 ipcMain.handle('app:info', () => ({ version: app.getVersion(), dataDir: dataDir() }));
+// voice and video: macOS asks the user the first time; elsewhere the app may use them
+ipcMain.handle('media:ask', async (_e, kind: 'microphone' | 'camera') => {
+  if (!isMac || (kind !== 'microphone' && kind !== 'camera')) return true;
+  if (systemPreferences.getMediaAccessStatus(kind) === 'granted') return true;
+  return systemPreferences.askForMediaAccess(kind);
+});
 
 // ---------- backups ----------
 
@@ -262,6 +273,10 @@ function sanitize(cfg: Partial<HostedServerConfig>): HostedServerConfig {
     port: Number.isInteger(port) && port >= 1024 && port <= 65535 ? port : DEFAULT_SERVER_CONFIG.port,
     upnp: cfg.upnp !== false,
     tunnel: cfg.tunnel !== false,
+    turn:
+      cfg.turn && /^turns?:/.test(String(cfg.turn.url).trim())
+        ? { url: String(cfg.turn.url).trim().slice(0, 300), username: String(cfg.turn.username ?? '').slice(0, 200), credential: String(cfg.turn.credential ?? '').slice(0, 300) }
+        : null,
   };
 }
 
@@ -269,7 +284,7 @@ ipcMain.handle('server:get-config', () => serverConfig);
 ipcMain.handle('server:status', () => hosted.status);
 ipcMain.handle('server:set-config', async (_e, cfg: Partial<HostedServerConfig>) => {
   const next = sanitize(cfg);
-  const changed = next.port !== serverConfig.port || next.upnp !== serverConfig.upnp || next.tunnel !== serverConfig.tunnel;
+  const changed = next.port !== serverConfig.port || next.upnp !== serverConfig.upnp || next.tunnel !== serverConfig.tunnel || JSON.stringify(next.turn ?? null) !== JSON.stringify(serverConfig.turn ?? null);
   serverConfig = next;
   await writeJson(serverConfigFile(), serverConfig);
   if (!next.enabled) await hosted.stop();

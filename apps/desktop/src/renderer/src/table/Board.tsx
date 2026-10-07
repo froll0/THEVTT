@@ -9,6 +9,7 @@ import { readImage } from '../components/ui';
 import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
+import { useCall } from '../store/call';
 
 export const CELL = 70;
 export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props' | 'light' | 'terrain';
@@ -413,8 +414,9 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
   const scene = state ? ((editorSceneId && state.scenes[editorSceneId]) || state.scenes[state.activeSceneId]) : undefined;
 
   // keep latest values available to the render loop and handlers
-  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate });
-  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate };
+  const speaking = useCall((s) => s.speaking);
+  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking });
+  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking };
   const hoverWall = useRef<string | null>(null);
   dirty.current = true;
 
@@ -760,6 +762,17 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
           ctx.stroke();
         }
 
+        // whoever owns this token is speaking in the voice chat
+        if (t.ownerIds.some((id) => L.speaking[id])) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r + 4 / cam.zoom + 2, 0, Math.PI * 2);
+          ctx.lineWidth = 3 / cam.zoom;
+          ctx.strokeStyle = 'rgba(48,209,88,0.95)';
+          ctx.shadowColor = '#30d158';
+          ctx.shadowBlur = 14;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
         if (t.id === activeTokenId) {
           ctx.shadowColor = acc;
           ctx.shadowBlur = 24;

@@ -124,6 +124,25 @@ describe('lobby server', () => {
     expect(await peer.next((m) => m.t === 'error')).toMatchObject({ message: 'Non sei seduto a questo tavolo' });
     expect((await api('GET', '/rtc/config', pl.token)).body.iceServers[0].urls).toBeTruthy();
 
+    // voice and video: who is in the call, and signaling between any two of them
+    host.send({ t: 'av.update', campaignId: camp.id, call: { mic: true, cam: false } });
+    expect(await peer.next((m) => m.t === 'av.members' && !!m.members[gm.user.id])).toMatchObject({ members: { [gm.user.id]: { mic: true, cam: false } } });
+    peer.send({ t: 'av.update', campaignId: camp.id, call: { mic: true, cam: true } });
+    await host.next((m) => m.t === 'av.members' && Object.keys(m.members).length === 2);
+    peer.send({ t: 'av.signal', campaignId: camp.id, to: gm.user.id, data: offer });
+    expect(await host.next((m) => m.t === 'av.signal')).toMatchObject({ from: pl.user.id, data: offer });
+    // someone not seated can't join the call
+    const outsider = connect(stranger.token);
+    await outsider.open;
+    outsider.send({ t: 'av.update', campaignId: camp.id, call: { mic: true, cam: false } });
+    expect(await outsider.next((m) => m.t === 'error')).toMatchObject({ message: 'Non sei seduto a questo tavolo' });
+    outsider.ws.close();
+    // leaving the table leaves the call
+    peer.send({ t: 'session.leave', campaignId: camp.id });
+    await host.next((m) => m.t === 'av.members' && !m.members[pl.user.id] && !!m.members[gm.user.id]);
+    peer.send({ t: 'session.join', campaignId: camp.id });
+    await host.next((m) => m.t === 'session.peer' && m.joined);
+
     // host disconnect ends the session
     host.ws.close();
     await peer.next((m) => m.t === 'session.state' && m.session === null);

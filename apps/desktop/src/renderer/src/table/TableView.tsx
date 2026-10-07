@@ -12,6 +12,8 @@ import { Board, CELL, groupDeleteActions, type Tool, type ToolOptions } from './
 import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { PROP_KINDS } from './props';
+import { CallControls, CallTiles, type CallPerson } from './Call';
+import { useCall } from '../store/call';
 import { EditorBanner, EditorPanel, EditorRail, type EditorTool } from './MapEditor';
 import { BestiaryPanel, ChatPanel, DiceBar, DoorInspector, InitiativePanel, NotesPanel, PropInspector, ScenePanel, SheetPanel, SheetWindow, TokenInspector } from './Panels';
 import { FloatingWindow, MinimizedWindow } from '../components/FloatingWindow';
@@ -98,9 +100,20 @@ export function TableView({ campaignId }: { campaignId: string }) {
     return () => useTable.getState().leave();
   }, [campaign?.id, isGm]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // voice and video: follow this table's call while seated
+  const rtReady = useApp((s) => !!s.rt);
+  useEffect(() => (rtReady ? useCall.getState().attach(campaignId) : undefined), [campaignId, rtReady]);
+  const speaking = useCall((s) => s.speaking);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return;
+      // microphone on and off, like in most call apps
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        void useCall.getState().toggleMic();
+        return;
+      }
       // the GM takes back changes to the map
       if ((e.ctrlKey || e.metaKey) && useTable.getState().role === 'gm') {
         const k = e.key.toLowerCase();
@@ -153,6 +166,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const { state, phase } = table;
   const scene = state?.scenes[state.activeSceneId];
   const editing = isGm && !!table.editorSceneId && !!state;
+  const people: Record<string, CallPerson> = Object.fromEntries(campaign.members.map((m) => [m.user.id, { name: m.user.displayName, color: m.user.avatarColor, avatar: m.user.avatar }]));
   const openEditor = (t?: EditorTool) => {
     if (!state) return;
     if (t) setEditorTool(t);
@@ -203,29 +217,42 @@ export function TableView({ campaignId }: { campaignId: string }) {
         {state && (
           <div className="row no-drag" style={{ gap: 'var(--s3)', marginLeft: 'var(--s3)' }}>
             <ConnectionBadge isGm={isGm} onlinePlayers={players.filter((p) => p.online).map((p) => p.id)} />
+            <CallControls people={people} />
             <MusicChip />
             {isGm && (
-              <button className={`btn sm ${editing ? 'primary' : 'ghost'}`} onClick={() => (editing ? closeEditor() : openEditor())} title={editing ? 'Torna al gioco (E)' : 'Editor mappa: dipingi, costruisci, arreda (E)'}>
-                <PencilRuler size={14} /> {editing ? 'Chiudi editor' : 'Editor mappa'}
+              <button
+                className={`btn sm ${editing ? 'primary' : 'ghost icon'}`}
+                onClick={() => (editing ? closeEditor() : openEditor())}
+                title={editing ? 'Torna al gioco (E)' : 'Editor mappa: dipingi, costruisci, arreda (E)'}
+                aria-label={editing ? 'Chiudi editor' : 'Editor mappa'}
+              >
+                <PencilRuler size={14} /> {editing && 'Chiudi editor'}
               </button>
             )}
             {isGm && (
-              <button className={`btn sm ${state.paused ? 'primary' : 'ghost'}`} onClick={() => table.dispatch({ type: 'game.pause', paused: !state.paused })} title={state.paused ? 'Riprendi il gioco' : 'Metti in pausa: i giocatori possono solo scrivere e tirare dadi'}>
-                {state.paused ? <Play size={14} /> : <Pause size={14} />} {state.paused ? 'Riprendi il gioco' : 'Pausa gioco'}
+              <button
+                className={`btn sm ${state.paused ? 'primary' : 'ghost icon'}`}
+                onClick={() => table.dispatch({ type: 'game.pause', paused: !state.paused })}
+                title={state.paused ? 'Riprendi il gioco' : 'Pausa gioco: i giocatori possono solo scrivere e tirare dadi'}
+                aria-label={state.paused ? 'Riprendi il gioco' : 'Pausa gioco'}
+              >
+                {state.paused ? <Play size={14} /> : <Pause size={14} />} {state.paused && 'Riprendi il gioco'}
               </button>
             )}
             <button className="btn ghost sm icon" onClick={() => setShowKeys(true)} title="Scorciatoie da tastiera (?)" aria-label="Scorciatoie da tastiera">
               <Keyboard size={15} />
             </button>
-            <button className="btn ghost sm" onClick={() => openWindow('journal', campaign.id, 'Diario')} title="Il tuo diario personale: appunti che legge solo tu">
-              <BookText size={14} /> Diario
+            <button className="btn ghost sm icon" onClick={() => openWindow('journal', campaign.id, 'Diario')} title="Diario: i tuoi appunti personali, che leggi solo tu" aria-label="Diario">
+              <BookText size={14} />
             </button>
             <div className="avatars">
-              <Avatar user={{ ...(campaign.members.find((m) => m.role === 'gm')?.user ?? user), online: true }} size={20} presence />
+              <span className={speaking[campaign.members.find((m) => m.role === 'gm')?.user.id ?? ''] ? 'speaking' : ''}>
+                <Avatar user={{ ...(campaign.members.find((m) => m.role === 'gm')?.user ?? user), online: true }} size={20} presence />
+              </span>
               {players.map((p) => (
                 <span
                   key={p.id}
-                  className="avatar-route"
+                  className={`avatar-route ${speaking[p.id] ? 'speaking' : ''}`}
                   data-route={p.online ? (table.routes[p.id] ?? 'relay') : undefined}
                   title={`${p.displayName}${p.online ? (table.routes[p.id] === 'p2p' ? ' · connessione diretta' : ' · via server') : ' · offline'}`}
                 >
@@ -256,6 +283,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
           {state?.paused && isGm && <div className="float paused-pill glass">In pausa: i giocatori non possono muovere né disegnare</div>}
           {state && scene ? (
             <>
+              <CallTiles people={people} />
               <Board tool={boardTool} options={boardOptions} cameraRef={cameraRef} onPickTerrain={(code) => setOptions((o) => ({ ...o, terrain: code, terrainMode: 'brush' }))} />
               <DiceLayer />
             </>
@@ -639,6 +667,10 @@ const SHORTCUTS: { title: string; gm?: boolean; keys: [string, string, boolean?]
       ['Ctrl + Z', 'Annulla l’ultima modifica alla mappa'],
       ['Ctrl + Y · Ctrl + Shift + Z', 'Ripeti'],
     ],
+  },
+  {
+    title: 'Voce e video',
+    keys: [['Ctrl + Maiusc + M', 'Accendi o spegni il microfono']],
   },
   {
     title: 'Chat',

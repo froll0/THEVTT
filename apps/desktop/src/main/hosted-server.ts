@@ -1,4 +1,4 @@
-import { buildApp } from '@thevtt/server/app';
+import { buildApp, DEFAULT_ICE_SERVERS } from '@thevtt/server/app';
 import { findGateway, isPrivateIp, mapPort, unmapPort, type PortMapping } from '@thevtt/server/upnp';
 import { networkInterfaces } from 'node:os';
 import { join } from 'node:path';
@@ -93,7 +93,8 @@ export class HostedServer {
       if (this.app) await this.shutdown();
       this.update({ state: 'starting', port: cfg.port, error: undefined, upnp: { state: cfg.upnp ? 'working' : 'off' } });
       try {
-        const { app } = await buildApp({ dbPath: join(this.o.dataDir, 'server', 'thevtt.sqlite') });
+        const iceServers = cfg.turn?.url ? [...DEFAULT_ICE_SERVERS, { urls: cfg.turn.url, username: cfg.turn.username, credential: cfg.turn.credential }] : undefined;
+        const { app } = await buildApp({ dbPath: join(this.o.dataDir, 'server', 'thevtt.sqlite'), iceServers });
         await app.listen({ port: cfg.port, host: '0.0.0.0' });
         this.app = app;
         this.update({ state: 'running', lanAddresses: lanAddresses(), published: 'no' });

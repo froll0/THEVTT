@@ -46,6 +46,7 @@ const bridge: DesktopBridge = {
       return () => ipcRenderer.removeListener('update:progress', listener);
     },
   },
+  askMedia: (kind) => ipcRenderer.invoke('media:ask', kind),
 };
 
 contextBridge.exposeInMainWorld('thevtt', bridge);

@@ -19,7 +19,7 @@ export interface RunningApp {
  * Launches the built desktop app with its own profile. With `hostPort`, the
  * profile is pre-configured to host the lobby server on that port.
  */
-export async function launchApp(opts: { hostPort?: number; release?: unknown; profile?: string } = {}): Promise<RunningApp> {
+export async function launchApp(opts: { hostPort?: number; release?: unknown; profile?: string; fakeMedia?: boolean } = {}): Promise<RunningApp> {
   const profile = opts.profile ?? mkdtempSync(join(tmpdir(), 'thevtt-e2e-'));
   // tests never reach out to the router, Cloudflare or the code relay
   mkdirSync(join(profile, 'data'), { recursive: true });
@@ -31,7 +31,7 @@ export async function launchApp(opts: { hostPort?: number; release?: unknown; pr
   const app = await _electron.launch({
     executablePath: electronPath,
     args: ['--no-sandbox', desktopDir],
-    env: { ...process.env, THEVTT_USER_DATA: profile, VITE_DEV_SERVER_URL: '', ...updates },
+    env: { ...process.env, THEVTT_USER_DATA: profile, VITE_DEV_SERVER_URL: '', ...updates, ...(opts.fakeMedia ? { THEVTT_FAKE_MEDIA: '1' } : {}) },
   });
   const page = await app.firstWindow();
   const errors: string[] = [];

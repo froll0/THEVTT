@@ -6,6 +6,8 @@ export interface HostedServerConfig {
   upnp: boolean;
   /** public address through a Cloudflare tunnel, no router setup needed */
   tunnel: boolean;
+  /** a TURN server, for voice, video and the table when two computers can't reach each other directly */
+  turn?: { url: string; username: string; credential: string } | null;
 }
 
 export interface HostedServerStatus {
@@ -97,6 +99,8 @@ export interface DesktopBridge {
     openPage(): Promise<void>;
     onProgress(cb: (p: { received: number; total: number }) => void): () => void;
   };
+  /** asks the system for the microphone or camera (macOS asks the user once); true when allowed */
+  askMedia(kind: 'microphone' | 'camera'): Promise<boolean>;
 }
 
 declare global {

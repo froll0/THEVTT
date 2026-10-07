@@ -18,7 +18,17 @@ export type ClientToServer =
   | { t: 'relay.peer'; campaignId: string; to: string; payload: unknown }
   /** WebRTC signaling, only between the session host and its players */
   | { t: 'rtc.signal'; campaignId: string; to: string; data: RtcSignal }
+  /** voice and video at the table: join, change mic/camera, or leave (null) */
+  | { t: 'av.update'; campaignId: string; call: AvState | null }
+  /** WebRTC signaling for voice and video, between any two people at the table */
+  | { t: 'av.signal'; campaignId: string; to: string; data: RtcSignal }
   | { t: 'ping' };
+
+/** Someone in the table's call: what they are sending. */
+export interface AvState {
+  mic: boolean;
+  cam: boolean;
+}
 
 /** Opaque WebRTC negotiation data forwarded by the server. */
 export type RtcSignal =
@@ -49,5 +59,8 @@ export type ServerToClient =
   | { t: 'session.peer'; campaignId: string; userId: string; joined: boolean }
   | { t: 'relay'; campaignId: string; from: string; payload: unknown }
   | { t: 'rtc.signal'; campaignId: string; from: string; data: RtcSignal }
+  /** who is in the table's call, sent to everyone at the table when it changes */
+  | { t: 'av.members'; campaignId: string; members: Record<string, AvState> }
+  | { t: 'av.signal'; campaignId: string; from: string; data: RtcSignal }
   | { t: 'error'; message: string }
   | { t: 'pong' };

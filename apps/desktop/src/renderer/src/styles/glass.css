@@ -1355,3 +1355,179 @@ img.ed-swatch {
   padding: 4px;
   box-sizing: border-box;
 }
+
+/* voice and video */
+.call-controls {
+  gap: 4px;
+}
+.call-controls.in-call {
+  padding: 2px;
+  border-radius: var(--capsule);
+  background: var(--fill);
+}
+.btn.danger-soft {
+  color: #ff453a;
+  background: rgb(255 69 58 / 0.14);
+}
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.icon-btn:hover {
+  opacity: 1;
+  background: rgb(255 255 255 / 0.12);
+}
+.call-tiles {
+  top: var(--s3);
+  right: var(--s3);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 16px;
+  max-height: calc(100% - 120px);
+  overflow-y: auto;
+  width: 184px;
+  background: var(--material);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--edge), var(--shadow);
+}
+.call-tiles.large {
+  width: 300px;
+}
+.call-tiles-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 2px 0 6px;
+  color: var(--fg-muted);
+}
+.call-tiles-bar .tiny {
+  flex: 1;
+  font-weight: 600;
+}
+.call-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: var(--fill);
+  transition: box-shadow 0.15s ease, opacity 0.2s;
+}
+.call-tile.video {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+.call-tile video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.call-tile video.mirror {
+  transform: scaleX(-1);
+}
+.call-tile.speaking {
+  box-shadow: 0 0 0 2.5px #30d158, 0 0 14px rgb(48 209 88 / 0.45);
+}
+.call-tile.pending {
+  opacity: 0.6;
+}
+.call-tile-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 560;
+}
+.call-tile.video .call-tile-name {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  max-width: calc(100% - 12px);
+  padding: 2px 8px;
+  border-radius: var(--capsule);
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-size: 0.74rem;
+}
+.call-tiles.large .call-tile-name {
+  font-size: 0.86rem;
+}
+.call-warn {
+  color: #ff9f0a;
+  display: inline-flex;
+}
+.call-volume {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--capsule);
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+}
+.call-tile:hover .call-volume,
+.call-volume:focus-within {
+  display: flex;
+}
+.call-volume input {
+  width: 70px;
+}
+.call-tile:not(.video) .call-volume {
+  top: 50%;
+  transform: translateY(-50%);
+}
+.call-pill {
+  top: var(--s3);
+  right: var(--s3);
+  gap: 6px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--capsule);
+  font-size: 0.82rem;
+  font-weight: 560;
+  color: var(--fg);
+  cursor: pointer;
+}
+.call-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #30d158;
+  box-shadow: 0 0 6px #30d158;
+}
+.call-meter {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--fill);
+  overflow: hidden;
+}
+.call-meter span {
+  display: block;
+  height: 100%;
+  background: #30d158;
+  transition: width 0.1s linear;
+}
+.avatar-route.speaking .avatar,
+.avatars > .speaking .avatar {
+  box-shadow: 0 0 0 2px #30d158;
+}

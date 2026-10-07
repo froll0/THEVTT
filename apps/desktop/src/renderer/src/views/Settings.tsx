@@ -1,5 +1,5 @@
 import { Copy, FolderOpen, ImagePlus } from 'lucide-react';
-import type { BackupSummary } from '../../../preload/api';
+import type { BackupSummary, HostedServerConfig } from '../../../preload/api';
 import { useEffect, useState } from 'react';
 import { Avatar, Modal, PageHeader, Section, Setting, squareImage, Switch, Tabs } from '../components/ui';
 import { displayServerAddress } from '../lib/address';
@@ -263,6 +263,7 @@ function ServerSettings() {
             <Setting title="Apri la porta sul router automaticamente" hint="Usa UPnP, supportato dalla maggior parte dei router di casa.">
               <Switch on={cfg.upnp} onChange={(upnp) => void hosting.apply({ ...cfg, upnp })} />
             </Setting>
+            <TurnSetting cfg={cfg} apply={(c) => void hosting.apply(c)} />
             <Setting title="Porta">
               <input className="input mono" style={{ width: 90 }} value={port} onChange={(e) => setPort(e.target.value.replace(/\D/g, ''))} />
               <button className="btn sm" disabled={Number(port) === cfg.port} onClick={() => void hosting.apply({ ...cfg, port: Number(port) })}>
@@ -602,5 +603,31 @@ function Advanced() {
         </div>
       </Section>
     </>
+  );
+}
+
+/** An optional TURN server: a bridge for voice and video when two computers can't see each other. */
+function TurnSetting({ cfg, apply }: { cfg: HostedServerConfig; apply: (c: HostedServerConfig) => void }) {
+  const [url, setUrl] = useState(cfg.turn?.url ?? '');
+  const [username, setUsername] = useState(cfg.turn?.username ?? '');
+  const [credential, setCredential] = useState(cfg.turn?.credential ?? '');
+  const dirty = url !== (cfg.turn?.url ?? '') || username !== (cfg.turn?.username ?? '') || credential !== (cfg.turn?.credential ?? '');
+  const valid = !url || /^turns?:/.test(url.trim());
+  return (
+    <Setting
+      title="Ponte per voce e video (facoltativo)"
+      hint="Voce e video vanno diretti tra i computer. Se due giocatori non riescono a sentirsi (reti aziendali, alcune connessioni mobili), inserisci qui un server TURN: per esempio uno gratuito di Open Relay o Cloudflare."
+    >
+      <div className="col" style={{ gap: 6, minWidth: 260 }}>
+        <input className="input mono" placeholder="turn:indirizzo:3478" value={url} onChange={(e) => setUrl(e.target.value)} aria-label="Indirizzo del server TURN" />
+        <div className="row" style={{ gap: 6 }}>
+          <input className="input" placeholder="Utente" value={username} onChange={(e) => setUsername(e.target.value)} aria-label="Utente TURN" />
+          <input className="input" type="password" placeholder="Password" value={credential} onChange={(e) => setCredential(e.target.value)} aria-label="Password TURN" />
+        </div>
+        <button className="btn sm" disabled={!dirty || !valid} onClick={() => apply({ ...cfg, turn: url.trim() ? { url: url.trim(), username, credential } : null })}>
+          {valid ? 'Applica' : 'L’indirizzo inizia con turn: o turns:'}
+        </button>
+      </div>
+    </Setting>
   );
 }

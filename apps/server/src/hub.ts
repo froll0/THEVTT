@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
-import type { ClientToServer, Notification, ServerToClient, SessionInfo } from '@thevtt/shared';
+import type { AvState, ClientToServer, Notification, ServerToClient, SessionInfo } from '@thevtt/shared';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { Presence, Repo } from './repo';
 
@@ -11,6 +11,8 @@ interface LiveSession {
   startedAt: string;
   /** userId → socket seated at the table */
   peers: Map<string, WebSocket>;
+  /** who is in the voice and video call */
+  av: Map<string, AvState>;
 }
 
 const MAX_PAYLOAD = 16 * 1024 * 1024;
@@ -70,6 +72,19 @@ export class Hub implements Presence {
       this.send(s.host, { t: 'session.peer', campaignId, userId, joined: false });
       this.sendUser(userId, { t: 'session.state', campaignId, session: null });
     }
+    if (s.av.delete(userId)) this.broadcastAv(s);
+  }
+
+  /** The socket of someone at the table (the host or a seated player). */
+  private seat(s: LiveSession, userId: string): WebSocket | undefined {
+    return s.hostId === userId ? s.host : s.peers.get(userId);
+  }
+
+  private broadcastAv(s: LiveSession, only?: WebSocket): void {
+    const msg: ServerToClient = { t: 'av.members', campaignId: s.campaignId, members: Object.fromEntries(s.av) };
+    if (only) return this.send(only, msg);
+    this.send(s.host, msg);
+    for (const ws of s.peers.values()) this.send(ws, msg);
   }
 
   endSession(campaignId: string): void {
@@ -141,6 +156,8 @@ export class Hub implements Presence {
           host: ws,
           startedAt: prev?.startedAt ?? new Date().toISOString(),
           peers: prev?.peers ?? new Map(),
+          // the call goes on: the host's app reconnects to it by itself
+          av: prev?.av ?? new Map(),
         });
         this.broadcastSession(msg.campaignId);
         for (const peer of prev?.peers.keys() ?? []) this.send(ws, { t: 'session.peer', campaignId: msg.campaignId, userId: peer, joined: true });
@@ -160,6 +177,7 @@ export class Hub implements Presence {
         s.peers.set(userId, ws);
         if (old !== ws) this.send(s.host, { t: 'session.peer', campaignId: msg.campaignId, userId, joined: true });
         this.broadcastSession(msg.campaignId);
+        this.broadcastAv(s, ws);
         return;
       }
       case 'session.leave': {
@@ -168,6 +186,7 @@ export class Hub implements Presence {
           s.peers.delete(userId);
           this.send(s.host, { t: 'session.peer', campaignId: msg.campaignId, userId, joined: false });
           this.broadcastSession(msg.campaignId);
+          if (s.av.delete(userId)) this.broadcastAv(s);
         }
         return;
       }
@@ -196,6 +215,23 @@ export class Hub implements Presence {
         } else throw new Error('Non sei seduto a questo tavolo');
         return;
       }
+      case 'av.update': {
+        const s = this.sessions.get(msg.campaignId);
+        if (!s || this.seat(s, userId) !== ws) throw new Error('Non sei seduto a questo tavolo');
+        if (msg.call) s.av.set(userId, { mic: !!msg.call.mic, cam: !!msg.call.cam });
+        else s.av.delete(userId);
+        this.broadcastAv(s);
+        return;
+      }
+      case 'av.signal': {
+        const s = this.sessions.get(msg.campaignId);
+        if (!s || this.seat(s, userId) !== ws) throw new Error('Non sei seduto a questo tavolo');
+        // only between two people who are both in the call
+        if (!s.av.has(userId) || !s.av.has(msg.to)) return;
+        const to = this.seat(s, msg.to);
+        if (to) this.send(to, { t: 'av.signal', campaignId: msg.campaignId, from: userId, data: msg.data });
+        return;
+      }
       default:
         throw new Error('Tipo di messaggio sconosciuto');
     }
@@ -215,6 +251,7 @@ export class Hub implements Presence {
         s.peers.delete(userId);
         this.send(s.host, { t: 'session.peer', campaignId: s.campaignId, userId, joined: false });
         this.broadcastSession(s.campaignId);
+        if (s.av.delete(userId)) this.broadcastAv(s);
       }
     }
   }
