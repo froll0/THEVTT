@@ -38,7 +38,7 @@ export async function renderPackage(pkg: MapPackage, maxSide: number): Promise<H
   if (sc.terrain) {
     // small pictures don't need the full detail of the ground
     const px = Math.max(8, Math.min(terrainCellPx(sc.widthCells, sc.heightCells), Math.ceil(scale)));
-    c.drawImage(renderTerrain(sc.terrain, sc.widthCells, sc.heightCells, terrainSeed(sc.seed ?? 'library'), px), 0, 0, W, H);
+    c.drawImage(renderTerrain(sc.terrain, sc.widthCells, sc.heightCells, terrainSeed(sc.seed ?? 'library'), px, sc.autoWalls !== false && sc.buildingWalls !== false), 0, 0, W, H);
   }
   if (sc.showGrid && scale >= 24) {
     c.strokeStyle = 'rgba(0,0,0,0.18)';

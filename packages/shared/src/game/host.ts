@@ -48,6 +48,7 @@ const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: s
   'fog.fill': { cols: ['scenes'], label: 'nebbia' },
   'scene.update': { cols: ['scenes', 'walls'], label: 'modifica della scena' },
   'terrain.set': { cols: ['scenes', 'walls'], label: 'mappa' },
+  'hp.roll': { cols: ['tokens'], label: 'danni o cure' },
   'scene.import': { cols: ['scenes', 'walls', 'props', 'drawings', 'tokens'], label: 'mappa dalla libreria' },
 };
 const HISTORY_LIMIT = 50;
@@ -393,7 +394,8 @@ export class GameHost {
         const resized = oldW !== scene.widthCells || oldH !== scene.heightCells;
         if (scene.terrain && resized) scene.terrain = resizeTerrain(scene.terrain, oldW, oldH, scene.widthCells, scene.heightCells);
         if (p.autoWalls !== undefined) scene.autoWalls = !!p.autoWalls;
-        if (resized || p.autoWalls !== undefined) this.refreshAutoWalls(scene.id);
+        if (p.buildingWalls !== undefined) scene.buildingWalls = !!p.buildingWalls;
+        if (resized || p.autoWalls !== undefined || p.buildingWalls !== undefined) this.refreshAutoWalls(scene.id);
         if (p.cellDistance !== undefined) scene.cellDistance = Math.min(1000, Math.max(0.1, Math.round(Number(p.cellDistance) * 10) / 10 || 1));
         if (p.unit !== undefined) scene.unit = p.unit === 'ft' ? 'ft' : 'm';
         if (p.showGrid !== undefined) scene.showGrid = !!p.showGrid;
@@ -445,6 +447,7 @@ export class GameHost {
             vision: sc.vision,
             ambient: sc.ambient,
             autoWalls: sc.autoWalls,
+            buildingWalls: sc.buildingWalls,
             bgCellPx: sc.bgCellPx,
             bgOffsetX: sc.bgOffsetX,
             bgOffsetY: sc.bgOffsetY,
@@ -600,6 +603,28 @@ export class GameHost {
         } catch (e) {
           return { ok: false, reason: e instanceof DiceError ? e.message : 'Tiro non valido' };
         }
+        break;
+      }
+      case 'hp.roll': {
+        const targets = (Array.isArray(action.tokenIds) ? action.tokenIds : []).slice(0, 50).map((id) => s.tokens[id]).filter((t): t is Token => !!t);
+        if (!targets.length) return { ok: false, reason: 'Seleziona prima uno o più token' };
+        if (!isGm && targets.some((t) => !t.ownerIds.includes(from))) return { ok: false, reason: 'Puoi farlo solo sui tuoi token' };
+        let r;
+        try {
+          r = roll(action.formula, this.rng);
+        } catch (e) {
+          return { ok: false, reason: e instanceof DiceError ? e.message : 'Tiro non valido' };
+        }
+        const amount = Math.max(0, r.total);
+        for (const t of targets) {
+          if (!t.hp) continue;
+          const current = action.heal ? Math.min(t.hp.max, t.hp.current + amount) : Math.max(0, t.hp.current - amount);
+          t.hp = { ...t.hp, current };
+        }
+        const names = targets.map((t) => t.name).join(', ');
+        const what = action.label?.trim().slice(0, 80) || (action.heal ? 'Cura' : 'Danni');
+        // hidden creatures stay hidden: the GM's roll on them is the GM's alone
+        this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `${what} → ${names}`.slice(0, 120), roll: r, private: isGm && targets.some((t) => t.hidden) });
         break;
       }
       case 'card': {
@@ -1068,7 +1093,7 @@ export class GameHost {
     const old = new Map<string, string>();
     for (const w of Object.values(walls)) if (w.sceneId === sceneId && w.auto) old.set(`${w.x1},${w.y1},${w.x2},${w.y2}`, w.id);
     const placed = Object.values(walls).filter((w) => w.sceneId === sceneId && !w.auto);
-    const wanted = scene.terrain && scene.autoWalls !== false ? terrainWalls(scene.terrain, scene.widthCells, scene.heightCells, placed).slice(0, Math.max(0, MAX_WALLS - placed.length)) : [];
+    const wanted = scene.terrain && scene.autoWalls !== false ? terrainWalls(scene.terrain, scene.widthCells, scene.heightCells, placed, scene.buildingWalls !== false).slice(0, Math.max(0, MAX_WALLS - placed.length)) : [];
     for (const seg of wanted) {
       const key = `${seg.x1},${seg.y1},${seg.x2},${seg.y2}`;
       if (old.has(key)) {

@@ -4,7 +4,8 @@
  * built floors give walls by themselves (`terrainWalls`).
  */
 
-export type TerrainStyle = 'natural' | 'built' | 'rock';
+/** built: floors inside a building · paved: roads and squares, outdoors */
+export type TerrainStyle = 'natural' | 'built' | 'paved' | 'rock';
 
 export interface TerrainKind {
   /** the character stored in the map */
@@ -22,7 +23,7 @@ export const TERRAINS: readonly TerrainKind[] = [
   { code: 's', id: 'stone', name: 'Pietra', style: 'built', color: '#7a746b' },
   { code: 'w', id: 'wood', name: 'Legno', style: 'built', color: '#8a6440' },
   { code: 't', id: 'tiles', name: 'Marmo', style: 'built', color: '#b9b4a8' },
-  { code: 'c', id: 'cobble', name: 'Selciato', style: 'built', color: '#6f6a62' },
+  { code: 'c', id: 'cobble', name: 'Selciato', style: 'paved', color: '#6f6a62' },
   { code: 'r', id: 'rock', name: 'Roccia', style: 'rock', color: '#2a2420' },
   { code: 'e', id: 'earth', name: 'Terra', style: 'natural', color: '#685a4a' },
   { code: 'd', id: 'dirt', name: 'Sterrato', style: 'natural', color: '#927a56' },
@@ -61,15 +62,18 @@ export const emptyTerrain = (w: number, h: number) => EMPTY_TERRAIN.repeat(w * h
 
 /**
  * Is there a wall between two neighbouring cells? Rock against anything that
- * is not rock (nor empty), and a built floor against nothing: a room painted
- * on an empty scene gets its walls, a pond on a picture doesn't.
+ * is not rock (nor empty), and a floor of a building against nothing: a room
+ * painted on an empty scene gets its walls, a pond on a picture doesn't.
+ * With `buildings`, a building's floor (stone, wood, marble) against the
+ * ground outside (grass, earth, a cobbled road…) is a wall too.
  */
-export function wallBetween(a: string, b: string): boolean {
+export function wallBetween(a: string, b: string, buildings = true): boolean {
   const ka = terrainKind(a);
   const kb = terrainKind(b);
   if (!ka && !kb) return false;
   if (!ka || !kb) return (ka ?? kb)!.style === 'built';
-  return (ka.style === 'rock') !== (kb.style === 'rock');
+  if ((ka.style === 'rock') !== (kb.style === 'rock')) return true;
+  return buildings && ka.style !== 'rock' && kb.style !== 'rock' && (ka.style === 'built') !== (kb.style === 'built');
 }
 
 type Seg = { x1: number; y1: number; x2: number; y2: number };
@@ -86,14 +90,14 @@ function covers(w: Seg, x: number, y: number, horizontal: boolean): boolean {
  * The walls a painted map implies, merged into long segments. Edges already
  * taken by a wall, door or window the GM placed are left free.
  */
-export function terrainWalls(terrain: string, w: number, h: number, placed: Seg[] = []): Seg[] {
+export function terrainWalls(terrain: string, w: number, h: number, placed: Seg[] = [], buildings = true): Seg[] {
   const at = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? EMPTY_TERRAIN : terrain[y * w + x] ?? EMPTY_TERRAIN);
   const out: Seg[] = [];
   const free = (x: number, y: number, horizontal: boolean) => !placed.some((p) => covers(p, x, y, horizontal));
   for (let y = 0; y <= h; y++) {
     let start = -1;
     for (let x = 0; x <= w; x++) {
-      const on = x < w && wallBetween(at(x, y - 1), at(x, y)) && free(x, y, true);
+      const on = x < w && wallBetween(at(x, y - 1), at(x, y), buildings) && free(x, y, true);
       if (on && start < 0) start = x;
       if (!on && start >= 0) {
         out.push({ x1: start, y1: y, x2: x, y2: y });
@@ -104,7 +108,7 @@ export function terrainWalls(terrain: string, w: number, h: number, placed: Seg[
   for (let x = 0; x <= w; x++) {
     let start = -1;
     for (let y = 0; y <= h; y++) {
-      const on = y < h && wallBetween(at(x - 1, y), at(x, y)) && free(x, y, false);
+      const on = y < h && wallBetween(at(x - 1, y), at(x, y), buildings) && free(x, y, false);
       if (on && start < 0) start = y;
       if (!on && start >= 0) {
         out.push({ x1: x, y1: start, x2: x, y2: y });

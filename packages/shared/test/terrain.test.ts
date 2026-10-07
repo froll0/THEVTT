@@ -131,3 +131,27 @@ describe('working on a scene the players are not on', () => {
     expect(Object.values(host.state.drawings!)[0]!.sceneId).toBe('s1');
   });
 });
+
+describe('walls around buildings', () => {
+  it('walls a building standing on grass, not a road across it', () => {
+    // 4×3 meadow: a 2×1 house of stone, a cobbled road along the bottom
+    const map = 'gggg' + 'gssg' + 'cccc';
+    const walls = terrainWalls(map, 4, 3).map(key).sort();
+    expect(walls).toEqual(['1,1,3,1', '1,2,3,2', '1,1,1,2', '3,1,3,2'].sort());
+    // without walls around buildings: none (no rock, no empty)
+    expect(terrainWalls(map, 4, 3, [], false)).toEqual([]);
+    // two rooms of different floors inside a building share no wall
+    expect(terrainWalls('sw', 2, 1).map(key).sort()).toEqual(['0,0,0,1', '0,0,2,0', '0,1,2,1', '2,0,2,1']);
+  });
+
+  it('the GM can turn them off for a scene', () => {
+    const host = table();
+    const map = paintCells('g'.repeat(24), rectCells(6, 4, 1, 1, 3, 2), 'w');
+    host.dispatch('gm', { type: 'terrain.set', sceneId: 's1', terrain: map });
+    expect(sceneWalls(host).length).toBeGreaterThan(0);
+    host.dispatch('gm', { type: 'scene.update', sceneId: 's1', patch: { buildingWalls: false } });
+    expect(sceneWalls(host)).toHaveLength(0);
+    host.dispatch('gm', { type: 'game.undo' });
+    expect(sceneWalls(host).length).toBeGreaterThan(0);
+  });
+});

@@ -495,7 +495,7 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
       // the painted map (while the GM paints, the stroke under way)
       const pg0 = gesture.current;
       const terrain = pg0.kind === 'paint' ? pg0.terrain : L.scene.terrain;
-      terrainLayer.current.update(terrain, L.scene.widthCells, L.scene.heightCells, terrainSeed(L.scene.seed ?? L.scene.id));
+      terrainLayer.current.update(terrain, L.scene.widthCells, L.scene.heightCells, terrainSeed(L.scene.seed ?? L.scene.id), L.scene.autoWalls !== false && L.scene.buildingWalls !== false);
       terrainLayer.current.draw(ctx, CELL);
       if (L.scene.showGrid && L.board.gridOpacity > 0) {
         ctx.strokeStyle = hexToRgba(L.board.gridColor, L.board.gridOpacity);

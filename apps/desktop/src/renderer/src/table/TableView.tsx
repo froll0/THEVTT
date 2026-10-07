@@ -13,6 +13,7 @@ import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { PROP_KINDS } from './props';
 import { CallControls, CallTiles, type CallPerson } from './Call';
+import { MacroBar } from './Macros';
 import { useCall } from '../store/call';
 import { EditorBanner, EditorPanel, EditorRail, type EditorTool } from './MapEditor';
 import { BestiaryPanel, ChatPanel, DiceBar, DoorInspector, InitiativePanel, NotesPanel, PropInspector, ScenePanel, SheetPanel, SheetWindow, TokenInspector } from './Panels';
@@ -139,6 +140,11 @@ export function TableView({ campaignId }: { campaignId: string }) {
       if (gm && t.state && (e.key === 'e' || (e.key !== 'v' && e.key !== 't' && editorKeys[e.key]))) {
         if (e.key !== 'e') setEditorTool(editorKeys[e.key]!);
         t.setEditor(t.state.activeSceneId);
+        return;
+      }
+      // the macros on the bar: 1 to 9, then 0
+      if (/^[0-9]$/.test(e.key) && !e.altKey) {
+        window.dispatchEvent(new CustomEvent('thevtt:macro', { detail: (Number(e.key) + 9) % 10 }));
         return;
       }
       if (e.key === 'v') setTool('select');
@@ -460,6 +466,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
             </button>
           )}
           {state && !editing && <DiceBar />}
+          {state && !editing && <MacroBar />}
         </div>
 
         {editing && (
@@ -667,6 +674,10 @@ const SHORTCUTS: { title: string; gm?: boolean; keys: [string, string, boolean?]
       ['Ctrl + Z', 'Annulla l’ultima modifica alla mappa'],
       ['Ctrl + Y · Ctrl + Shift + Z', 'Ripeti'],
     ],
+  },
+  {
+    title: 'Macro',
+    keys: [['1 … 9 · 0', 'Lancia la macro in quella posizione della barra']],
   },
   {
     title: 'Voce e video',

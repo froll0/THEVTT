@@ -26,6 +26,8 @@ export type GameAction =
   /** blind: only the GM sees the result */
   | { type: 'roll'; formula: string; label?: string; private?: boolean; blind?: boolean }
   | { type: 'card'; card: ChatCard; private?: boolean }
+  /** damage (or healing) rolled once and applied to these tokens */
+  | { type: 'hp.roll'; formula: string; tokenIds: string[]; heal?: boolean; label?: string }
   | { type: 'initiative.add'; name: string; tokenId?: string | null; modifier?: number; value?: number }
   | { type: 'initiative.set'; entryId: string; value: number }
   | { type: 'initiative.remove'; entryId: string }

@@ -1589,3 +1589,151 @@ img.ed-swatch {
   border-radius: 14px;
   border: 1px dashed var(--border-strong);
 }
+
+/* macros */
+.macrobar {
+  bottom: calc(var(--s4) + 50px);
+  left: 50%;
+  transform: translateX(-50%);
+  gap: 3px;
+  padding: 4px;
+  border-radius: var(--capsule);
+  max-width: calc(100% - 240px);
+  overflow-x: auto;
+}
+.macro-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  max-width: 170px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--capsule);
+  background: none;
+  color: var(--fg);
+  font-size: 0.8rem;
+  font-weight: 560;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.macro-btn:hover {
+  background: var(--fill);
+}
+.macro-btn:active {
+  transform: scale(0.96);
+}
+.macro-btn.icon-only {
+  padding: 0 8px;
+  color: var(--fg-muted);
+}
+.macro-btn kbd,
+.macro-row kbd {
+  font: 600 0.66rem/1 var(--font-mono, ui-monospace, monospace);
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: var(--fill);
+  color: var(--fg-faint);
+}
+.macro-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.macro-manager {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 18px;
+  min-height: 420px;
+}
+.macro-list {
+  gap: 4px;
+}
+.macro-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 10px;
+}
+.macro-row.on {
+  background: var(--selected);
+}
+.macro-row-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  font-weight: 560;
+}
+.macro-edit {
+  gap: 10px;
+  min-width: 0;
+}
+.macro-colors {
+  gap: 4px;
+  align-self: flex-end;
+  padding-bottom: 6px;
+}
+.macro-body {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 120px;
+}
+.macro-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--fill);
+}
+.macro-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+}
+.macro-step.bad {
+  color: #ff453a;
+}
+.macro-step-n {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.macro-help summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+}
+.macro-help dl {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+}
+.macro-help dl > div {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 10px;
+  font-size: 0.8rem;
+}
+.macro-help dd {
+  margin: 0;
+  color: var(--fg-muted);
+}

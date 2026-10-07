@@ -43,6 +43,8 @@ interface MapRef {
   w: number;
   h: number;
   seed: number;
+  /** floors of buildings walled against the ground outside */
+  buildings: boolean;
 }
 
 /**
@@ -62,7 +64,8 @@ function paintRegion(c: CanvasRenderingContext2D, m: MapRef, P: number, x0: numb
         if (code !== EMPTY_TERRAIN) fn(x, y, code);
       }
   };
-  const isBuilt = (code: string) => terrainKind(code)?.style === 'built';
+  // floors of buildings and roads: crisp squares, on top of the ground around them
+  const isBuilt = (code: string) => { const st = terrainKind(code)?.style; return st === 'built' || st === 'paved'; };
 
   // 1. flat ground
   cells((x, y, code) => {
@@ -121,7 +124,7 @@ function paintRegion(c: CanvasRenderingContext2D, m: MapRef, P: number, x0: numb
   // 3. large soft variations of light, so natural ground isn't flat
   cells((x, y, code) => {
     const k = terrainKind(code)!;
-    if (k.style === 'built') return;
+    if (k.style === 'built' || k.style === 'paved') return;
     const rnd = cellRng(x, y, m.seed, 2);
     if (rnd() < 0.35) return;
     const cx = (x + rnd()) * P;
@@ -345,11 +348,11 @@ function paintRegion(c: CanvasRenderingContext2D, m: MapRef, P: number, x0: numb
       const here = at(x, y);
       const left = at(x - 1, y);
       const up = at(x, y - 1);
-      if ((isBuilt(here) || isBuilt(left)) && wallBetween(left, here)) {
+      if ((isBuilt(here) || isBuilt(left)) && wallBetween(left, here, m.buildings)) {
         c.moveTo(x * P, y * P);
         c.lineTo(x * P, (y + 1) * P);
       }
-      if ((isBuilt(here) || isBuilt(up)) && wallBetween(up, here)) {
+      if ((isBuilt(here) || isBuilt(up)) && wallBetween(up, here, m.buildings)) {
         c.moveTo(x * P, y * P);
         c.lineTo((x + 1) * P, y * P);
       }
@@ -359,11 +362,11 @@ function paintRegion(c: CanvasRenderingContext2D, m: MapRef, P: number, x0: numb
 }
 
 /** The whole map as one picture (previews, export). */
-export function renderTerrain(terrain: string, w: number, h: number, seed: number, P: number): HTMLCanvasElement {
+export function renderTerrain(terrain: string, w: number, h: number, seed: number, P: number, buildings = true): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = w * P;
   canvas.height = h * P;
-  paintRegion(canvas.getContext('2d')!, { terrain, w, h, seed }, P, 0, 0, w, h);
+  paintRegion(canvas.getContext('2d')!, { terrain, w, h, seed, buildings }, P, 0, 0, w, h);
   return canvas;
 }
 
@@ -374,18 +377,18 @@ export class TerrainLayer {
   private map: MapRef | null = null;
   private P = 32;
 
-  update(terrain: string | null | undefined, w: number, h: number, seed: number): void {
+  update(terrain: string | null | undefined, w: number, h: number, seed: number, buildings = true): void {
     if (!terrain) {
       this.map = null;
       return;
     }
-    const sig = `${w}x${h}:${seed}`;
+    const sig = `${w}x${h}:${seed}:${buildings}`;
     if (sig !== this.sig) {
       this.sig = sig;
       this.chunks.clear();
       this.P = terrainCellPx(w, h);
     }
-    this.map = { terrain, w, h, seed };
+    this.map = { terrain, w, h, seed, buildings };
     const cw = Math.ceil(w / CHUNK);
     const ch = Math.ceil(h / CHUNK);
     for (let cy = 0; cy < ch; cy++)

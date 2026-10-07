@@ -294,6 +294,14 @@ export function EditorPanel({ tool, options, setOptions }: { tool: EditorTool; o
             </span>
             <Switch on={scene.autoWalls !== false} onChange={(autoWalls) => upd({ autoWalls })} label="Muri automatici" />
           </div>
+          {scene.autoWalls !== false && (
+            <div className="row between">
+              <span className="small" title="Pietra, legno e marmo sono pavimenti di un edificio: contro erba, terra, acqua o una strada selciata prendono il muro. Le porte si mettono con lo strumento Muri.">
+                Muri attorno agli edifici
+              </span>
+              <Switch on={scene.buildingWalls !== false} onChange={(buildingWalls) => upd({ buildingWalls })} label="Muri attorno agli edifici" />
+            </div>
+          )}
           {scene.terrain && (
             <button className="btn ghost sm" onClick={() => dispatch({ type: 'terrain.set', sceneId: scene.id, terrain: null })}>
               Cancella tutto il terreno
@@ -360,6 +368,14 @@ export function EditorPanel({ tool, options, setOptions }: { tool: EditorTool; o
             <span className="small">Muri automatici dalla mappa</span>
             <Switch on={scene.autoWalls !== false} onChange={(autoWalls) => upd({ autoWalls })} label="Muri automatici" />
           </div>
+          {scene.autoWalls !== false && (
+            <div className="row between">
+              <span className="small" title="Pietra, legno e marmo sono pavimenti di un edificio: contro erba, terra, acqua o una strada selciata prendono il muro. Le porte si mettono con lo strumento Muri.">
+                Muri attorno agli edifici
+              </span>
+              <Switch on={scene.buildingWalls !== false} onChange={(buildingWalls) => upd({ buildingWalls })} label="Muri attorno agli edifici" />
+            </div>
+          )}
           {Object.values(state.walls ?? {}).some((w) => w.sceneId === scene.id && !w.auto) && (
             <button className="btn ghost sm" onClick={() => dispatch({ type: 'wall.clear', sceneId: scene.id })}>
               Cancella i muri messi a mano

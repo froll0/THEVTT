@@ -113,6 +113,14 @@ test('the GM paints a map at the table and the players see it', async () => {
   await expect(P.locator('.table-title')).toContainText('Cripta');
   await expect(G.getByRole('status').filter({ hasText: 'dal vivo' })).toBeVisible();
 
+  // walls around buildings, on by default, can be switched off
+  await G.keyboard.press('b');
+  const buildings = ed.getByRole('switch', { name: 'Muri attorno agli edifici' });
+  await expect(buildings).toHaveAttribute('aria-checked', 'true');
+  await buildings.click();
+  await expect(buildings).toHaveAttribute('aria-checked', 'false');
+  await buildings.click();
+
   // undo works in the editor too, then back to the game
   await G.keyboard.press('Control+z');
   await expect(G.locator('.toast', { hasText: /Annullato/ })).toBeVisible();
