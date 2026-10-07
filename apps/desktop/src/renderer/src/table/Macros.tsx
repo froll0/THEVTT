@@ -20,7 +20,7 @@ const HELP: [string, string][] = [
   ['/r 1d20+5 Etichetta', 'tira i dadi (/gr di nascosto, /br alla cieca)'],
   ['/danno 2d6+3 Ascia', 'tira e toglie i PF ai token selezionati'],
   ['/cura 2d4+2 Pozione', 'tira e ridà i PF ai token selezionati'],
-  ['/condizione Avvelenato', 'mette o toglie una condizione ai token selezionati'],
+  ['/condizione Avvelenato 3', 'mette o toglie una condizione (per 3 round, se dici quanti)'],
   ['/iniziativa', 'aggiunge i token selezionati all’iniziativa'],
   ['/gm testo', 'messaggio al solo master'],
   ['testo', 'un messaggio in chat'],

@@ -1,4 +1,4 @@
-import { blockingSegments, brushCells, ellipseCells, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { blockingSegments, brushCells, ellipseCells, moveCost, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
 import { exploredTexture, updateExplored } from './explored';
 import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
@@ -10,6 +10,7 @@ import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
 import { useCall } from '../store/call';
+import { tokenSpeed } from '../lib/combat';
 
 export const CELL = 70;
 export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props' | 'light' | 'terrain';
@@ -209,6 +210,18 @@ function hitDrawing(d: Drawing, wx: number, wy: number, slack: number) {
 
 /** Half-angle of a 2024 cone: its width at the end equals its length. */
 const CONE_HALF = Math.atan(0.5);
+
+/** Is a point (cells) inside an area of effect? */
+export function inTemplate(t: Pick<AreaTemplate, 'shape' | 'x' | 'y' | 'size' | 'angle'>, px: number, py: number): boolean {
+  const dx = px - t.x;
+  const dy = py - t.y;
+  if (t.shape === 'circle') return Math.hypot(dx, dy) <= t.size + 1e-6;
+  if (t.shape === 'square') return Math.abs(dx) <= t.size / 2 && Math.abs(dy) <= t.size / 2;
+  const along = dx * Math.cos(t.angle) + dy * Math.sin(t.angle);
+  const across = Math.abs(-dx * Math.sin(t.angle) + dy * Math.cos(t.angle));
+  if (along < 0 || along > t.size + 1e-6) return false;
+  return t.shape === 'cone' ? across <= along * Math.tan(CONE_HALF) + 1e-6 : across <= 0.5;
+}
 
 export function templatePath(ctx: CanvasRenderingContext2D, t: Pick<AreaTemplate, 'shape' | 'x' | 'y' | 'size' | 'angle'>) {
   const ox = t.x * CELL;
@@ -415,8 +428,12 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
 
   // keep latest values available to the render loop and handlers
   const speaking = useCall((s) => s.speaking);
-  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking });
-  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking };
+  const pendingArea = useTable((s) => s.pendingArea);
+  const setPendingArea = useTable((s) => s.setPendingArea);
+  /** a cone or line with no caster on the map: its point, set by a first click */
+  const areaOrigin = useRef<{ x: number; y: number } | null>(null);
+  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea });
+  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea };
   const hoverWall = useRef<string | null>(null);
   dirty.current = true;
 
@@ -724,6 +741,27 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
         ctx.restore();
       }
 
+      // a spell's area being placed: where it goes, and who's caught in it
+      const draft = L.pendingArea ? areaDraft() : null;
+      if (draft && L.pendingArea) {
+        ctx.save();
+        templatePath(ctx, draft);
+        ctx.fillStyle = hexToRgba(acc, 0.26);
+        ctx.fill();
+        ctx.setLineDash([8 / cam.zoom, 5 / cam.zoom]);
+        haloStroke(ctx, acc, 2.5 / cam.zoom, cam.zoom);
+        ctx.restore();
+        const caught = tokensInArea(draft);
+        for (const t of caught) {
+          ctx.beginPath();
+          ctx.arc((t.x + t.size / 2) * CELL, (t.y + t.size / 2) * CELL, (t.size * CELL) / 2 + 4 / cam.zoom, 0, Math.PI * 2);
+          haloStroke(ctx, '#ff9f0a', 3 / cam.zoom, cam.zoom);
+        }
+        const hwp = hoverWorld.current!;
+        const pending = (L.pendingArea.shape === 'cone' || L.pendingArea.shape === 'line') && !areaOrigin.current && !(L.pendingArea.originTokenId && L.state.tokens[L.pendingArea.originTokenId]?.sceneId === L.scene.id);
+        tag(ctx, pending ? `${L.pendingArea.label}: clic sul punto di partenza` : `${L.pendingArea.label} · ${caught.length ? `${caught.length} ${caught.length === 1 ? 'creatura' : 'creature'}` : 'nessuno dentro'}`, hwp.x, hwp.y, cam.zoom);
+      }
+
       const ini = L.state.initiative;
       const activeTokenId = ini.round > 0 ? ini.entries[ini.turn]?.tokenId : null;
       const g = gesture.current;
@@ -903,11 +941,21 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
           ctx.beginPath();
           ctx.rect(nx * CELL, ny * CELL, t.size * CELL, t.size * CELL);
           haloStroke(ctx, col, 2 / cam.zoom, cam.zoom);
-          const dist = Math.round(cells * L.scene.cellDistance * 10) / 10;
-          const label = blocked ? 'C’è un muro' : `${String(dist).replace('.', ',')} ${L.scene.unit ?? 'ft'}`;
+          // difficult ground costs double; in combat, what's left of the turn's walk
+          const cost = moveCost(L.scene.terrain, L.scene.widthCells, L.scene.heightCells, { x: t.x + t.size / 2 - 0.5, y: t.y + t.size / 2 - 0.5 }, { x: nx + t.size / 2 - 0.5, y: ny + t.size / 2 - 0.5 });
+          const fmtD = (c: number) => String(Math.round(c * L.scene!.cellDistance * 10) / 10).replace('.', ',');
+          const unit = L.scene.unit ?? 'ft';
+          const inCombat = L.state.initiative.round > 0 && L.state.initiative.entries.some((e) => e.tokenId === t.id);
+          const speedM = inCombat ? tokenSpeed(L.state, t) : null;
+          const speedCells = speedM !== null ? speedM / (L.scene.unit === 'ft' ? L.scene.cellDistance * 0.3048 : L.scene.cellDistance) : null;
+          const used = (t.moved ?? 0) + Math.max(cost, Math.round(cells));
+          const over = speedCells !== null && used > speedCells + 1e-6;
+          const label = blocked
+            ? 'C’è un muro'
+            : `${fmtD(Math.max(cost, cells))} ${unit}${cost > Math.round(cells) ? ' · terreno difficile' : ''}${speedCells !== null ? ` · ${fmtD(used)}/${fmtD(speedCells)} nel turno` : ''}${over ? ' · troppo lontano' : ''}`;
           ctx.font = `700 ${14 / cam.zoom}px system-ui, sans-serif`;
           const w = ctx.measureText(label).width + 14 / cam.zoom;
-          ctx.fillStyle = blocked ? 'rgba(120,20,24,0.9)' : 'rgba(0,0,0,0.8)';
+          ctx.fillStyle = blocked || over ? 'rgba(120,20,24,0.9)' : 'rgba(0,0,0,0.8)';
           ctx.beginPath();
           ctx.roundRect(b.x + half + 6 / cam.zoom, b.y - 12 / cam.zoom, w, 24 / cam.zoom, 6 / cam.zoom);
           ctx.fill();
@@ -1088,6 +1136,49 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
     return { x: (clientX - rect.left) / cam.zoom + cam.x, y: (clientY - rect.top) / cam.zoom + cam.y };
   };
 
+  /** the spell's area as it would land now, following the pointer */
+  const areaDraft = (): Pick<AreaTemplate, 'shape' | 'x' | 'y' | 'size' | 'angle'> | null => {
+    const L = live.current;
+    const pa = L.pendingArea;
+    const hw = hoverWorld.current;
+    if (!pa || !hw || !L.state) return null;
+    const cx = hw.x / CELL;
+    const cy = hw.y / CELL;
+    if (pa.shape === 'cone' || pa.shape === 'line') {
+      const caster = pa.originTokenId ? L.state.tokens[pa.originTokenId] : undefined;
+      const o = caster && caster.sceneId === L.scene?.id ? { x: caster.x + caster.size / 2, y: caster.y + caster.size / 2 } : areaOrigin.current;
+      if (!o) return { shape: pa.shape, x: cx, y: cy, size: pa.size, angle: 0 };
+      return { shape: pa.shape, x: o.x, y: o.y, size: pa.size, angle: Math.atan2(cy - o.y, cx - o.x) };
+    }
+    // spheres and cubes sit on the corners and centres of the squares
+    const snap = (v: number) => Math.round(v * 2) / 2;
+    return { shape: pa.shape, x: snap(cx), y: snap(cy), size: pa.size, angle: 0 };
+  };
+  const tokensInArea = (d: Pick<AreaTemplate, 'shape' | 'x' | 'y' | 'size' | 'angle'>) => {
+    const L = live.current;
+    if (!L.state || !L.scene) return [];
+    return Object.values(L.state.tokens).filter((t) => t.sceneId === L.scene!.id && (L.isGm || !t.hidden) && inTemplate(d, t.x + t.size / 2, t.y + t.size / 2));
+  };
+  const placeArea = () => {
+    const L = live.current;
+    const pa = L.pendingArea;
+    if (!pa || !L.state) return;
+    const caster = pa.originTokenId ? L.state.tokens[pa.originTokenId] : undefined;
+    const needsPoint = (pa.shape === 'cone' || pa.shape === 'line') && !(caster && caster.sceneId === L.scene?.id);
+    if (needsPoint && !areaOrigin.current && hoverWorld.current) {
+      areaOrigin.current = { x: hoverWorld.current.x / CELL, y: hoverWorld.current.y / CELL };
+      dirty.current = true;
+      return;
+    }
+    const d = areaDraft();
+    if (!d) return;
+    dispatch({ type: 'template.create', template: { ...d, color: accentColor() } });
+    const hits = tokensInArea(d);
+    if (hits.length) dispatch({ type: 'chat', text: `${pa.label}: nell’area ${hits.map((t) => t.name).join(', ')}` });
+    setPendingArea(null);
+    areaOrigin.current = null;
+  };
+
   const tokenAt = (wx: number, wy: number) => {
     const L = live.current;
     if (!L.state || !L.scene) return undefined;
@@ -1153,6 +1244,11 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
     }
     if (e.button === 1 || e.button === 2) {
       gesture.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, cx: cameraRef.current.x, cy: cameraRef.current.y };
+      return;
+    }
+    if (L.pendingArea) {
+      hoverWorld.current = w;
+      placeArea();
       return;
     }
     if (L.tool === 'ping' || e.altKey) {
@@ -1326,7 +1422,7 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
     const w = toWorld(e.clientX, e.clientY);
     altDown.current = e.altKey;
     const Lm = live.current;
-    if (Lm.tool === 'props' || Lm.tool === 'light' || Lm.tool === 'terrain' || Lm.tool === 'walls') {
+    if (Lm.tool === 'props' || Lm.tool === 'light' || Lm.tool === 'terrain' || Lm.tool === 'walls' || Lm.pendingArea) {
       hoverWorld.current = w;
       dirty.current = true;
     }
@@ -1527,6 +1623,11 @@ export function Board({ tool, options, cameraRef, onPickTerrain }: { tool: Tool;
       // typing anywhere (fields, rich text) never reaches the map
       if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return;
       const L = live.current;
+      if (e.key === 'Escape' && L.pendingArea) {
+        setPendingArea(null);
+        areaOrigin.current = null;
+        return;
+      }
       if (e.key === 'Escape' || e.key === 'Enter') {
         if (gesture.current.kind === 'wall') {
           gesture.current = { kind: 'none' };

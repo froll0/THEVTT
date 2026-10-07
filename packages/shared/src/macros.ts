@@ -21,8 +21,8 @@ export type MacroStep =
   | { kind: 'chat'; text: string; private?: boolean }
   /** damage or healing rolled and applied to the selected tokens */
   | { kind: 'hp'; formula: string; heal: boolean; label?: string }
-  /** a condition switched on or off on the selected tokens */
-  | { kind: 'condition'; name: string }
+  /** a condition switched on or off on the selected tokens, for some rounds if said */
+  | { kind: 'condition'; name: string; rounds?: number }
   /** the selected tokens join the initiative; no modifier: the character's own */
   | { kind: 'initiative'; modifier: number | null }
   | { kind: 'error'; line: number; text: string; message: string };
@@ -94,6 +94,8 @@ export function parseMacro(expanded: string): MacroStep[] {
     }
     if (['condizione', 'cond', 'condition'].includes(cmd)) {
       if (!rest) return err('Manca la condizione, per esempio /condizione Avvelenato');
+      const timed = /^(.+?)\s+(\d+)$/.exec(rest);
+      if (timed) return void steps.push({ kind: 'condition', name: timed[1]!, rounds: Math.min(100, Number(timed[2])) });
       return void steps.push({ kind: 'condition', name: rest });
     }
     if (['iniziativa', 'init', 'initiative'].includes(cmd)) {
@@ -117,7 +119,7 @@ export function describeStep(s: MacroStep): string {
     case 'hp':
       return `${s.heal ? 'Cura' : 'Infligge'} ${s.formula} ${s.heal ? 'ai' : 'di danni ai'} token selezionati${s.label ? ` · ${s.label}` : ''}`;
     case 'condition':
-      return `Mette o toglie «${s.name}» ai token selezionati`;
+      return `Mette o toglie «${s.name}» ai token selezionati${s.rounds ? ` (per ${s.rounds} round)` : ''}`;
     case 'initiative':
       return s.modifier === null ? 'Aggiunge i token selezionati all’iniziativa (col loro bonus)' : `Aggiunge i token selezionati all’iniziativa con ${s.modifier >= 0 ? '+' : ''}${s.modifier}`;
     case 'error':

@@ -19,6 +19,18 @@ export interface SheetProps<T = any> {
   onRoll: (formula: string, label: string) => void;
   /** at the table: post a spell, feature or attack to the chat */
   onShare?: (card: ChatCard) => void;
+  /** at the table: what the sheet can do on the map */
+  table?: SheetTable;
+}
+
+/** The sheet's hooks into the table: attacks against a target, areas, concentration. */
+export interface SheetTable {
+  /** an attack against the selected target; false when nobody is targeted (then it's a plain roll) */
+  attack(a: { name: string; bonus: number; damage: string; damageType?: string; mode?: 'normal' | 'adv' | 'dis' }): boolean;
+  /** start placing the area of a spell on the map */
+  area(a: { shape: 'circle' | 'cone' | 'line' | 'square'; metres: number; label: string }): void;
+  /** the caster now keeps a spell up */
+  concentrate(): void;
 }
 
 export interface BestiaryProps {

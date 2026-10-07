@@ -3,7 +3,7 @@ import { dnd5e } from '@thevtt/systems';
 import { ArrowUpCircle, BookOpen, Dices, Heart, MessageSquareShare, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { Modal, Section, Switch } from '../../components/ui';
-import type { SheetProps } from '..';
+import type { SheetProps, SheetTable } from '..';
 import { DetailsEditor, InventoryEditor } from './editors';
 
 type C = dnd5e.Dnd5eCharacter;
@@ -50,7 +50,7 @@ function spellCard(c: C, sc: dnd5e.Spellcasting, s: dnd5e.SpellDef): ChatCard {
   };
 }
 
-export function Dnd5eSheet({ data, editable, onChange, onRoll, onShare, compact }: SheetProps<C> & { compact?: boolean }) {
+export function Dnd5eSheet({ data, editable, onChange, onRoll, onShare, compact, table }: SheetProps<C> & { compact?: boolean }) {
   const c = dnd5e.normalize(data);
   const set = (patch: Partial<C>) => onChange({ ...c, ...patch });
   const sc = dnd5e.spellcasting(c);
@@ -229,8 +229,8 @@ export function Dnd5eSheet({ data, editable, onChange, onRoll, onShare, compact 
       </div>
 
       {tab === 'main' && <MainTab c={c} onRoll={onRoll} />}
-      {tab === 'combat' && <CombatTab c={c} editable={editable} set={set} onRoll={onRoll} onShare={onShare} onRest={() => setResting(true)} onLongRest={() => onChange(dnd5e.longRest(c))} />}
-      {tab === 'spells' && sc && <SpellsTab c={c} sc={sc} editable={editable} set={set} onRoll={onRoll} onShare={onShare} />}
+      {tab === 'combat' && <CombatTab c={c} editable={editable} set={set} onRoll={onRoll} onShare={onShare} table={table} onRest={() => setResting(true)} onLongRest={() => onChange(dnd5e.longRest(c))} />}
+      {tab === 'spells' && sc && <SpellsTab c={c} sc={sc} editable={editable} set={set} onRoll={onRoll} onShare={onShare} table={table} />}
       {tab === 'features' && <FeaturesTab c={c} onShare={onShare} />}
       {tab === 'inventory' && <InventoryEditor c={c} set={set} readOnly={!editable} onShare={onShare} />}
       {tab === 'details' && (editable && !compact ? <DetailsEditor c={c} set={set} /> : <DetailsView c={c} />)}
@@ -323,10 +323,12 @@ function CombatTab({
   set,
   onRoll,
   onShare,
+  table,
   onRest,
   onLongRest,
 }: {
   c: C;
+  table?: SheetTable;
   editable: boolean;
   set: (p: Partial<C>) => void;
   onRoll: (f: string, l: string) => void;
@@ -357,7 +359,15 @@ function CombatTab({
                   })}
                 />
               </div>
-              <button className="btn sm" onClick={() => onRoll(d20(a.bonus), `${a.name} · attacco`)}>
+              <button
+                className="btn sm"
+                title={table ? 'Attacca il bersaglio selezionato sulla mappa (Maiusc: vantaggio · Alt: svantaggio)' : undefined}
+                onClick={(e) => {
+                  const mode = e.shiftKey ? 'adv' : e.altKey ? 'dis' : 'normal';
+                  if (table?.attack({ name: a.name, bonus: a.bonus, damage: a.damage, damageType: a.damageType, mode })) return;
+                  onRoll(mode === 'adv' ? `2d20kh1${dnd5e.fmtMod(a.bonus)}` : mode === 'dis' ? `2d20kl1${dnd5e.fmtMod(a.bonus)}` : d20(a.bonus), `${a.name} · attacco${mode === 'adv' ? ' con vantaggio' : mode === 'dis' ? ' con svantaggio' : ''}`);
+                }}
+              >
                 {dnd5e.fmtMod(a.bonus)}
               </button>
               <button className="btn sm" onClick={() => onRoll(a.damage, `${a.name} · danni ${a.damageType}`)} title={a.versatile ? `A due mani: ${a.versatile}` : undefined}>
@@ -441,8 +451,10 @@ function SpellsTab({
   set,
   onRoll,
   onShare,
+  table,
 }: {
   c: C;
+  table?: SheetTable;
   sc: dnd5e.Spellcasting;
   editable: boolean;
   set: (p: Partial<C>) => void;
@@ -469,9 +481,16 @@ function SpellsTab({
     }
     const up = slot ? slot - s.level : 0;
     const label = `${s.name}${slot && slot > s.level ? ` (${slot}°)` : ''}`;
-    if (s.attack) onRoll(d20(sc.attack), `${label} · attacco con incantesimo`);
     const dmg = s.level === 0 ? dnd5e.cantripDice(c, s) : s.damage ? addDice(s.damage, s.upcast, up) : undefined;
-    if (dmg) onRoll(s.addMod ? `${dmg}+${castMod}` : dmg, `${label} · danni${s.save ? ` (TS ${ABILITY_LABELS[s.save].short} CD ${sc.saveDc})` : ''}`);
+    const dmgFormula = dmg ? (s.addMod ? `${dmg}+${castMod}` : dmg) : undefined;
+    if (s.concentration) table?.concentrate();
+    // the area goes on the map; its saves and damage are rolled as usual
+    const area = dnd5e.spellArea(s);
+    if (area && table) table.area({ ...area, label });
+    // a spell attack against the target selected on the map
+    if (s.attack && dmgFormula && table?.attack({ name: label, bonus: sc.attack, damage: dmgFormula, damageType: s.damageType ? dnd5e.DAMAGE_TYPES[s.damageType] : undefined })) return;
+    if (s.attack) onRoll(d20(sc.attack), `${label} · attacco con incantesimo`);
+    if (dmgFormula) onRoll(dmgFormula, `${label} · danni${s.save ? ` (TS ${ABILITY_LABELS[s.save].short} CD ${sc.saveDc})` : ''}`);
     if (s.heal) onRoll(s.addMod ? `${addDice(s.heal, s.upcast, up)}+${castMod}` : addDice(s.heal, s.upcast, up), `${label} · cura`);
     if (!s.attack && !dmg && !s.heal) onRoll('0', `${label}${s.save ? ` · TS ${ABILITY_LABELS[s.save].name} CD ${sc.saveDc}` : ' · lanciato'}`);
   };

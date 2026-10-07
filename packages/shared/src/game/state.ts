@@ -135,6 +135,10 @@ export interface Token {
   darkvision?: number;
   /** a circle around the token (paladin aura, spirit guardians…), radius in cells */
   aura?: { radius: number; color: string } | null;
+  /** conditions that end by themselves: rounds left, counted at the start of the token's turns */
+  conditionRounds?: Record<string, number>;
+  /** cells walked in its current turn (only during combat) */
+  moved?: number;
 }
 
 /**

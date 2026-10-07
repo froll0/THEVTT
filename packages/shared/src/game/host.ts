@@ -3,7 +3,7 @@ import { newId } from '../id';
 import type { GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
 import { emptyMask, paintRect, resizeMask } from './fog';
 import { isMapPackage } from './library';
-import { cleanTerrain, resizeTerrain, terrainWalls } from './terrain';
+import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
 import { lineOfSight } from './vision';
 import {
   createScene,
@@ -49,6 +49,7 @@ const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: s
   'scene.update': { cols: ['scenes', 'walls'], label: 'modifica della scena' },
   'terrain.set': { cols: ['scenes', 'walls'], label: 'mappa' },
   'hp.roll': { cols: ['tokens'], label: 'danni o cure' },
+  attack: { cols: ['tokens'], label: 'attacco' },
   'scene.import': { cols: ['scenes', 'walls', 'props', 'drawings', 'tokens'], label: 'mappa dalla libreria' },
 };
 const HISTORY_LIMIT = 50;
@@ -75,9 +76,11 @@ export interface GameHostOptions {
   onChange?: (state: GameState) => void;
   /** called when a character sheet changes (sync back to the server) */
   onCharacterChange?: (character: TableCharacter) => void;
+  /** a token's saving throw bonus (from its sheet or stat block), for the concentration check */
+  saveBonus?: (token: Token, ability: 'con') => number | null;
 }
 
-const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'color', 'name', 'light', 'aura'];
+const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'conditionRounds', 'color', 'name', 'light', 'aura'];
 
 function cleanAura(a: unknown): { radius: number; color: string } | null {
   const v = a as { radius?: unknown; color?: unknown } | null;
@@ -538,6 +541,11 @@ export class GameHost {
           const half = t.size / 2;
           if (blocking.length && !lineOfSight({ x: t.x + half, y: t.y + half }, { x: nx + half, y: ny + half }, blocking)) return { ok: false, reason: 'C’è un muro in mezzo' };
         }
+        // in combat, the walk counts against the turn's movement (difficult ground double)
+        if (s.initiative.round > 0 && s.initiative.entries.some((e) => e.tokenId === t.id)) {
+          const half = t.size / 2;
+          t.moved = (t.moved ?? 0) + moveCost(scene.terrain, scene.widthCells, scene.heightCells, { x: t.x + half - 0.5, y: t.y + half - 0.5 }, { x: nx + half - 0.5, y: ny + half - 0.5 });
+        }
         t.x = nx;
         t.y = ny;
         break;
@@ -557,6 +565,17 @@ export class GameHost {
         if (patch.ownerIds !== undefined) t.ownerIds = patch.ownerIds.filter((id) => !!s.players[id]);
         if (patch.ac !== undefined) t.ac = patch.ac === null ? null : clampInt(patch.ac, 0, 99);
         if (patch.conditions !== undefined) t.conditions = patch.conditions.slice(0, 20).map(String);
+        if (patch.conditionRounds !== undefined) {
+          const timers: Record<string, number> = {};
+          for (const [k, v] of Object.entries(patch.conditionRounds ?? {})) {
+            const n = Math.round(Number(v));
+            if (t.conditions.includes(k) && n > 0) timers[k] = Math.min(100, n);
+          }
+          t.conditionRounds = timers;
+        }
+        // a condition taken off takes its timer with it
+        if (t.conditionRounds) for (const k of Object.keys(t.conditionRounds)) if (!t.conditions.includes(k)) delete t.conditionRounds[k];
+        if (patch.moved !== undefined && isGm) t.moved = Math.max(0, Number(patch.moved) || 0);
         if (patch.light !== undefined) t.light = cleanLight(patch.light);
         if (patch.aura !== undefined) t.aura = cleanAura(patch.aura);
         if (patch.darkvision !== undefined) t.darkvision = Math.min(60, Math.max(0, Number(patch.darkvision) || 0));
@@ -565,7 +584,9 @@ export class GameHost {
           t.image = patch.image;
         }
         if (patch.hp !== undefined) {
+          const before = t.hp?.current;
           t.hp = patch.hp === null ? null : { current: clampInt(patch.hp.current, -999, 9999), max: clampInt(patch.hp.max, 0, 9999) };
+          if (t.hp && before !== undefined && t.hp.current < before) this.concentration(t, before - t.hp.current, from);
         }
         if (patch.x !== undefined || patch.y !== undefined) {
           const scene = s.scenes[t.sceneId]!;
@@ -616,15 +637,49 @@ export class GameHost {
           return { ok: false, reason: e instanceof DiceError ? e.message : 'Tiro non valido' };
         }
         const amount = Math.max(0, r.total);
-        for (const t of targets) {
-          if (!t.hp) continue;
-          const current = action.heal ? Math.min(t.hp.max, t.hp.current + amount) : Math.max(0, t.hp.current - amount);
-          t.hp = { ...t.hp, current };
-        }
         const names = targets.map((t) => t.name).join(', ');
         const what = action.label?.trim().slice(0, 80) || (action.heal ? 'Cura' : 'Danni');
         // hidden creatures stay hidden: the GM's roll on them is the GM's alone
         this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `${what} → ${names}`.slice(0, 120), roll: r, private: isGm && targets.some((t) => t.hidden) });
+        for (const t of targets) {
+          if (!t.hp) continue;
+          if (action.heal) t.hp = { ...t.hp, current: Math.min(t.hp.max, t.hp.current + amount) };
+          else this.hurt(t, amount, from);
+        }
+        break;
+      }
+      case 'attack': {
+        const attacker = action.attackerId ? s.tokens[action.attackerId] : undefined;
+        if (!isGm && attacker && !attacker.ownerIds.includes(from)) return { ok: false, reason: 'Non controlli questo token' };
+        const targets = (Array.isArray(action.targetIds) ? action.targetIds : [])
+          .slice(0, 20)
+          .map((id) => s.tokens[id])
+          .filter((t): t is Token => !!t && t.id !== attacker?.id);
+        if (!targets.length) return { ok: false, reason: 'Seleziona un bersaglio sulla mappa' };
+        try {
+          roll(action.damage, () => 0.5);
+        } catch (e) {
+          return { ok: false, reason: e instanceof DiceError ? e.message : 'Danni non validi' };
+        }
+        const bonus = clampInt(action.bonus, -20, 30);
+        const d20 = action.mode === 'adv' ? '2d20kh1' : action.mode === 'dis' ? '2d20kl1' : '1d20';
+        const name = String(action.name ?? 'Attacco').slice(0, 60);
+        const type = action.damageType ? ` ${String(action.damageType).slice(0, 30)}` : '';
+        for (const t of targets) {
+          const r = roll(`${d20}${bonus >= 0 ? '+' : ''}${bonus}`, this.rng);
+          const die = r.parts[0]?.type === 'dice' ? r.parts[0].rolls.find((x) => !x.dropped)?.value : undefined;
+          const crit = die === 20;
+          const hit = crit || (die !== 1 && (t.ac == null || r.total >= t.ac));
+          // the target's AC stays the GM's: players read hit or miss
+          const verdict = crit ? 'colpo critico!' : hit ? (t.ac == null ? 'CA sconosciuta' : 'colpito') : die === 1 ? '1 naturale, mancato' : 'mancato';
+          const hidden = t.hidden;
+          this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `${name} → ${t.name}: ${verdict}`.slice(0, 120), roll: r, private: hidden });
+          if (!hit) continue;
+          const formula = crit ? action.damage.replace(/(\d*)d(\d+)/gi, (_, n: string, sides: string) => `${(Number(n) || 1) * 2}d${sides}`) : action.damage;
+          const dr = roll(formula, this.rng);
+          this.log({ kind: 'roll', authorId: from, text: `${dr.total}`, label: `${name} · danni${type} → ${t.name}`.slice(0, 120), roll: dr, private: hidden });
+          if (t.hp) this.hurt(t, Math.max(0, dr.total), from);
+        }
         break;
       }
       case 'card': {
@@ -694,6 +749,8 @@ export class GameHost {
         } else ini.turn++;
         const cur = ini.entries[ini.turn];
         if (cur) this.system(`Round ${ini.round} · turno di ${cur.name}`);
+        const tok = cur?.tokenId ? s.tokens[cur.tokenId] : undefined;
+        if (tok) this.startTurn(tok);
         break;
       }
       case 'initiative.prev': {
@@ -713,6 +770,7 @@ export class GameHost {
         const denied = gmOnly();
         if (denied) return denied;
         s.initiative = { round: 0, turn: 0, entries: [] };
+        for (const t of Object.values(s.tokens)) delete t.moved;
         break;
       }
       case 'character.update': {
@@ -1079,6 +1137,45 @@ export class GameHost {
       known.add(assetId);
     }
     this.opts.send(userId, { k: 'state', state: view, rev: ++this.rev, now: this.now() });
+  }
+
+  /** A token takes damage; if it was keeping a spell up, it must try to hold on. */
+  private hurt(t: Token, amount: number, from: string): void {
+    if (!t.hp || amount <= 0) return;
+    t.hp = { ...t.hp, current: Math.max(0, t.hp.current - amount) };
+    this.concentration(t, amount, from);
+  }
+
+  private concentration(t: Token, damage: number, from: string): void {
+    if (!t.conditions.includes('Concentrazione') || damage <= 0) return;
+    const dc = Math.min(30, Math.max(10, Math.floor(damage / 2)));
+    const bonus = this.opts.saveBonus?.(t, 'con') ?? 0;
+    this.log({
+      kind: 'card',
+      authorId: from,
+      text: `Concentrazione · ${t.name}`,
+      private: t.hidden,
+      card: {
+        title: `Concentrazione · ${t.name}`,
+        subtitle: `Tiro salvezza su Costituzione, CD ${dc}`,
+        body: 'Se non lo supera, l’incantesimo che sta mantenendo finisce.',
+        rolls: [{ label: 'Tira il TS', formula: `1d20${bonus >= 0 ? '+' : ''}${bonus}` }],
+      },
+    });
+  }
+
+  /** The start of a token's turn: its movement is fresh, its timed conditions tick down. */
+  private startTurn(t: Token): void {
+    t.moved = 0;
+    if (!t.conditionRounds) return;
+    for (const [name, left] of Object.entries(t.conditionRounds)) {
+      if (left > 1) t.conditionRounds[name] = left - 1;
+      else {
+        delete t.conditionRounds[name];
+        t.conditions = t.conditions.filter((c) => c !== name);
+        this.system(`${t.name}: finisce «${name}»`);
+      }
+    }
   }
 
   /**

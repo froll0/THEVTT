@@ -4,6 +4,8 @@ import { dnd5e, getSystem } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
 import { MapGenerator } from './MapGenerator';
 import { MapLibrary } from './MapLibrary';
+import { useSheetTable } from './sheetTable';
+import { tokenSpeed } from '../lib/combat';
 import { plainText, RichEditor, RichView } from '../components/RichText';
 import { Library, BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -373,6 +375,7 @@ export function SheetPanel() {
 export function SheetWindow({ characterId, width, placeAt }: { characterId: string; width: number; placeAt: () => { x: number; y: number } }) {
   const { state, dispatch, role } = useTable();
   const meId = useApp((s) => s.user?.id ?? '');
+  const sheetTable = useSheetTable(characterId);
   if (!state) return null;
   const selected = state.characters[characterId];
   const system = getSystem(state.systemId);
@@ -419,6 +422,7 @@ export function SheetWindow({ characterId, width, placeAt }: { characterId: stri
         }}
         onRoll={(formula, label) => dispatch({ type: 'roll', formula, label: `${selected.name} · ${label}` })}
         onShare={(card) => dispatch({ type: 'card', card: { ...card, subtitle: [selected.name, card.subtitle].filter(Boolean).join(' · ') } })}
+        table={sheetTable}
       />
     </div>
   );
@@ -1069,9 +1073,42 @@ export function TokenInspector({ token }: { token: Token }) {
                   onClick={() => upd({ conditions: token.conditions.includes(c) ? token.conditions.filter((x) => x !== c) : [...token.conditions, c] })}
                 >
                   <ConditionIcon name={c} /> {c}
+                  {token.conditionRounds?.[c] ? <span className="faint"> · {token.conditionRounds[c]}</span> : null}
                 </button>
               ))}
             </div>
+          )}
+          {token.conditions.length > 0 && (
+            <div className="col cond-timers" aria-label="Durata delle condizioni">
+              {token.conditions.map((c) => (
+                <div key={c} className="row between small">
+                  <span>{c}</span>
+                  <select
+                    className="select tool-select"
+                    aria-label={`Durata di ${c}`}
+                    value={token.conditionRounds?.[c] ?? 0}
+                    onChange={(e) => {
+                      const rounds = { ...(token.conditionRounds ?? {}) };
+                      const n = Number(e.target.value);
+                      if (n > 0) rounds[c] = n;
+                      else delete rounds[c];
+                      upd({ conditionRounds: rounds });
+                    }}
+                  >
+                    <option value={0}>finché non la togli</option>
+                    {[1, 2, 3, 5, 10].map((n) => (
+                      <option key={n} value={n}>
+                        {n} {n === 1 ? 'round' : 'round'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              <span className="faint tiny">Le durate scalano all’inizio di ogni turno del token, in iniziativa.</span>
+            </div>
+          )}
+          {inInitiative && state.initiative.round > 0 && state.scenes[token.sceneId] && (
+            <MovementLine token={token} />
           )}
           {isGm && (
             <>
@@ -1184,6 +1221,32 @@ export function DiceBar() {
             {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
         </>
+      )}
+    </div>
+  );
+}
+
+/** In combat: how far the token has walked this turn, out of its speed. */
+function MovementLine({ token }: { token: Token }) {
+  const { state, dispatch, role } = useTable();
+  if (!state) return null;
+  const scene = state.scenes[token.sceneId]!;
+  const used = cellsToMetres(scene, token.moved ?? 0);
+  const speed = tokenSpeed(state, token);
+  const unit = scene.unit ?? 'ft';
+  const fmt = (m: number) => String(Math.round((scene.unit === 'ft' ? m / 0.3048 : m) * 10) / 10).replace('.', ',');
+  const over = speed !== null && used > speed;
+  return (
+    <div className={`row between small move-line ${over ? 'over' : ''}`} aria-label="Movimento nel turno">
+      <span>
+        Movimento nel turno: <b>{fmt(used)}</b>
+        {speed !== null ? ` / ${fmt(speed)}` : ''} {unit}
+        {over ? ' · oltre la velocità' : ''}
+      </span>
+      {role === 'gm' && (token.moved ?? 0) > 0 && (
+        <button className="btn sm ghost" onClick={() => dispatch({ type: 'token.update', tokenId: token.id, patch: { moved: 0 } })}>
+          Azzera
+        </button>
       )}
     </div>
   );

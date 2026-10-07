@@ -11,6 +11,7 @@ import {
   type TableCharacter,
 } from '@thevtt/shared';
 import { create } from 'zustand';
+import { tokenSave } from '../lib/combat';
 import { FALLBACK_ICE, PeerLink } from '../lib/p2p';
 import { localStore } from '../lib/platform';
 import { useApp } from './app';
@@ -53,6 +54,9 @@ interface TableStore {
   clockOffset: number;
   /** GM: the map editor is open on this scene (null: playing) */
   editorSceneId: string | null;
+  /** a spell's area waiting to be placed on the map (size in cells) */
+  pendingArea: { shape: 'circle' | 'cone' | 'line' | 'square'; size: number; label: string; originTokenId: string | null } | null;
+  setPendingArea(a: TableStore['pendingArea']): void;
   setEditor(sceneId: string | null): void;
 
   host(campaign: Campaign): Promise<void>;
@@ -239,6 +243,8 @@ export const useTable = create<TableStore>((set, get) => {
     group: { tokens: [], props: [] },
     selectedWallId: null,
     editorSceneId: null,
+    pendingArea: null,
+    setPendingArea: (pendingArea) => set({ pendingArea }),
     setEditor: (editorSceneId) => set({ editorSceneId, selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: NO_GROUP }),
     routes: {},
     clockOffset: 0,
@@ -260,6 +266,7 @@ export const useTable = create<TableStore>((set, get) => {
       host = new GameHost({
         state,
         assets: saved?.assets,
+        saveBonus: (t, ability) => (host ? tokenSave(host.state, t, ability) : null),
         send: (to, msg) => {
           if (to === me) apply(msg);
           else if (!links.get(to)?.send(msg)) rt.send({ t: 'relay.peer', campaignId: campaign.id, to, payload: msg });

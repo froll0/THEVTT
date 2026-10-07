@@ -203,3 +203,26 @@ export function ellipseCells(w: number, h: number, x0: number, y0: number, x1: n
     }
   return out;
 }
+
+/** Ground that costs double to walk on (D&D difficult terrain). */
+export const DIFFICULT_TERRAIN = new Set(['n', 'q', 'p', 'v', 'l']);
+
+/**
+ * How many cells a walk from one cell to another costs: one per step
+ * (diagonals too), two for each step into difficult ground.
+ */
+export function moveCost(terrain: string | null | undefined, w: number, h: number, from: { x: number; y: number }, to: { x: number; y: number }): number {
+  const fx = Math.floor(from.x);
+  const fy = Math.floor(from.y);
+  const tx = Math.floor(to.x);
+  const ty = Math.floor(to.y);
+  const steps = Math.max(Math.abs(tx - fx), Math.abs(ty - fy));
+  let cost = 0;
+  for (let i = 1; i <= steps; i++) {
+    const x = Math.round(fx + ((tx - fx) * i) / steps);
+    const y = Math.round(fy + ((ty - fy) * i) / steps);
+    const code = terrain && x >= 0 && y >= 0 && x < w && y < h ? terrain[y * w + x] : undefined;
+    cost += code && DIFFICULT_TERRAIN.has(code) ? 2 : 1;
+  }
+  return cost;
+}

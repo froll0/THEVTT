@@ -65,7 +65,10 @@ export function runMacro(
       const name = known ?? s.name.charAt(0).toUpperCase() + s.name.slice(1);
       for (const t of mine) {
         const has = t.conditions.includes(name);
-        ctx.dispatch({ type: 'token.update', tokenId: t.id, patch: { conditions: has ? t.conditions.filter((c) => c !== name) : [...t.conditions, name] } });
+        const rounds = { ...(t.conditionRounds ?? {}) };
+        if (has) delete rounds[name];
+        else if (s.rounds) rounds[name] = s.rounds;
+        ctx.dispatch({ type: 'token.update', tokenId: t.id, patch: { conditions: has ? t.conditions.filter((c) => c !== name) : [...t.conditions, name], conditionRounds: rounds } });
       }
     } else if (s.kind === 'initiative') {
       for (const t of mine) {

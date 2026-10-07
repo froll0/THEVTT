@@ -894,3 +894,24 @@ export function headline(c: Dnd5eCharacter): string {
   const parts = [getSpecies(c)?.name, getClass(c)?.name].filter(Boolean);
   return parts.length ? `${parts.join(' ')} ${c.level}` : '';
 }
+
+// ---------- areas of effect ----------
+
+export interface SpellArea {
+  shape: 'circle' | 'cone' | 'line' | 'square';
+  /** radius (circle), length (cone, line) or side (square), in metres */
+  metres: number;
+}
+
+/**
+ * The area a spell covers, read from its range ("Sé (cono 4,5 m)") or its
+ * text ("sfera di 6 m", "cubo di 4,5 m", "Linea di 30 m").
+ */
+export function spellArea(s: Pick<SpellDef, 'range' | 'description'>): SpellArea | null {
+  const shapes: Record<string, SpellArea['shape']> = { sfera: 'circle', cilindro: 'circle', emanazione: 'circle', cono: 'cone', linea: 'line', cubo: 'square' };
+  for (const text of [s.range, s.description]) {
+    const m = /(sfera|cilindro|emanazione|cono|linea|cubo)[^0-9.;:]{0,30}?(\d+(?:,\d+)?)\s*m\b/i.exec(text);
+    if (m) return { shape: shapes[m[1]!.toLowerCase()]!, metres: Number(m[2]!.replace(',', '.')) };
+  }
+  return null;
+}

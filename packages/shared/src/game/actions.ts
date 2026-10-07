@@ -26,6 +26,8 @@ export type GameAction =
   /** blind: only the GM sees the result */
   | { type: 'roll'; formula: string; label?: string; private?: boolean; blind?: boolean }
   | { type: 'card'; card: ChatCard; private?: boolean }
+  /** an attack against each target: d20+bonus against its AC; on a hit the damage is applied (doubled dice on a 20) */
+  | { type: 'attack'; attackerId?: string | null; targetIds: string[]; name: string; bonus: number; damage: string; damageType?: string; mode?: 'normal' | 'adv' | 'dis' }
   /** damage (or healing) rolled once and applied to these tokens */
   | { type: 'hp.roll'; formula: string; tokenIds: string[]; heal?: boolean; label?: string }
   | { type: 'initiative.add'; name: string; tokenId?: string | null; modifier?: number; value?: number }

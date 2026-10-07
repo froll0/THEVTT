@@ -21,7 +21,7 @@ describe('macros', () => {
   });
 
   it('understands every command and says what each line will do', () => {
-    const steps = parseMacro('Si va!\n/gm pssst\n/gr 1d20\n/br 1d20+3 Furtività\n/cura 2d4+2 Pozione\n/condizione Avvelenato\n/iniziativa\n/iniziativa +2');
+    const steps = parseMacro('Si va!\n/gm pssst\n/gr 1d20\n/br 1d20+3 Furtività\n/cura 2d4+2 Pozione\n/condizione Avvelenato\n/iniziativa\n/iniziativa +2\n/condizione Spaventato 3');
     expect(steps.map(describeStep)).toEqual([
       'Scrive in chat: «Si va!»',
       'Scrive al master: «pssst»',
@@ -31,6 +31,7 @@ describe('macros', () => {
       'Mette o toglie «Avvelenato» ai token selezionati',
       'Aggiunge i token selezionati all’iniziativa (col loro bonus)',
       'Aggiunge i token selezionati all’iniziativa con +2',
+      'Mette o toglie «Spaventato» ai token selezionati (per 3 round)',
     ]);
   });
 
