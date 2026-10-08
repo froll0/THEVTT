@@ -12,7 +12,9 @@ import {
   type TableCharacter,
 } from '@thevtt/shared';
 import { create } from 'zustand';
+import { getSystem } from '@thevtt/systems';
 import { tokenSave } from '../lib/combat';
+import type { GroupSave } from '../systems';
 import { FALLBACK_ICE, PeerLink } from '../lib/p2p';
 import { localStore } from '../lib/platform';
 import { useApp } from './app';
@@ -59,7 +61,7 @@ interface TableStore {
   /** GM: a piece of map copied (or a ready-made room) waiting to be put down */
   clipboard: MapPiece | null;
   setClipboard(p: MapPiece | null): void;
-  pendingArea: { shape: 'circle' | 'cone' | 'line' | 'square'; size: number; label: string; originTokenId: string | null } | null;
+  pendingArea: { shape: 'circle' | 'cone' | 'line' | 'square'; size: number; label: string; originTokenId: string | null; save?: GroupSave } | null;
   setPendingArea(a: TableStore['pendingArea']): void;
   setEditor(sceneId: string | null): void;
   /** tokens marked as the targets of attacks (Ctrl+click), apart from the selection */
@@ -280,6 +282,8 @@ export const useTable = create<TableStore>((set, get) => {
         state,
         assets: saved?.assets,
         saveBonus: (t, ability) => (host ? tokenSave(host.state, t, ability) : null),
+        // the sheet follows its token's hit points
+        withHp: (ch, current) => getSystem(ch.systemId)?.withHp?.(ch.data, current) ?? null,
         send: (to, msg) => {
           if (to === me) apply(msg);
           else if (!links.get(to)?.send(msg)) rt.send({ t: 'relay.peer', campaignId: campaign.id, to, payload: msg });

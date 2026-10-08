@@ -1,3 +1,4 @@
+import type { Token } from '@thevtt/shared';
 import type { SheetTable } from '../systems';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
@@ -18,12 +19,16 @@ export function useSheetTable(characterId: string): SheetTable | undefined {
   if (!state) return undefined;
   const isGm = state.gmId === me;
   const own = () => Object.values(state.tokens).find((t) => t.characterId === characterId && t.sceneId === state.activeSceneId);
+  // the tokens marked as targets (Ctrl+click), otherwise those selected; never oneself, nor (for a player) their own
+  const targetsFor = (selfId: string | undefined) => {
+    const ids = table.targets.length ? table.targets : table.group.tokens.length ? table.group.tokens : table.selectedTokenId ? [table.selectedTokenId] : [];
+    return ids.map((id) => state.tokens[id]).filter((t): t is Token => !!t && t.id !== selfId && (isGm || !t.ownerIds.includes(me)));
+  };
   return {
     attack: (a) => {
       const attacker = own();
       // the tokens marked as targets (Ctrl+click), otherwise those selected
-      const ids = table.targets.length ? table.targets : table.group.tokens.length ? table.group.tokens : table.selectedTokenId ? [table.selectedTokenId] : [];
-      const targets = ids.map((id) => state.tokens[id]).filter((t) => !!t && t.id !== attacker?.id && (isGm || !t.ownerIds.includes(me)));
+      const targets = targetsFor(attacker?.id);
       if (!targets.length) return false;
       table.dispatch({ type: 'attack', attackerId: attacker?.id ?? null, targetIds: targets.map((t) => t!.id), ...a });
       return true;
@@ -31,10 +36,17 @@ export function useSheetTable(characterId: string): SheetTable | undefined {
     area: (a) => {
       const scene = state.scenes[state.activeSceneId];
       if (!scene) return;
-      table.setPendingArea({ shape: a.shape, size: metresToCells(scene, a.metres), label: a.label, originTokenId: own()?.id ?? null });
+      table.setPendingArea({ shape: a.shape, size: metresToCells(scene, a.metres), label: a.label, originTokenId: own()?.id ?? null, save: a.save });
       // the sheet steps aside, so the map is free to aim at
       useWindows.getState().update(`sheet:${characterId}`, { minimized: true });
       toast(`${a.label}: ${AREA_NAMES[a.shape]} di ${String(a.metres).replace('.', ',')} m. Clicca sulla mappa per posarla, Esc per annullare.`);
+    },
+    save: (a) => {
+      const caster = own();
+      const targets = targetsFor(caster?.id);
+      if (!targets.length) return false;
+      table.dispatch({ type: 'save.group', casterId: caster?.id ?? null, tokenIds: targets.map((t) => t.id), ...a });
+      return true;
     },
     concentrate: () => {
       const t = own();

@@ -14,7 +14,8 @@ import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { PROP_KINDS } from './props';
 import { CallControls, CallTiles, type CallPerson } from './Call';
-import { QuestsPanel, WorldClock } from './World';
+import { GroupSaveForm } from './Saves';
+import { QuestsPanel, RestPrompt, WorldClock } from './World';
 import { MacroBar } from './Macros';
 import { useCall } from '../store/call';
 import { EditorBanner, EditorPanel, EditorRail, type EditorTool } from './MapEditor';
@@ -481,6 +482,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
           )}
           {state && !editing && <DiceBar />}
           {state && !editing && <MacroBar />}
+          {state && <RestPrompt />}
         </div>
 
         {editing && (
@@ -622,6 +624,7 @@ function GroupBar({ isGm }: { isGm: boolean }) {
         </button>
       </div>
       <p className="faint small">Trascina uno di loro per spostarli insieme. Shift+clic aggiunge o toglie, Shift+trascina seleziona un’area.</p>
+      {isGm && tokens.length > 0 && <GroupSaveForm tokenIds={tokens.map((t) => t.id)} />}
       <div className="row wrap">
         {isGm && (
           <button className="btn sm" onClick={() => setHidden(anyVisible)}>

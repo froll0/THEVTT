@@ -4,6 +4,7 @@
  */
 
 import type { Ability } from './data';
+import { MONSTER_EXTRAS } from './monster-extras';
 import { MORE_MONSTERS } from './monsters-more';
 
 export interface MonsterAction {
@@ -16,6 +17,10 @@ export interface MonsterAction {
   reach?: string;
   description?: string;
   recharge?: string;
+  /** legendary actions: how many of the round's uses it takes (1 if not said) */
+  cost?: number;
+  /** a save that, passed, takes no damage at all (instead of half) */
+  noHalf?: boolean;
 }
 
 export interface MonsterDef {
@@ -32,6 +37,16 @@ export interface MonsterDef {
   senses?: string;
   traits?: { name: string; description: string }[];
   actions: MonsterAction[];
+  /** damage types, as the chat writes them («fuoco», «taglienti»…) */
+  resistances?: string[];
+  immunities?: string[];
+  vulnerabilities?: string[];
+  /** saving throw bonuses it's proficient in (the others: just the modifier) */
+  saves?: Partial<Record<Ability, number>>;
+  /** actions it takes at the end of others' turns, `uses` per round */
+  legendary?: { uses: number; actions: MonsterAction[] };
+  /** what its lair does on initiative 20 */
+  lair?: MonsterAction[];
 }
 
 const A = (str: number, dex: number, con: number, int: number, wis: number, cha: number): Record<Ability, number> => ({ str, dex, con, int, wis, cha });
@@ -327,7 +342,7 @@ const BASE_MONSTERS: MonsterDef[] = [
   },
 ];
 
-export const MONSTERS: MonsterDef[] = [...BASE_MONSTERS, ...MORE_MONSTERS];
+export const MONSTERS: MonsterDef[] = [...BASE_MONSTERS, ...MORE_MONSTERS].map((m) => ({ ...m, ...MONSTER_EXTRAS[m.id] }));
 
 export const monsterById = (id: string) => MONSTERS.find((m) => m.id === id);
 

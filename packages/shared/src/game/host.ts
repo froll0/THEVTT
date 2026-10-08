@@ -1,6 +1,6 @@
-import { cryptoRng, DiceError, roll, type Rng } from '../dice';
+import { cryptoRng, DiceError, roll, type RollResult, type Rng } from '../dice';
 import { newId } from '../id';
-import type { GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
+import type { Ability, GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
 import { emptyMask, paintRect, resizeMask } from './fog';
 import { isMapPackage } from './library';
 import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
@@ -12,6 +12,8 @@ import {
   referencedAssets,
   viewFor,
   worldTime,
+  damageAfter,
+  type Defenses,
   type GameState,
   type Light,
   type LogEntry,
@@ -52,6 +54,7 @@ const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: s
   'terrain.set': { cols: ['scenes', 'walls'], label: 'mappa' },
   'hp.roll': { cols: ['tokens'], label: 'danni o cure' },
   attack: { cols: ['tokens'], label: 'attacco' },
+  'save.group': { cols: ['tokens'], label: 'tiro salvezza di gruppo' },
   'scene.import': { cols: ['scenes', 'walls', 'props', 'drawings', 'tokens'], label: 'mappa dalla libreria' },
 };
 const HISTORY_LIMIT = 50;
@@ -78,11 +81,29 @@ export interface GameHostOptions {
   onChange?: (state: GameState) => void;
   /** called when a character sheet changes (sync back to the server) */
   onCharacterChange?: (character: TableCharacter) => void;
-  /** a token's saving throw bonus (from its sheet or stat block), for the concentration check */
-  saveBonus?: (token: Token, ability: 'con') => number | null;
+  /** a token's saving throw bonus (from its sheet or stat block) */
+  saveBonus?: (token: Token, ability: Ability) => number | null;
+  /** a character's sheet with the hit points its token now has (null: leave it) */
+  withHp?: (character: TableCharacter, current: number) => unknown;
 }
 
-const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'conditionRounds', 'color', 'name', 'light', 'aura'];
+const ABILITY_NAMES: Record<Ability, string> = { str: 'Forza', dex: 'Destrezza', con: 'Costituzione', int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
+
+function cleanList(v: unknown): string[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const out = v.slice(0, 20).map((x) => String(x).trim().toLowerCase().slice(0, 30)).filter(Boolean);
+  return out.length ? [...new Set(out)] : undefined;
+}
+
+function cleanDefenses(v: unknown): Defenses | undefined {
+  const d = v as Defenses | null | undefined;
+  if (!d || typeof d !== 'object') return undefined;
+  const out: Defenses = { resist: cleanList(d.resist), immune: cleanList(d.immune), vulnerable: cleanList(d.vulnerable) };
+  for (const k of ['resist', 'immune', 'vulnerable'] as const) if (!out[k]) delete out[k];
+  return Object.keys(out).length ? out : undefined;
+}
+
+const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'conditionRounds', 'color', 'name', 'light', 'aura', 'used'];
 
 function cleanAura(a: unknown): { radius: number; color: string } | null {
   const v = a as { radius?: unknown; color?: unknown } | null;
@@ -583,6 +604,13 @@ export class GameHost {
           light: cleanLight(t.light),
           darkvision: Math.min(60, Math.max(0, Number(t.darkvision) || 0)),
         };
+        const defenses = cleanDefenses(t.defenses);
+        if (defenses) token.defenses = defenses;
+        if (isGm && t.legendary) {
+          const max = clampInt(t.legendary.max, 0, 10);
+          if (max > 0) token.legendary = { max, left: max };
+        }
+        if (isGm && Array.isArray(t.lair) && t.lair.length) token.lair = t.lair.slice(0, 10).map((x) => String(x).slice(0, 60));
         s.tokens[token.id] = token;
         break;
       }
@@ -642,6 +670,17 @@ export class GameHost {
         // a condition taken off takes its timer with it
         if (t.conditionRounds) for (const k of Object.keys(t.conditionRounds)) if (!t.conditions.includes(k)) delete t.conditionRounds[k];
         if (patch.moved !== undefined && isGm) t.moved = Math.max(0, Number(patch.moved) || 0);
+        if (patch.defenses !== undefined) {
+          const d = cleanDefenses(patch.defenses);
+          if (d) t.defenses = d;
+          else delete t.defenses;
+        }
+        if (patch.used !== undefined) t.used = { action: !!patch.used?.action, bonus: !!patch.used?.bonus, reaction: !!patch.used?.reaction };
+        if (patch.legendary !== undefined) {
+          const max = clampInt(patch.legendary?.max ?? 0, 0, 10);
+          t.legendary = max > 0 ? { max, left: clampInt(patch.legendary?.left ?? max, 0, max) } : null;
+        }
+        if (patch.lair !== undefined) t.lair = Array.isArray(patch.lair) ? patch.lair.slice(0, 10).map((x) => String(x).slice(0, 60)) : [];
         if (patch.light !== undefined) t.light = cleanLight(patch.light);
         if (patch.aura !== undefined) t.aura = cleanAura(patch.aura);
         if (patch.darkvision !== undefined) t.darkvision = Math.min(60, Math.max(0, Number(patch.darkvision) || 0));
@@ -653,6 +692,7 @@ export class GameHost {
           const before = t.hp?.current;
           t.hp = patch.hp === null ? null : { current: clampInt(patch.hp.current, -999, 9999), max: clampInt(patch.hp.max, 0, 9999) };
           if (t.hp && before !== undefined && t.hp.current < before) this.concentration(t, before - t.hp.current, from);
+          if (t.hp && t.hp.current !== before) this.hpChanged(t);
         }
         if (patch.x !== undefined || patch.y !== undefined) {
           const scene = s.scenes[t.sceneId]!;
@@ -703,15 +743,77 @@ export class GameHost {
           return { ok: false, reason: e instanceof DiceError ? e.message : 'Tiro non valido' };
         }
         const amount = Math.max(0, r.total);
-        const names = targets.map((t) => t.name).join(', ');
-        const what = action.label?.trim().slice(0, 80) || (action.heal ? 'Cura' : 'Danni');
+        // resistances and the like change what each one takes
+        const dealt = targets.map((t) => (action.heal ? { amount } : damageAfter(t.defenses, amount, action.damageType)));
+        const names = targets.map((t, i) => (dealt[i]!.note ? `${t.name} (${dealt[i]!.note}: ${dealt[i]!.amount})` : t.name)).join(', ');
+        const type = !action.heal && action.damageType ? ` ${String(action.damageType).slice(0, 30)}` : '';
+        const what = (action.label?.trim().slice(0, 80) || (action.heal ? 'Cura' : 'Danni')) + type;
         // hidden creatures stay hidden: the GM's roll on them is the GM's alone
-        this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `${what} → ${names}`.slice(0, 120), roll: r, private: isGm && targets.some((t) => t.hidden) });
-        for (const t of targets) {
-          if (!t.hp) continue;
-          if (action.heal) t.hp = { ...t.hp, current: Math.min(t.hp.max, t.hp.current + amount) };
-          else this.hurt(t, amount, from);
+        this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `${what} → ${names}`.slice(0, 160), roll: r, private: isGm && targets.some((t) => t.hidden) });
+        targets.forEach((t, i) => {
+          if (!t.hp) return;
+          if (action.heal) {
+            t.hp = { ...t.hp, current: Math.min(t.hp.max, t.hp.current + amount) };
+            this.hpChanged(t);
+          } else this.hurt(t, dealt[i]!.amount, from);
+        });
+        break;
+      }
+      case 'save.group': {
+        const caster = action.casterId ? s.tokens[action.casterId] : undefined;
+        if (!isGm && caster && !caster.ownerIds.includes(from)) return { ok: false, reason: 'Non controlli questo token' };
+        const ability = action.ability in ABILITY_NAMES ? action.ability : 'dex';
+        const targets = (Array.isArray(action.tokenIds) ? action.tokenIds : []).slice(0, 50).map((id) => s.tokens[id]).filter((t): t is Token => !!t);
+        if (!targets.length) return { ok: false, reason: 'Nessuno da far tirare' };
+        const dc = clampInt(action.dc, 1, 40);
+        let dmg: RollResult | undefined;
+        if (action.damage) {
+          try {
+            dmg = roll(action.damage, this.rng);
+          } catch (e) {
+            return { ok: false, reason: e instanceof DiceError ? e.message : 'Danni non validi' };
+          }
         }
+        const label = String(action.label ?? 'Tiro salvezza').slice(0, 60);
+        const type = action.damageType ? String(action.damageType).slice(0, 30) : undefined;
+        const lines: { text: string; hidden: boolean }[] = [];
+        for (const t of targets) {
+          const bonus = clampInt(this.opts.saveBonus?.(t, ability) ?? 0, -20, 30);
+          const r = roll(`1d20${bonus >= 0 ? '+' : ''}${bonus}`, this.rng);
+          const ok = r.total >= dc;
+          let text = `${t.name}: ${r.total} — ${ok ? 'riuscito' : 'fallito'}`;
+          if (dmg) {
+            const base = Math.max(0, dmg.total);
+            const raw = ok ? (action.half !== false ? Math.floor(base / 2) : 0) : base;
+            const d = damageAfter(t.defenses, raw, type);
+            text += d.amount > 0 ? `, ${d.amount} danni${ok && action.half !== false ? ' (metà)' : ''}` : ', nessun danno';
+            if (d.note) text += ` (${d.note})`;
+            if (t.hp) this.hurt(t, d.amount, from);
+          }
+          lines.push({ text, hidden: t.hidden });
+        }
+        if (dmg) this.log({ kind: 'roll', authorId: from, text: `${dmg.total}`, label: `${label} · danni${type ? ` ${type}` : ''}`, roll: dmg });
+        // what happened to hidden creatures stays with the GM
+        const card = (rows: typeof lines, priv: boolean) =>
+          rows.length &&
+          this.log({
+            kind: 'card',
+            authorId: from,
+            text: label,
+            private: priv,
+            card: { title: label, subtitle: `Tiro salvezza su ${ABILITY_NAMES[ability]}, CD ${dc}`, body: rows.map((l) => l.text).join('\n') },
+          });
+        card(lines.filter((l) => !l.hidden), false);
+        card(lines.filter((l) => l.hidden), true);
+        break;
+      }
+      case 'rest': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const kind = action.kind === 'long' ? 'long' : 'short';
+        s.rest = { id: newId(), kind };
+        this.apply(from, { type: 'time.advance', minutes: kind === 'long' ? 480 : 60 });
+        this.system(kind === 'long' ? 'Riposo lungo: il gruppo recupera PF, slot, dadi vita e risorse' : 'Riposo breve: ognuno può spendere i suoi dadi vita');
         break;
       }
       case 'attack': {
@@ -743,8 +845,9 @@ export class GameHost {
           if (!hit) continue;
           const formula = crit ? action.damage.replace(/(\d*)d(\d+)/gi, (_, n: string, sides: string) => `${(Number(n) || 1) * 2}d${sides}`) : action.damage;
           const dr = roll(formula, this.rng);
-          this.log({ kind: 'roll', authorId: from, text: `${dr.total}`, label: `${name} · danni${type} → ${t.name}`.slice(0, 120), roll: dr, private: hidden });
-          if (t.hp) this.hurt(t, Math.max(0, dr.total), from);
+          const d = damageAfter(t.defenses, Math.max(0, dr.total), action.damageType);
+          this.log({ kind: 'roll', authorId: from, text: `${dr.total}`, label: `${name} · danni${type} → ${t.name}${d.note ? ` (${d.note}: ${d.amount})` : ''}`.slice(0, 160), roll: dr, private: hidden });
+          if (t.hp) this.hurt(t, d.amount, from);
         }
         break;
       }
@@ -814,6 +917,9 @@ export class GameHost {
           ini.round++;
         } else ini.turn++;
         const cur = ini.entries[ini.turn];
+        // lairs act on initiative 20 (losing ties): before the first one below it
+        const prevValue = ini.turn === 0 ? Infinity : (ini.entries[ini.turn - 1]?.value ?? Infinity);
+        if (cur && cur.value < 20 && prevValue >= 20) this.lairReminder();
         if (cur) this.system(`Round ${ini.round} · turno di ${cur.name}`);
         const tok = cur?.tokenId ? s.tokens[cur.tokenId] : undefined;
         if (tok) this.startTurn(tok);
@@ -1246,6 +1352,28 @@ export class GameHost {
     if (!t.hp || amount <= 0) return;
     t.hp = { ...t.hp, current: Math.max(0, t.hp.current - amount) };
     this.concentration(t, amount, from);
+    this.hpChanged(t);
+  }
+
+  /** The GM's reminder of the lair actions of the creatures in the fight. */
+  private lairReminder(): void {
+    const s = this._state;
+    const rows = s.initiative.entries
+      .map((e) => (e.tokenId ? s.tokens[e.tokenId] : undefined))
+      .filter((t): t is Token => !!t?.lair?.length)
+      .map((t) => `${t.name}: ${t.lair!.join(', ')}`);
+    if (!rows.length) return;
+    this.log({ kind: 'card', authorId: 'system', text: 'Azioni di tana', private: true, card: { title: 'Azioni di tana', subtitle: 'Iniziativa 20', body: rows.join('\n') } });
+  }
+
+  /** A character's token lost or got back hit points: its sheet follows. */
+  private hpChanged(t: Token): void {
+    const ch = t.characterId ? this._state.characters[t.characterId] : undefined;
+    if (!ch || !t.hp || !this.opts.withHp) return;
+    const data = this.opts.withHp(ch, t.hp.current);
+    if (data === null || data === undefined) return;
+    ch.data = data;
+    this.opts.onCharacterChange?.(ch);
   }
 
   private concentration(t: Token, damage: number, from: string): void {
@@ -1269,14 +1397,21 @@ export class GameHost {
   /** The start of a token's turn: its movement is fresh, its timed conditions tick down. */
   private startTurn(t: Token): void {
     t.moved = 0;
-    if (!t.conditionRounds) return;
-    for (const [name, left] of Object.entries(t.conditionRounds)) {
-      if (left > 1) t.conditionRounds[name] = left - 1;
+    // action, bonus action and reaction come back; so do legendary actions
+    if (t.used) delete t.used;
+    if (t.legendary) t.legendary = { ...t.legendary, left: t.legendary.max };
+    for (const [name, left] of Object.entries(t.conditionRounds ?? {})) {
+      if (left > 1) t.conditionRounds![name] = left - 1;
       else {
-        delete t.conditionRounds[name];
+        delete t.conditionRounds![name];
         t.conditions = t.conditions.filter((c) => c !== name);
         this.system(`${t.name}: finisce «${name}»`);
       }
+    }
+    // what to keep in mind this turn
+    if (t.conditions.length) {
+      const list = t.conditions.map((c) => (t.conditionRounds?.[c] ? `${c} (ancora ${t.conditionRounds[c]} round)` : c)).join(', ');
+      this.log({ kind: 'system', authorId: 'system', text: `${t.name} ricorda: ${list}`, private: t.hidden });
     }
   }
 

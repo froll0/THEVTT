@@ -1,4 +1,4 @@
-import type { ChatCard, Token } from '@thevtt/shared';
+import type { Ability, ChatCard, Token } from '@thevtt/shared';
 import type { FC, ReactNode } from 'react';
 import { Dnd5eBestiary, dnd5eMonsterInitiative, Dnd5eStatBlock } from './dnd5e-2024/Bestiary';
 import { Dnd5eBuilder } from './dnd5e-2024/Builder';
@@ -24,11 +24,23 @@ export interface SheetProps<T = any> {
 }
 
 /** The sheet's hooks into the table: attacks against a target, areas, concentration. */
+/** A saving throw for several creatures at once, with the damage of failing it. */
+export interface GroupSave {
+  ability: Ability;
+  dc: number;
+  damage?: string;
+  damageType?: string;
+  /** half the damage on a success (otherwise none) */
+  half?: boolean;
+}
+
 export interface SheetTable {
   /** an attack against the selected target; false when nobody is targeted (then it's a plain roll) */
   attack(a: { name: string; bonus: number; damage: string; damageType?: string; mode?: 'normal' | 'adv' | 'dis' }): boolean;
-  /** start placing the area of a spell on the map */
-  area(a: { shape: 'circle' | 'cone' | 'line' | 'square'; metres: number; label: string }): void;
+  /** start placing the area of a spell on the map; with a save, those inside roll it once it's down */
+  area(a: { shape: 'circle' | 'cone' | 'line' | 'square'; metres: number; label: string; save?: GroupSave }): void;
+  /** the marked (or selected) tokens roll a saving throw; false when nobody is targeted */
+  save(a: GroupSave & { label: string }): boolean;
   /** the caster now keeps a spell up */
   concentrate(): void;
 }

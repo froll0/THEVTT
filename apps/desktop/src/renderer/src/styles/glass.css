@@ -1878,6 +1878,66 @@ img.ed-swatch.stamp {
   left: calc(var(--s4) + 64px);
   transform: none;
   max-width: calc(100% - var(--s4) * 2 - 64px - 380px);
-  overflow-x: auto;
-  scrollbar-width: none;
+  /* a creature with many actions: the bar grows upwards in rows */
+  flex-wrap: wrap;
+  border-radius: 18px;
+}
+.turn-economy {
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.turn-economy .chip {
+  padding: 2px 9px;
+  font-size: 0.76rem;
+}
+.turn-economy .chip.spent {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+.legendary-pips {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+.legendary-pips span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid #bf5af2;
+}
+.legendary-pips span.on {
+  background: #bf5af2;
+}
+.insp-defenses summary {
+  cursor: pointer;
+}
+.ini-economy {
+  display: inline-flex;
+  gap: 2px;
+}
+.ini-economy button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  font: 650 0.66rem/1 var(--font-mono, ui-monospace, monospace);
+  background: rgb(48 209 88 / 0.22);
+  color: var(--fg);
+  cursor: pointer;
+}
+.ini-economy button.spent {
+  background: var(--fill);
+  color: var(--fg-faint);
+  text-decoration: line-through;
+}
+.macro-btn.monster.legendary {
+  background: rgb(191 90 242 / 0.16);
+}
+.macro-btn.monster.lair {
+  background: rgb(255 159 10 / 0.16);
+}
+.macro-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
 }

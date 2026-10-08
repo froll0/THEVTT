@@ -109,16 +109,43 @@ export function MacroBar() {
   const creature = state && state.gmId === me && selectedTokenId ? state.tokens[selectedTokenId] : undefined;
   const monster = creature?.monsterId ? findMonster(creature.monsterId) : undefined;
 
-  const useAction = (a: dnd5e.MonsterAction, mode: 'normal' | 'adv' | 'dis') => {
+  const useAction = (a: dnd5e.MonsterAction, mode: 'normal' | 'adv' | 'dis', kind: 'action' | 'legendary' | 'lair' = 'action') => {
     if (!creature || !monster) return;
+    if (kind === 'legendary') {
+      const l = creature.legendary;
+      const cost = a.cost ?? 1;
+      if (l && l.left < cost) return toast(`${a.name}: restano ${l.left} azioni leggendarie su ${l.max}`, 'error');
+      if (l) dispatch({ type: 'token.update', tokenId: creature.id, patch: { legendary: { ...l, left: l.left - cost } } });
+    }
+    const what = kind === 'legendary' ? ' (leggendaria)' : kind === 'lair' ? ' (tana)' : '';
     const save = a.save ? ` (TS ${dnd5e.ABILITY_LABELS[a.save.ability].short} CD ${a.save.dc})` : '';
+    const targets = useTable.getState().targets.filter((id) => id !== creature.id && state?.tokens[id]);
     if (a.attack !== undefined && a.damage) {
-      const targets = useTable.getState().targets.filter((id) => id !== creature.id && state?.tokens[id]);
       if (!targets.length) return toast(`${a.name}: segna i bersagli con Ctrl+clic sulla mappa`, 'error');
-      dispatch({ type: 'attack', attackerId: creature.id, targetIds: targets, name: a.name, bonus: a.attack, damage: a.damage, damageType: a.damageType, mode });
-    } else if (a.damage) dispatch({ type: 'roll', formula: a.damage, label: `${creature.name} · ${a.name}${a.damageType ? ` · danni ${a.damageType}` : ''}${save}` });
-    else dispatch({ type: 'chat', text: `${creature.name} usa ${a.name}${save}${a.description ? `: ${a.description}` : ''}` });
+      dispatch({ type: 'attack', attackerId: creature.id, targetIds: targets, name: `${a.name}${what}`, bonus: a.attack, damage: a.damage, damageType: a.damageType, mode });
+    } else if (a.save && targets.length) {
+      // the marked targets roll the save; the damage follows (half on a success)
+      dispatch({ type: 'save.group', casterId: creature.id, tokenIds: targets, ability: a.save.ability, dc: a.save.dc, damage: a.damage, damageType: a.damageType, half: !a.noHalf, label: `${creature.name} · ${a.name}${what}` });
+    } else if (a.damage) dispatch({ type: 'roll', formula: a.damage, label: `${creature.name} · ${a.name}${what}${a.damageType ? ` · danni ${a.damageType}` : ''}${save}` });
+    else dispatch({ type: 'chat', text: `${creature.name} usa ${a.name}${what}${save}${a.description ? `: ${a.description}` : ''}` });
   };
+  const actionTitle = (a: dnd5e.MonsterAction) =>
+    `${a.name}${a.attack !== undefined ? ` · ${dnd5e.fmtMod(a.attack)} a colpire` : ''}${a.damage ? ` · ${a.damage} ${a.damageType ?? ''}` : ''}${a.save ? ` · TS ${dnd5e.ABILITY_LABELS[a.save.ability].short} CD ${a.save.dc}` : ''}${a.cost && a.cost > 1 ? ` · costa ${a.cost}` : ''}${a.description ? `\n${a.description}` : ''}${
+      a.attack !== undefined ? '\nSui bersagli segnati (Ctrl+clic). Maiusc: vantaggio · Alt: svantaggio' : a.save ? '\nI bersagli segnati (Ctrl+clic) tirano il TS' : ''
+    }`;
+  const actionButton = (a: dnd5e.MonsterAction, kind: 'action' | 'legendary' | 'lair') => (
+    <button
+      key={`${kind}-${a.name}`}
+      className={`macro-btn monster ${kind}`}
+      disabled={kind === 'legendary' && !!creature?.legendary && creature.legendary.left < (a.cost ?? 1)}
+      onClick={(e) => useAction(a, e.shiftKey ? 'adv' : e.altKey ? 'dis' : 'normal', kind)}
+      title={actionTitle(a)}
+    >
+      <span className="ellipsis">{a.name}</span>
+      {a.attack !== undefined ? <kbd>{dnd5e.fmtMod(a.attack)}</kbd> : a.save ? <kbd>CD {a.save.dc}</kbd> : null}
+      {kind === 'legendary' && (a.cost ?? 1) > 1 && <kbd>×{a.cost}</kbd>}
+    </button>
+  );
 
   return (
     <>
@@ -140,21 +167,27 @@ export function MacroBar() {
         ))}
         {monster && creature && (
           <>
-            <span className="macro-sep" aria-hidden />
+            {(macros.length > 0 || shared.length > 0) && <span className="macro-sep" aria-hidden />}
             <span className="macro-who ellipsis" title={monster.name}>
               <Swords size={12} /> {creature.name}
             </span>
-            {monster.actions.map((a) => (
-              <button
-                key={a.name}
-                className="macro-btn monster"
-                onClick={(e) => useAction(a, e.shiftKey ? 'adv' : e.altKey ? 'dis' : 'normal')}
-                title={`${a.name}${a.attack !== undefined ? ` · ${dnd5e.fmtMod(a.attack)} a colpire` : ''}${a.damage ? ` · ${a.damage} ${a.damageType ?? ''}` : ''}${a.save ? ` · TS CD ${a.save.dc}` : ''}${a.description ? `\n${a.description}` : ''}${a.attack !== undefined ? '\nSui bersagli segnati (Ctrl+clic). Maiusc: vantaggio · Alt: svantaggio' : ''}`}
-              >
-                <span className="ellipsis">{a.name}</span>
-                {a.attack !== undefined && <kbd>{dnd5e.fmtMod(a.attack)}</kbd>}
-              </button>
-            ))}
+            {monster.actions.map((a) => actionButton(a, 'action'))}
+            {monster.legendary && (
+              <>
+                <span className="macro-who" title="Azioni leggendarie: si ricaricano all’inizio del suo turno">
+                  Leggendarie {creature.legendary ? `${creature.legendary.left}/${creature.legendary.max}` : ''}
+                </span>
+                {monster.legendary.actions.map((a) => actionButton(a, 'legendary'))}
+              </>
+            )}
+            {monster.lair && (
+              <>
+                <span className="macro-who" title="Azioni di tana: all’iniziativa 20">
+                  Tana
+                </span>
+                {monster.lair.map((a) => actionButton(a, 'lair'))}
+              </>
+            )}
           </>
         )}
         <button className={`macro-btn ${macros.length || shared.length ? 'icon-only' : ''}`} onClick={() => setManaging(true)} title="Crea e modifica le macro" aria-label="Gestisci le macro">

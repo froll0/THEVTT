@@ -144,6 +144,33 @@ export interface Token {
   conditionRounds?: Record<string, number>;
   /** cells walked in its current turn (only during combat) */
   moved?: number;
+  /** damage types (as written in the chat: «fuoco», «taglienti»…) it takes half, none or double of */
+  defenses?: Defenses;
+  /** what it has spent this round: action, bonus action, reaction (back at the start of its turn) */
+  used?: { action?: boolean; bonus?: boolean; reaction?: boolean };
+  /** legendary actions: how many per round, how many are left */
+  legendary?: { max: number; left: number } | null;
+  /** its lair's actions, by name: a reminder at initiative 20 */
+  lair?: string[];
+}
+
+export interface Defenses {
+  resist?: string[];
+  immune?: string[];
+  vulnerable?: string[];
+}
+
+/** Damage after resistance, immunity or vulnerability, and what changed it. */
+export function damageAfter(defenses: Defenses | undefined, amount: number, type: string | undefined): { amount: number; note?: string } {
+  // «da fuoco» and «fuoco» are the same
+  const norm = (x: string) => x.trim().toLowerCase().replace(/^da\s+/, '');
+  const t = type ? norm(type) : '';
+  if (!t || !defenses || amount <= 0) return { amount };
+  const has = (list?: string[]) => !!list?.some((x) => norm(x) === t);
+  if (has(defenses.immune)) return { amount: 0, note: 'immune' };
+  if (has(defenses.resist)) return { amount: Math.floor(amount / 2), note: 'resistente' };
+  if (has(defenses.vulnerable)) return { amount: amount * 2, note: 'vulnerabile' };
+  return { amount };
 }
 
 /**
@@ -284,6 +311,8 @@ export interface GameState {
   world?: { minutes: number };
   /** quests: players see those the GM made visible */
   quests?: Record<string, Quest>;
+  /** the last rest the GM called: each player spends their hit dice */
+  rest?: { id: string; kind: 'short' | 'long' };
 }
 
 export interface QuestObjective {

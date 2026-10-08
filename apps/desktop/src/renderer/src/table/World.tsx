@@ -1,7 +1,8 @@
-import { newId, worldTime, type Quest } from '@thevtt/shared';
-import { ChevronLeft, Clock, Eye, EyeOff, Moon, Plus, Sun, Sunrise, Trash2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Popover, Switch } from '../components/ui';
+import { newId, roll, worldTime, type GameAction, type Quest } from '@thevtt/shared';
+import { dnd5e } from '@thevtt/systems';
+import { BedDouble, ChevronLeft, Clock, Coffee, Dices, Eye, EyeOff, Moon, Plus, Sun, Sunrise, Trash2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Modal, Popover, Switch } from '../components/ui';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
 
@@ -38,6 +39,20 @@ export function WorldClock() {
     </button>
   );
   if (!isGm) return chip();
+  // the whole party rests: every sheet at the table gets its long rest, every token its hit points
+  const longRest = () => {
+    const st = useTable.getState().state;
+    if (!st) return;
+    const actions: GameAction[] = [{ type: 'rest', kind: 'long' }];
+    for (const ch of Object.values(st.characters)) {
+      if (ch.systemId !== 'dnd5e-2024') continue;
+      const data = dnd5e.longRest(dnd5e.normalize(ch.data));
+      actions.push({ type: 'character.update', characterId: ch.id, data });
+      const max = dnd5e.maxHp(data);
+      for (const t of Object.values(st.tokens)) if (t.characterId === ch.id) actions.push({ type: 'token.update', tokenId: t.id, patch: { hp: { current: max, max } } });
+    }
+    dispatch({ type: 'batch', actions });
+  };
   const set = () => {
     const [h, m] = clock.split(':').map(Number);
     const d = Math.max(1, Math.round(Number(day) || 1));
@@ -81,6 +96,14 @@ export function WorldClock() {
             </label>
           )}
           <span className="faint tiny">Per le scene all’aperto: giorno dalle 7 alle 19, penombra all’alba e al tramonto, buio di notte.</span>
+          <div className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
+            <button className="chip" onClick={() => dispatch({ type: 'rest', kind: 'short' })} title="Un’ora: ognuno può spendere i suoi dadi vita">
+              <Coffee size={12} /> Riposo breve
+            </button>
+            <button className="chip" onClick={() => longRest()} title="Otto ore: PF, slot, dadi vita e risorse tornano">
+              <BedDouble size={12} /> Riposo lungo
+            </button>
+          </div>
         </div>
       )}
     </Popover>
@@ -234,5 +257,88 @@ function QuestEditor({ quest, onBack }: { quest: Quest; onBack: () => void }) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * A short rest called by the GM: each player spends hit dice for their own
+ * character, rolled at the table and healing the token (the sheet follows).
+ */
+export function RestPrompt() {
+  const rest = useTable((s) => s.state?.rest);
+  const me = useApp((s) => s.user?.id ?? '');
+  const seen = useRef(rest?.id);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!rest || rest.id === seen.current) return;
+    seen.current = rest.id;
+    if (rest.kind === 'short') setOpen(true);
+  }, [rest]);
+  const state = useTable((s) => s.state);
+  if (!open || !state) return null;
+  const mine = Object.values(state.characters).filter((ch) => ch.ownerId === me && ch.systemId === 'dnd5e-2024');
+  if (!mine.length) return null;
+  return <ShortRest characterId={mine[0]!.id} onClose={() => setOpen(false)} />;
+}
+
+function ShortRest({ characterId, onClose }: { characterId: string; onClose: () => void }) {
+  const { state, dispatch } = useTable();
+  const [dice, setDice] = useState(1);
+  const ch = state?.characters[characterId];
+  if (!state || !ch) return null;
+  const c = dnd5e.normalize(ch.data);
+  const cls = dnd5e.getClass(c);
+  const available = c.level - c.hitDiceUsed;
+  const n = Math.max(0, Math.min(available, dice));
+  const con = dnd5e.abilityMod(c, 'con');
+  const formula = cls && n ? `${n}d${cls.hitDie}${con ? `${con > 0 ? '+' : ''}${con * n}` : ''}` : '';
+  const token = Object.values(state.tokens).find((t) => t.characterId === ch.id);
+  const hp = token?.hp?.current ?? dnd5e.currentHp(c);
+  const max = dnd5e.maxHp(c);
+  const go = () => {
+    // resources first, then the healing: rolled at the table on the token when it's on the map
+    if (!formula) {
+      dispatch({ type: 'character.update', characterId: ch.id, data: dnd5e.shortRest(c, 0, 0) });
+    } else if (token) {
+      dispatch({ type: 'character.update', characterId: ch.id, data: dnd5e.shortRest(c, n, 0) });
+      dispatch({ type: 'hp.roll', formula, heal: true, tokenIds: [token.id], label: `Dadi vita · ${ch.name}` });
+    } else {
+      const r = roll(formula);
+      dispatch({ type: 'character.update', characterId: ch.id, data: dnd5e.shortRest(c, n, Math.max(0, r.total)) });
+      dispatch({ type: 'chat', text: `${ch.name} spende ${n} dadi vita e recupera ${Math.max(0, r.total)} PF` });
+    }
+    onClose();
+  };
+  return (
+    <Modal
+      title={`Riposo breve · ${ch.name}`}
+      onClose={onClose}
+      actions={
+        <>
+          <button className="btn ghost" onClick={onClose}>
+            Più tardi
+          </button>
+          <button className="btn primary" onClick={go}>
+            {formula ? (
+              <>
+                <Dices size={14} /> Tira {formula}
+              </>
+            ) : (
+              'Riposa senza dadi'
+            )}
+          </button>
+        </>
+      }
+    >
+      <p className="muted small">Il master ha chiamato un riposo breve. Spendi dadi vita per recuperare PF; le risorse che si ricaricano col riposo breve tornano disponibili.</p>
+      <div className="row" style={{ gap: 8 }}>
+        <span className="small">PF {hp}/{max}</span>
+        <span className="faint small">· dadi vita {available}/{c.level} (d{cls?.hitDie ?? '?'})</span>
+      </div>
+      <label className="row small" style={{ gap: 8 }}>
+        Dadi da spendere
+        <input className="input num" type="number" min={0} max={available} value={n} style={{ width: 70 }} onChange={(e) => setDice(Number(e.target.value) || 0)} aria-label="Dadi vita da spendere" />
+      </label>
+    </Modal>
   );
 }

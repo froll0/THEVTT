@@ -1,4 +1,4 @@
-import type { GameState, Token } from '@thevtt/shared';
+import type { Ability, GameState, Token } from '@thevtt/shared';
 import { dnd5e } from '@thevtt/systems';
 import { useHomebrew } from '../store/homebrew';
 
@@ -24,9 +24,19 @@ export function tokenSpeed(state: GameState, t: Token): number | null {
 }
 
 /** A token's saving throw bonus, from its sheet or its stat block. */
-export function tokenSave(state: GameState, t: Token, ability: 'con'): number | null {
+export function tokenSave(state: GameState, t: Token, ability: Ability): number | null {
   const c = sheetOf(state, t);
   if (c) return dnd5e.saveBonus(c, ability);
   const m = findMonster(t.monsterId);
-  return m ? dnd5e.mod(m.abilities[ability]) : null;
+  return m ? (m.saves?.[ability] ?? dnd5e.mod(m.abilities[ability])) : null;
+}
+
+/** What a creature brings to the map besides its numbers: defenses, legendary and lair actions. */
+export function monsterTokenExtras(m: dnd5e.MonsterDef): Pick<Token, 'defenses' | 'legendary' | 'lair'> {
+  const defenses = { resist: m.resistances, immune: m.immunities, vulnerable: m.vulnerabilities };
+  return {
+    defenses: defenses.resist || defenses.immune || defenses.vulnerable ? defenses : undefined,
+    legendary: m.legendary?.actions.length ? { max: m.legendary.uses || 3, left: m.legendary.uses || 3 } : undefined,
+    lair: m.lair?.length ? m.lair.map((a) => a.name) : undefined,
+  };
 }

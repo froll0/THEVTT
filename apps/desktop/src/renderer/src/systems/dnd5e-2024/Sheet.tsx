@@ -484,11 +484,17 @@ function SpellsTab({
     const dmg = s.level === 0 ? dnd5e.cantripDice(c, s) : s.damage ? addDice(s.damage, s.upcast, up) : undefined;
     const dmgFormula = dmg ? (s.addMod ? `${dmg}+${castMod}` : dmg) : undefined;
     if (s.concentration) table?.concentrate();
-    // the area goes on the map; its saves and damage are rolled as usual
+    // a save: everyone in the area (or the marked targets) rolls it, the damage follows; cantrips do nothing on a success
+    const damageType = s.damageType ? dnd5e.DAMAGE_TYPES[s.damageType] : undefined;
+    const groupSave = s.save && !s.attack ? { ability: s.save, dc: sc.saveDc, damage: dmgFormula, damageType, half: s.level > 0 } : undefined;
     const area = dnd5e.spellArea(s);
-    if (area && table) table.area({ ...area, label });
+    if (area && table) {
+      table.area({ ...area, label, save: groupSave });
+      if (groupSave) return;
+    }
+    if (groupSave && table?.save({ ...groupSave, label })) return;
     // a spell attack against the target selected on the map
-    if (s.attack && dmgFormula && table?.attack({ name: label, bonus: sc.attack, damage: dmgFormula, damageType: s.damageType ? dnd5e.DAMAGE_TYPES[s.damageType] : undefined })) return;
+    if (s.attack && dmgFormula && table?.attack({ name: label, bonus: sc.attack, damage: dmgFormula, damageType })) return;
     if (s.attack) onRoll(d20(sc.attack), `${label} · attacco con incantesimo`);
     if (dmgFormula) onRoll(dmgFormula, `${label} · danni${s.save ? ` (TS ${ABILITY_LABELS[s.save].short} CD ${sc.saveDc})` : ''}`);
     if (s.heal) onRoll(s.addMod ? `${addDice(s.heal, s.upcast, up)}+${castMod}` : addDice(s.heal, s.upcast, up), `${label} · cura`);

@@ -23,6 +23,8 @@ import {
   spellcasting,
   validate,
   darkvision,
+  damageDefenses,
+  withHp,
   type Dnd5eCharacter,
 } from './rules';
 
@@ -86,6 +88,10 @@ export const dnd5e2024: GameSystem<Dnd5eCharacter> = {
       size: 1,
       initiativeModifier: initiativeBonus(c),
       darkvision: darkvision(c),
+      defenses: damageDefenses(c),
     };
+  },
+  withHp(raw, current) {
+    return withHp(normalize(raw), current);
   },
 };

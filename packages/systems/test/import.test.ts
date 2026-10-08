@@ -35,3 +35,35 @@ describe('5e.tools import', () => {
     expect(list[0]!.actions[0]).toMatchObject({ damage: '4d6', save: { ability: 'dex', dc: 13 } });
   });
 });
+
+describe('5e.tools import: defenses and legendary actions', () => {
+  it('reads resistances, saves and legendary actions', () => {
+    const dragon = {
+      ...goblin,
+      name: 'Adult Red Dragon',
+      resist: ['cold', { resist: ['bludgeoning', 'piercing'], note: 'from nonmagical attacks' }],
+      immune: ['fire'],
+      vulnerable: ['cold'],
+      save: { dex: '+6', con: '+13' },
+      legendaryActions: 3,
+      legendary: [
+        { name: 'Tail Attack', entries: ['The dragon makes a tail attack. {@atk mw} {@hit 14} to hit, reach 15 ft. {@h}17 ({@damage 2d8 + 8}) bludgeoning damage.'] },
+        { name: 'Wing Attack (Costs 2 Actions)', entries: ['Each creature within 10 feet must succeed on a {@dc 22} Dexterity saving throw or take 15 ({@damage 2d6 + 8}) bludgeoning damage.'] },
+      ],
+    };
+    const [m] = dnd5e.importFiveEtools(dragon);
+    expect(m).toMatchObject({ resistances: ['freddo', 'contundenti', 'perforanti'], immunities: ['fuoco'], vulnerabilities: ['freddo'], saves: { dex: 6, con: 13 } });
+    expect(m!.legendary!.uses).toBe(3);
+    expect(m!.legendary!.actions[0]).toMatchObject({ name: 'Tail Attack', attack: 14, damage: '2d8+8' });
+    expect(m!.legendary!.actions[1]).toMatchObject({ name: 'Wing Attack', cost: 2, save: { ability: 'dex', dc: 22 }, damage: '2d6+8' });
+  });
+
+  it('characters resist what their species does', () => {
+    const c = dnd5e.normalize({ speciesId: 'tiefling', speciesChoices: { legacy: 'infernal' }, classId: 'wizard', level: 3 });
+    const key = dnd5e.SPECIES.find((s) => s.id === 'tiefling')!.choice!.key;
+    expect(dnd5e.damageDefenses({ ...c, speciesChoices: { [key]: 'infernal' } })).toEqual({ resist: ['fuoco'] });
+    expect(dnd5e.damageDefenses(dnd5e.normalize({ speciesId: 'dwarf', classId: 'fighter' }))).toEqual({ resist: ['veleno'] });
+    const hurt = dnd5e.withHp(dnd5e.normalize({ speciesId: 'dwarf', classId: 'fighter', level: 1, baseScores: { str: 15, dex: 12, con: 14, int: 10, wis: 10, cha: 8 } }), 3);
+    expect(hurt.hp.current).toBe(3);
+  });
+});

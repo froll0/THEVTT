@@ -1,4 +1,4 @@
-import { describeRoll, isNat, type Ambient, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
+import { describeRoll, isNat, type Ambient, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
@@ -7,7 +7,7 @@ import { MapLibrary } from './MapLibrary';
 import { useSheetTable } from './sheetTable';
 import { tokenSpeed } from '../lib/combat';
 import { plainText, RichEditor, RichView } from '../components/RichText';
-import { Library, BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
+import { Library, BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Minus, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, Field, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
@@ -249,6 +249,35 @@ export function InitiativePanel() {
             <div key={e.id} className={`ini-row ${ini.round > 0 && i === ini.turn ? 'active' : ''}`}>
               <span className="ini-dot" style={{ background: t?.color ?? 'var(--fg-faint)' }} />
               <span className="grow ellipsis">{e.name}</span>
+              {isGm && t?.legendary && (
+                <span className="legendary-pips" title={`Azioni leggendarie: ${t.legendary.left}/${t.legendary.max}`} aria-label={`Azioni leggendarie di ${e.name}: ${t.legendary.left} su ${t.legendary.max}`}>
+                  {Array.from({ length: t.legendary.max }, (_, k) => (
+                    <span key={k} className={k < t.legendary!.left ? 'on' : ''} />
+                  ))}
+                </span>
+              )}
+              {ini.round > 0 && t && (isGm || t.ownerIds.includes(meId)) && (
+                <span className="ini-economy" role="group" aria-label={`Azioni di ${e.name}`}>
+                  {(
+                    [
+                      ['action', 'A', 'Azione'],
+                      ['bonus', 'B', 'Azione bonus'],
+                      ['reaction', 'R', 'Reazione'],
+                    ] as const
+                  ).map(([k, short, label]) => (
+                    <button
+                      key={k}
+                      className={t.used?.[k] ? 'spent' : ''}
+                      aria-pressed={!!t.used?.[k]}
+                      aria-label={label}
+                      title={`${label}: ${t.used?.[k] ? 'usata' : 'disponibile'}`}
+                      onClick={() => dispatch({ type: 'token.update', tokenId: t.id, patch: { used: { ...t.used, [k]: !t.used?.[k] } } })}
+                    >
+                      {short}
+                    </button>
+                  ))}
+                </span>
+              )}
               {isGm ? (
                 <input
                   key={e.value}
@@ -398,6 +427,7 @@ export function SheetWindow({ characterId, width, placeAt }: { characterId: stri
         ownerIds: [selected.ownerId],
         color: owner?.color,
         darkvision: d.darkvision && state.scenes[state.activeSceneId] ? metresToCells(state.scenes[state.activeSceneId]!, d.darkvision) : 0,
+        defenses: d.defenses,
       },
     });
   };
@@ -1010,6 +1040,116 @@ export function PropInspector({ prop }: { prop: Prop }) {
   );
 }
 
+const DEFENSE_KINDS = [
+  ['resist', 'Resistente', 'metà danni'],
+  ['immune', 'Immune', 'nessun danno'],
+  ['vulnerable', 'Vulnerabile', 'danni doppi'],
+] as const;
+
+export const describeDefenses = (d: Defenses) =>
+  DEFENSE_KINDS.filter(([k]) => d[k]?.length)
+    .map(([k, label]) => `${label}: ${d[k]!.join(', ')}`)
+    .join(' · ');
+
+/** GM: the damage types a token resists, ignores or suffers double from. */
+function DefensesEditor({ defenses, onChange }: { defenses: Defenses | undefined; onChange: (d: Defenses | undefined) => void }) {
+  const d = defenses ?? {};
+  const set = (k: keyof Defenses, list: string[]) => {
+    const next = { ...d, [k]: list };
+    if (!list.length) delete next[k];
+    onChange(Object.keys(next).length ? next : undefined);
+  };
+  const types = Object.values(dnd5e.DAMAGE_TYPES);
+  return (
+    <details className="insp-defenses" open={!!defenses}>
+      <summary className="small muted">Resistenze e immunità{defenses ? '' : ' · nessuna'}</summary>
+      <div className="col" style={{ gap: 6, marginTop: 6 }}>
+        {DEFENSE_KINDS.map(([k, label, hint]) => (
+          <div key={k} className="row wrap" style={{ gap: 4 }} aria-label={label}>
+            <span className="small" style={{ width: 82 }} title={hint}>
+              {label}
+            </span>
+            {(d[k] ?? []).map((t) => (
+              <button key={t} className="chip on" style={{ padding: '2px 8px', fontSize: '0.76rem' }} onClick={() => set(k, d[k]!.filter((x) => x !== t))} aria-label={`Togli ${t} da ${label}`}>
+                {t} <X size={10} />
+              </button>
+            ))}
+            <select
+              className="select tool-select"
+              aria-label={`Aggiungi a ${label}`}
+              value=""
+              onChange={(e) => e.target.value && set(k, [...(d[k] ?? []), e.target.value])}
+            >
+              <option value="">+</option>
+              {types
+                .filter((t) => !d[k]?.includes(t))
+                .map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+            </select>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+/** Action, bonus action and reaction: spent or still there this round. */
+function TurnEconomy({ token }: { token: Token }) {
+  const dispatch = useTable((s) => s.dispatch);
+  const used = token.used ?? {};
+  const items = [
+    ['action', 'Azione'],
+    ['bonus', 'Azione bonus'],
+    ['reaction', 'Reazione'],
+  ] as const;
+  return (
+    <div className="row turn-economy" role="group" aria-label="Azioni del turno">
+      {items.map(([k, label]) => (
+        <button
+          key={k}
+          className={`chip ${used[k] ? 'spent' : 'on'}`}
+          aria-pressed={!!used[k]}
+          title={used[k] ? `${label}: usata (clic per ridarla)` : `${label}: disponibile (clic quando la usi)`}
+          onClick={() => dispatch({ type: 'token.update', tokenId: token.id, patch: { used: { ...used, [k]: !used[k] } } })}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** GM: legendary actions left this round. */
+function LegendaryCounter({ token }: { token: Token }) {
+  const dispatch = useTable((s) => s.dispatch);
+  const l = token.legendary!;
+  const set = (left: number) => dispatch({ type: 'token.update', tokenId: token.id, patch: { legendary: { ...l, left } } });
+  return (
+    <div className="row between small" aria-label="Azioni leggendarie">
+      <span>
+        Azioni leggendarie{' '}
+        <span className="legendary-pips">
+          {Array.from({ length: l.max }, (_, i) => (
+            <span key={i} className={i < l.left ? 'on' : ''} />
+          ))}
+        </span>{' '}
+        {l.left}/{l.max}
+      </span>
+      <span className="row" style={{ gap: 4 }}>
+        <button className="btn ghost sm icon" disabled={!l.left} onClick={() => set(l.left - 1)} aria-label="Usa un’azione leggendaria">
+          <Minus size={12} />
+        </button>
+        <button className="btn ghost sm" disabled={l.left === l.max} onClick={() => set(l.max)}>
+          Ripristina
+        </button>
+      </span>
+    </div>
+  );
+}
+
 export function TokenInspector({ token }: { token: Token }) {
   const { state, dispatch, role, select } = useTable();
   const meId = useApp((s) => s.user?.id ?? '');
@@ -1122,8 +1262,15 @@ export function TokenInspector({ token }: { token: Token }) {
               <span className="faint tiny">Le durate scalano all’inizio di ogni turno del token, in iniziativa.</span>
             </div>
           )}
+          {inInitiative && state.initiative.round > 0 && <TurnEconomy token={token} />}
+          {isGm && token.legendary && <LegendaryCounter token={token} />}
           {inInitiative && state.initiative.round > 0 && state.scenes[token.sceneId] && (
             <MovementLine token={token} />
+          )}
+          {isGm ? (
+            <DefensesEditor defenses={token.defenses} onChange={(defenses) => upd({ defenses })} />
+          ) : (
+            token.defenses && <p className="faint tiny">{describeDefenses(token.defenses)}</p>
           )}
           {isGm && (
             <>

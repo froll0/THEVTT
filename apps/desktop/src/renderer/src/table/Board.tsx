@@ -1280,6 +1280,8 @@ export function Board({
     dispatch({ type: 'template.create', template: { ...d, color: accentColor() } });
     const hits = tokensInArea(d);
     if (hits.length) dispatch({ type: 'chat', text: `${pa.label}: nell’area ${hits.map((t) => t.name).join(', ')}` });
+    // those inside roll their saves; the damage lands by itself
+    if (hits.length && pa.save) dispatch({ type: 'save.group', casterId: caster?.id ?? null, tokenIds: hits.map((t) => t.id), label: pa.label, ...pa.save });
     setPendingArea(null);
     areaOrigin.current = null;
   };

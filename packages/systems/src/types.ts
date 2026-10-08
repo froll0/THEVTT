@@ -23,6 +23,8 @@ export interface TokenDefaults {
   initiativeModifier: number;
   /** darkvision range in metres (0 = none) */
   darkvision?: number;
+  /** damage types it resists, ignores or suffers double from */
+  defenses?: { resist?: string[]; immune?: string[]; vulnerable?: string[] };
 }
 
 export interface GameSystem<TCharacter = unknown> {
@@ -41,6 +43,8 @@ export interface GameSystem<TCharacter = unknown> {
   /** rolls offered as one-click buttons on the sheet */
   quickRolls(character: TCharacter): QuickRoll[];
   tokenDefaults(character: TCharacter): TokenDefaults;
+  /** the character with its hit points as the token on the map has them */
+  withHp?(character: TCharacter, current: number): TCharacter;
   /** conditions offered by the token menu */
   conditions: string[];
 }

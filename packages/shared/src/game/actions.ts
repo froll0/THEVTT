@@ -2,6 +2,8 @@ import type { Macro } from '../macros';
 import type { MapPackage } from './library';
 import type { AreaTemplate, ChatCard, GameState, Note, Prop, Quest, Scene, Token, Wall } from './state';
 
+export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+
 export type TokenPatch = Partial<Omit<Token, 'id' | 'sceneId'>>;
 export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog' | 'terrain' | 'seed'>>;
 
@@ -30,7 +32,14 @@ export type GameAction =
   /** an attack against each target: d20+bonus against its AC; on a hit the damage is applied (doubled dice on a 20) */
   | { type: 'attack'; attackerId?: string | null; targetIds: string[]; name: string; bonus: number; damage: string; damageType?: string; mode?: 'normal' | 'adv' | 'dis' }
   /** damage (or healing) rolled once and applied to these tokens */
-  | { type: 'hp.roll'; formula: string; tokenIds: string[]; heal?: boolean; label?: string }
+  | { type: 'hp.roll'; formula: string; tokenIds: string[]; heal?: boolean; label?: string; damageType?: string }
+  /**
+   * Everyone in an area (or picked) rolls a saving throw; the damage is
+   * rolled once, and those who succeed take half (or none).
+   */
+  | { type: 'save.group'; casterId?: string | null; tokenIds: string[]; ability: Ability; dc: number; label: string; damage?: string; damageType?: string; half?: boolean }
+  /** GM: the group rests (the clock moves on; on a short rest each player spends hit dice) */
+  | { type: 'rest'; kind: 'short' | 'long' }
   | { type: 'initiative.add'; name: string; tokenId?: string | null; modifier?: number; value?: number }
   | { type: 'initiative.set'; entryId: string; value: number }
   | { type: 'initiative.remove'; entryId: string }

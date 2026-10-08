@@ -4,6 +4,7 @@ import { Copy, Download, ImagePlus, Minus, Pencil, Plus, Search, SlidersHorizont
 import { useMemo, useState } from 'react';
 import type { BestiaryProps, StatBlockProps } from '..';
 import { squareImage } from '../../components/ui';
+import { monsterTokenExtras } from '../../lib/combat';
 import { useApp } from '../../store/app';
 import { HOMEBREW_PREFIX, useHomebrew } from '../../store/homebrew';
 import { MonsterEditor } from './MonsterEditor';
@@ -70,7 +71,7 @@ export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps
   const add = (m: dnd5e.MonsterDef, index?: number, name = m.name) => {
     const hp = rollHp ? Math.max(1, roll(m.hp.dice).total) : m.hp.average;
     const image = useHomebrew.getState().images[m.id];
-    onAdd?.({ name, monsterId: m.id, hp: { current: hp, max: hp }, ac: m.ac, size: dnd5e.sizeCells(m.size), darkvision: dnd5e.monsterDarkvision(m), ...(image ? { image } : {}) }, index);
+    onAdd?.({ name, monsterId: m.id, hp: { current: hp, max: hp }, ac: m.ac, size: dnd5e.sizeCells(m.size), darkvision: dnd5e.monsterDarkvision(m), ...monsterTokenExtras(m), ...(image ? { image } : {}) }, index);
   };
   const bump = (id: string, by: number) =>
     setEncounter((e) => {
@@ -365,6 +366,35 @@ function StatBlock({ monsterId, onRoll }: StatBlockProps) {
   const m = resolveMonster(monsterId);
   if (!m) return null;
   const mod = (a: dnd5e.Ability) => dnd5e.monsterMod(m.abilities[a]);
+  const actionRow = (a: dnd5e.MonsterAction) => (
+    <div key={a.name} className="attack" style={{ gridTemplateColumns: '1fr auto auto' }}>
+      <b>
+        {a.name}
+        {a.recharge ? <span className="faint tiny"> (ricarica {a.recharge})</span> : null}
+      </b>
+      {a.attack !== undefined ? (
+        <button className="btn sm" onClick={() => onRoll(d20(a.attack!), `${m.name} · ${a.name}`)}>
+          {dnd5e.fmtMod(a.attack)}
+        </button>
+      ) : a.save ? (
+        <span className="badge">
+          TS {ABILITY_LABELS[a.save.ability].short} {a.save.dc}
+        </span>
+      ) : (
+        <span />
+      )}
+      {a.damage ? (
+        <button className="btn sm" onClick={() => onRoll(a.damage!, `${m.name} · ${a.name} · danni ${a.damageType ?? ''}`)}>
+          {a.damage}
+        </button>
+      ) : (
+        <span />
+      )}
+      <div className="meta">
+        {[a.reach, a.damageType, a.save && a.attack !== undefined ? `TS ${ABILITY_LABELS[a.save.ability].short} CD ${a.save.dc}` : null, a.description].filter(Boolean).join(' · ')}
+      </div>
+    </div>
+  );
   return (
     <div className="col small" style={{ gap: 6 }}>
       <div className="muted">
@@ -398,35 +428,48 @@ function StatBlock({ monsterId, onRoll }: StatBlockProps) {
           <b>{t.name}.</b> <span className="muted">{t.description}</span>
         </div>
       ))}
-      {m.actions.map((a) => (
-        <div key={a.name} className="attack" style={{ gridTemplateColumns: '1fr auto auto' }}>
-          <b>
-            {a.name}
-            {a.recharge ? <span className="faint tiny"> (ricarica {a.recharge})</span> : null}
-          </b>
-          {a.attack !== undefined ? (
-            <button className="btn sm" onClick={() => onRoll(d20(a.attack!), `${m.name} · ${a.name}`)}>
-              {dnd5e.fmtMod(a.attack)}
-            </button>
-          ) : a.save ? (
-            <span className="badge">
-              TS {ABILITY_LABELS[a.save.ability].short} {a.save.dc}
-            </span>
-          ) : (
-            <span />
+      {(m.saves || m.resistances || m.immunities || m.vulnerabilities) && (
+        <div className="small">
+          {m.saves && (
+            <div>
+              <b>Tiri salvezza</b>{' '}
+              <span className="muted">
+                {Object.entries(m.saves)
+                  .map(([k, v]) => `${ABILITY_LABELS[k as dnd5e.Ability].short} ${dnd5e.fmtMod(v)}`)
+                  .join(', ')}
+              </span>
+            </div>
           )}
-          {a.damage ? (
-            <button className="btn sm" onClick={() => onRoll(a.damage!, `${m.name} · ${a.name} · danni ${a.damageType ?? ''}`)}>
-              {a.damage}
-            </button>
-          ) : (
-            <span />
+          {m.resistances && (
+            <div>
+              <b>Resistenze</b> <span className="muted">{m.resistances.join(', ')}</span>
+            </div>
           )}
-          <div className="meta">
-            {[a.reach, a.damageType, a.save && a.attack !== undefined ? `TS ${ABILITY_LABELS[a.save.ability].short} CD ${a.save.dc}` : null, a.description].filter(Boolean).join(' · ')}
-          </div>
+          {m.immunities && (
+            <div>
+              <b>Immunità</b> <span className="muted">{m.immunities.join(', ')}</span>
+            </div>
+          )}
+          {m.vulnerabilities && (
+            <div>
+              <b>Vulnerabilità</b> <span className="muted">{m.vulnerabilities.join(', ')}</span>
+            </div>
+          )}
         </div>
-      ))}
+      )}
+      {m.actions.map(actionRow)}
+      {m.legendary && (
+        <>
+          <span className="section-title">Azioni leggendarie · {m.legendary.uses} per round</span>
+          {m.legendary.actions.map(actionRow)}
+        </>
+      )}
+      {m.lair && (
+        <>
+          <span className="section-title">Azioni di tana · iniziativa 20</span>
+          {m.lair.map(actionRow)}
+        </>
+      )}
     </div>
   );
 }

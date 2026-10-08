@@ -412,6 +412,28 @@ export function currentHp(c: Dnd5eCharacter): number {
   return c.hp.current === null ? max : Math.max(0, Math.min(max, c.hp.current));
 }
 
+/** The character with its hit points as they are on the map. */
+export function withHp(c: Dnd5eCharacter, current: number): Dnd5eCharacter {
+  const max = maxHp(c);
+  const hp = Math.max(0, Math.min(max, Math.round(current)));
+  return { ...c, hp: { ...c.hp, current: hp >= max ? null : hp } };
+}
+
+const TIEFLING_RESIST: Record<string, string> = { abyssal: 'veleno', chthonic: 'necrotici', infernal: 'fuoco' };
+
+/** Damage types the character resists (species, draconic ancestry, fiendish legacy). */
+export function damageDefenses(c: Dnd5eCharacter): { resist?: string[] } {
+  const sp = getSpecies(c);
+  const out = new Set(sp?.resistances ?? []);
+  const pick = sp?.choice ? c.speciesChoices[sp.choice.key] : undefined;
+  if (c.speciesId === 'dragonborn' && pick) {
+    const type = sp!.choice!.options.find((o) => o.id === pick)?.description.toLowerCase();
+    if (type) out.add(type);
+  }
+  if (c.speciesId === 'tiefling' && pick && TIEFLING_RESIST[pick]) out.add(TIEFLING_RESIST[pick]);
+  return out.size ? { resist: [...out] } : {};
+}
+
 // ---------- attacks ----------
 
 export interface Attack {

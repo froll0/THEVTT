@@ -15,9 +15,22 @@ const TYPES: Record<string, string> = {
   fiend: 'Immondo', giant: 'Gigante', humanoid: 'Umanoide', monstrosity: 'Mostruosità', ooze: 'Melma', plant: 'Vegetale', undead: 'Non morto',
 };
 const DAMAGE: Record<string, string> = {
-  acid: 'da acido', bludgeoning: 'contundenti', cold: 'da freddo', fire: 'da fuoco', force: 'da forza', lightning: 'da fulmine', necrotic: 'necrotici',
-  piercing: 'perforanti', poison: 'da veleno', psychic: 'psichici', radiant: 'radiosi', slashing: 'taglienti', thunder: 'da tuono',
+  acid: 'acido', bludgeoning: 'contundenti', cold: 'freddo', fire: 'fuoco', force: 'forza', lightning: 'fulmine', necrotic: 'necrotici',
+  piercing: 'perforanti', poison: 'veleno', psychic: 'psichici', radiant: 'radiosi', slashing: 'taglienti', thunder: 'tuono',
 };
+
+/** Damage types of a 5e.tools resist/immune/vulnerable list (nested groups too), in Italian. */
+function damageList(v: unknown, key: string): string[] | undefined {
+  const out = new Set<string>();
+  const walk = (x: unknown) => {
+    if (typeof x === 'string') {
+      if (DAMAGE[x.toLowerCase()]) out.add(DAMAGE[x.toLowerCase()]!);
+    } else if (Array.isArray(x)) x.forEach(walk);
+    else if (x && typeof x === 'object' && key in (x as Json)) walk((x as Json)[key]);
+  };
+  walk(v);
+  return out.size ? [...out] : undefined;
+}
 const ABILITY_WORDS: Record<string, Ability> = { strength: 'str', dexterity: 'dex', constitution: 'con', intelligence: 'int', wisdom: 'wis', charisma: 'cha' };
 const XP: Record<string, number> = {
   '0': 10, '1/8': 25, '1/4': 50, '1/2': 100, '1': 200, '2': 450, '3': 700, '4': 1100, '5': 1800, '6': 2300, '7': 2900, '8': 3900, '9': 5000, '10': 5900,
@@ -49,7 +62,9 @@ const entriesText = (entries: unknown): string =>
 
 function action(a: Json): MonsterAction {
   const raw = entriesText(a.entries);
-  const out: MonsterAction = { name: clean(String(a.name ?? 'Azione')) };
+  const out: MonsterAction = { name: clean(String(a.name ?? 'Azione')).replace(/\s*\(Costs (\d+) Actions\)/i, '') };
+  const cost = /\(Costs (\d+) Actions\)/i.exec(String(a.name ?? ''));
+  if (cost) out.cost = Number(cost[1]);
   const hit = /\{@hit (-?\d+)\}/.exec(raw);
   if (hit) out.attack = Number(hit[1]);
   const dmg = /\{@damage ([^}]+)\}/.exec(raw);
@@ -97,8 +112,23 @@ function monster(m: Json): MonsterDef | null {
     xp: XP[cr] ?? 0,
     senses: senses.join(', ') || undefined,
     traits: list('trait').map((t) => ({ name: clean(String(t.name ?? '')), description: clean(entriesText(t.entries)) })),
+    resistances: damageList(m.resist, 'resist'),
+    immunities: damageList(m.immune, 'immune'),
+    vulnerabilities: damageList(m.vulnerable, 'vulnerable'),
+    saves: saves((m.save as Json | undefined) ?? {}),
+    legendary: list('legendary').length ? { uses: Number(m.legendaryActions ?? 3) || 3, actions: list('legendary').map(action) } : undefined,
     actions: [...list('action'), ...list('bonus').map((b) => ({ ...b, name: `${String(b.name)} (azione bonus)` })), ...list('reaction').map((r) => ({ ...r, name: `${String(r.name)} (reazione)` }))].map(action),
   };
+}
+
+/** Saving throw bonuses: `{ dex: "+6" }`. */
+function saves(v: Json): MonsterDef['saves'] {
+  const out: NonNullable<MonsterDef['saves']> = {};
+  for (const a of ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const) {
+    const n = Number(String(v[a] ?? '').replace(/\s/g, ''));
+    if (v[a] !== undefined && Number.isFinite(n)) out[a] = n;
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 /** Every creature found in a 5e.tools file. */
