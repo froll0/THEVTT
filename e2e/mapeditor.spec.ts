@@ -1,15 +1,18 @@
 import { expect, test, type Page } from '@playwright/test';
 import { apiCall, launchApp, nav, register } from './app';
 
-/** brightness of the board at a point of the screen */
+/** brightness of the board around a point of the screen (a patch: painted details vary pixel by pixel) */
 async function shade(page: Page, x: number, y: number): Promise<number> {
   return page.evaluate(
     ([sx, sy]) => {
       const c = document.querySelector('.board canvas') as HTMLCanvasElement;
       const r = c.getBoundingClientRect();
       const k = c.width / r.width;
-      const [R, G, B] = c.getContext('2d')!.getImageData(Math.round((sx! - r.left) * k), Math.round((sy! - r.top) * k), 1, 1).data;
-      return (R! + G! + B!) / 3;
+      const n = 9;
+      const d = c.getContext('2d')!.getImageData(Math.round((sx! - r.left) * k) - 4, Math.round((sy! - r.top) * k) - 4, n, n).data;
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 4) sum += (d[i]! + d[i + 1]! + d[i + 2]!) / 3;
+      return sum / (n * n);
     },
     [x, y],
   );
