@@ -90,7 +90,7 @@ export function MacroBar() {
   const me = useApp((s) => s.user?.id ?? '');
   const toast = useApp((s) => s.toast);
   const { macros, load } = useMacros();
-  const { state, selectedTokenId, dispatch } = useTable();
+  const { state, selectedTokenId, group, dispatch } = useTable();
   const { run, askElement } = useMacroRun();
   const [managing, setManaging] = useState(false);
   useEffect(() => {
@@ -122,7 +122,8 @@ export function MacroBar() {
 
   return (
     <>
-      <div className="float macrobar glass" role="toolbar" aria-label="Macro">
+      {/* with a token's panel open on the right, the bar steps to the left */}
+      <div className={`float macrobar glass ${selectedTokenId || group.tokens.length ? 'aside' : ''}`} role="toolbar" aria-label="Macro">
         {macros.slice(0, 10).map((m, i) => (
           <button key={m.id} className="macro-btn" onClick={() => run(m)} title={`${m.name} (${(i + 1) % 10})\n${m.body}`}>
             <span className="macro-dot" style={{ background: m.color }} />

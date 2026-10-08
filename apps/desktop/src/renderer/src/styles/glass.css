@@ -1874,3 +1874,10 @@ img.ed-swatch.stamp {
   background: #30d158;
   transition: width var(--dur) var(--ease);
 }
+.macrobar.aside {
+  left: calc(var(--s4) + 64px);
+  transform: none;
+  max-width: calc(100% - var(--s4) * 2 - 64px - 380px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}

@@ -1,6 +1,6 @@
 import { newId, worldTime, type Quest } from '@thevtt/shared';
 import { ChevronLeft, Clock, Eye, EyeOff, Moon, Plus, Sun, Sunrise, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Popover, Switch } from '../components/ui';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
@@ -23,6 +23,11 @@ export function WorldClock() {
   const t = worldTime(minutes);
   const [day, setDay] = useState(String(t.day));
   const [clock, setClock] = useState(t.clock);
+  // the fields follow the clock as it moves on
+  useEffect(() => {
+    setDay(String(t.day));
+    setClock(t.clock);
+  }, [t.day, t.clock]);
   // players see it once the GM has started the clock
   if (!world && !isGm) return null;
   const Icon = t.light === 'bright' ? Sun : t.light === 'dim' ? Sunrise : Moon;
@@ -44,11 +49,7 @@ export function WorldClock() {
       align="left"
       width={280}
       trigger={(_, toggle) =>
-        chip(() => {
-          setDay(String(t.day));
-          setClock(t.clock);
-          toggle();
-        })
+        chip(toggle)
       }
     >
       {() => (

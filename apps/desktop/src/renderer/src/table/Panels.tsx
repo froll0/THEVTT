@@ -127,7 +127,7 @@ function LogLine({
           </span>
           <span className="roll-total">{e.roll.total}</span>
         </div>
-        {target && e.roll.total > 0 && (
+        {target && e.roll.total > 0 && !e.label?.includes(' → ') && (
           <div className="roll-apply">
             <span className="faint tiny ellipsis">a {target.name}:</span>
             <button className="btn ghost sm" title="Infliggi come danni" onClick={() => target.apply(-e.roll!.total)}>
