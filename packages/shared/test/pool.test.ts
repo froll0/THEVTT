@@ -132,3 +132,103 @@ describe('zones', () => {
     expect(host.state.initiative.entries.map((e) => [e.name, e.value])).toEqual([['Gunter', 2], ['Gor', 1]]);
   });
 });
+
+describe('success-pool table rules', () => {
+  const zone = (host: GameHost, z: Partial<Zone>) => host.dispatch('gm', { type: 'zone.create', zone: z });
+  const fight = (host: GameHost, ...ids: string[]) => {
+    for (const id of ids) host.dispatch('gm', { type: 'initiative.add', name: id, tokenId: id, side: 'players' });
+    host.dispatch('gm', { type: 'initiative.next' });
+  };
+
+  it('charging, outnumbering and the high ground add dice by themselves', () => {
+    const { host, gunter, gor } = table(seq(1));
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Lina', x: 2, y: 2, ownerIds: ['p1'], pool: pc } });
+    zone(host, { name: 'Collina', x: 0, y: 0, w: 2, h: 5, high: true });
+    zone(host, { name: 'Prato', x: 2, y: 0, w: 5, h: 5 });
+    host.dispatch('p1', { type: 'pool.attack', attackerId: gunter.id, targetIds: [gor.id], name: 'Spada', dice: 3, target: 4, damage: 3, charge: true });
+    const atk = host.state.log.find((e) => e.label === 'Spada → Gor')!;
+    expect(atk.roll!.formula).toBe('6d10s4');
+    const card = host.state.log.filter((e) => e.kind === 'card').at(0)!.card!.body!;
+    expect(card).toContain('+1d Carica');
+    expect(card).toContain('+1d posizione sopraelevata');
+    // Lina beside the Gor, and Gunter attacking: two against one
+    expect(card).toContain('+1d superiorità numerica (2 contro 1)');
+  });
+
+  it('shots lose a die for cover and beyond the optimal range', () => {
+    const { host, gunter, gor } = table(seq(9));
+    zone(host, { name: 'Bosco', x: 2, y: 0, w: 3, h: 3, cover: true });
+    host.dispatch('p1', { type: 'pool.attack', attackerId: gunter.id, targetIds: [gor.id], name: 'Arco', dice: 4, target: 3, damage: 4, ranged: true, optimal: 'Media – Lunga' });
+    expect(host.state.log.find((e) => e.label === 'Arco → Gor')!.roll!.formula).toBe('2d10s3');
+  });
+
+  it('a hazard zone tests whoever walks in during a fight', () => {
+    // Tempra 2d/2: 9, 9 → no successes against Pericolo (2): a wound with 2 dice
+    const { host, gunter } = table(seq(9, 9, 5, 5));
+    zone(host, { name: 'Strada', x: 0, y: 0, w: 2, h: 5 });
+    zone(host, { name: 'Casa in fiamme', x: 2, y: 0, w: 3, h: 5, hazard: 2, hazardCondition: 'In Fiamme' });
+    fight(host, gunter.id);
+    host.dispatch('p1', { type: 'token.move', tokenId: gunter.id, x: 3, y: 1 });
+    const t = host.state.tokens[gunter.id]!;
+    expect(t.conditions).toContain('In Fiamme');
+    expect(t.zonesMoved).toBe(1);
+    expect(host.state.log.find((e) => e.label?.startsWith('Tabella delle Ferite'))!.roll!.formula).toBe('2d10');
+  });
+
+  it('bleeding out at the end of the turn: Indifeso, then dead', () => {
+    const { host, gunter } = table(seq(9));
+    host.dispatch('gm', { type: 'token.update', tokenId: gunter.id, patch: { conditions: ['Ferito Gravemente'] } });
+    fight(host, gunter.id);
+    host.dispatch('gm', { type: 'initiative.next' });
+    expect(host.state.tokens[gunter.id]!.conditions).toContain('Indifeso');
+    host.dispatch('gm', { type: 'initiative.next' });
+    expect(host.state.tokens[gunter.id]!.conditions).toContain('Morto');
+  });
+
+  it('a Mostruosità chooses between the wound and its Reaction', () => {
+    const monster: PoolStats = { ...brute, type: 'Mostruosità', monster: true, reaction: 'Arretra volando.' };
+    const { host, gunter, gor } = table(seq(1), monster);
+    host.dispatch('p1', { type: 'pool.attack', attackerId: gunter.id, targetIds: [gor.id], name: 'Ascia', dice: 3, target: 4, damage: 4, unopposed: true });
+    expect(host.state.tokens[gor.id]!.pool!.pending).toBe('wound');
+    expect(host.state.tokens[gor.id]!.pool!.wounds).toBe(0);
+    host.dispatch('p1', { type: 'pool.react', tokenId: gor.id, choice: 'reaction' });
+    expect(host.state.tokens[gor.id]!.pool!.pending).toBeUndefined();
+    expect(host.state.log.at(-1)!.card!.body).toBe('Arretra volando.');
+  });
+
+  it('vehicles take breakdowns, not wounds', () => {
+    const cart: PoolStats = { type: 'Bruto', resilience: 5, toughness: 5, armoured: false, melee: { dice: 0, target: 1 }, ranged: { dice: 0, target: 1 }, wounds: 0, maxWounds: 3, vehicle: true };
+    const { host, gunter, gor } = table(seq(1, 1, 1, 4), cart);
+    host.dispatch('p1', { type: 'pool.attack', attackerId: gunter.id, targetIds: [gor.id], name: 'Ascia', dice: 3, target: 4, damage: 4 });
+    expect(host.state.tokens[gor.id]!.pool!.wounds).toBe(1);
+    expect(host.state.log.at(-1)!.card!.body).toContain('Tratto Movimentato');
+  });
+
+  it('a retreat: those who fail Atletica roll on Si Salvi Chi Può!', () => {
+    const { host, gunter } = table(seq(9, 9, 8));
+    host.dispatch('gm', { type: 'pool.retreat', tokenIds: [gunter.id] });
+    expect(host.state.log.at(-1)!.card!.body).toContain('Debitori (8)');
+  });
+
+  it('the end of the day: infections for the wounded, Volontà for those exposed', () => {
+    const { host, gunter } = table(seq(3, 9, 9));
+    host.dispatch('gm', { type: 'pool.wound', tokenId: gunter.id });
+    host.dispatch('gm', { type: 'token.update', tokenId: gunter.id, patch: { pool: { ...host.state.tokens[gunter.id]!.pool!, exposure: 4 } } });
+    host.dispatch('gm', { type: 'pool.dayEnd' });
+    const t = host.state.tokens[gunter.id]!;
+    expect(t.pool!.untreated).toBe(2);
+    expect(t.pool!.woundsToday).toBeUndefined();
+    const text = host.state.log.filter((e) => e.kind === 'card').map((e) => e.card!.body).join('\n');
+    expect(text).toContain('Ferita Purulenta');
+    expect(text).toContain('Vulnerabile');
+  });
+
+  it('extended tests add up the successes of everyone at the table', () => {
+    const { host } = table(seq(1, 1, 9));
+    host.dispatch('p1', { type: 'extended.save', test: { name: 'Forzare il portone', need: 4 } });
+    const id = Object.keys(host.state.extended!)[0]!;
+    host.dispatch('p1', { type: 'extended.roll', testId: id, formula: '3d10s3' });
+    expect(host.state.extended![id]!.have).toBe(2);
+    expect(host.dispatch('p1', { type: 'extended.delete', testId: id }).ok).toBe(false);
+  });
+});

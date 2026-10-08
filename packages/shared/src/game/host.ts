@@ -1,11 +1,27 @@
-import { cryptoRng, DiceError, roll, type RollResult, type Rng } from '../dice';
+import { cryptoRng, DiceError, roll, successes, type RollResult, type Rng } from '../dice';
 import { newId } from '../id';
 import type { Ability, GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
 import { emptyMask, paintRect, resizeMask } from './fog';
 import { isMapPackage } from './library';
 import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
 import { lineOfSight } from './vision';
-import { cleanPoolStats, cleanZone, trackRow, type PoolStats } from './pool';
+import {
+  attackModifiers,
+  cleanExtendedTest,
+  cleanPoolStats,
+  cleanZone,
+  EXPOSURE_LEVELS,
+  faultFor,
+  freeZones,
+  POOL_CHECKS,
+  retreatFor,
+  trackRow,
+  zoneAt,
+  zoneHops,
+  type PoolCheck,
+  type PoolStats,
+  type Zone,
+} from './pool';
 import {
   createScene,
   emptyMusic,
@@ -59,6 +75,10 @@ const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: s
   'hp.roll': { cols: ['tokens'], label: 'danni o cure' },
   attack: { cols: ['tokens'], label: 'attacco' },
   'save.group': { cols: ['tokens'], label: 'tiro salvezza di gruppo' },
+  'pool.attack': { cols: ['tokens'], label: 'attacco' },
+  'pool.wound': { cols: ['tokens'], label: 'ferita' },
+  'pool.check': { cols: ['tokens'], label: 'prova' },
+  'pool.react': { cols: ['tokens'], label: 'reazione' },
   'scene.import': { cols: ['scenes', 'walls', 'props', 'drawings', 'tokens'], label: 'mappa dalla libreria' },
 };
 const HISTORY_LIMIT = 50;
@@ -92,7 +112,9 @@ export interface GameHostOptions {
   /** success-pool systems: what a total on the wounds table means */
   woundResult?: (total: number) => { name: string; text: string; conditions?: string[]; dead?: boolean };
   /** success-pool systems: the character's sheet with a new wound written on it (null: leave it) */
-  withWound?: (character: TableCharacter, wound: { name: string; text: string }) => unknown;
+  withWound?: (character: TableCharacter, wound: { name: string; text: string; festering?: boolean }) => unknown;
+  /** success-pool systems: the sheet of a character the corruption got hold of (Vulnerabile) */
+  withCorruption?: (character: TableCharacter) => unknown;
 }
 
 const ABILITY_NAMES: Record<Ability, string> = { str: 'Forza', dex: 'Destrezza', con: 'Costituzione', int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
@@ -644,12 +666,15 @@ export class GameHost {
           if (blocking.length && !lineOfSight({ x: t.x + half, y: t.y + half }, { x: nx + half, y: ny + half }, blocking)) return { ok: false, reason: 'C’è un muro in mezzo' };
         }
         // in combat, the walk counts against the turn's movement (difficult ground double)
-        if (s.initiative.round > 0 && s.initiative.entries.some((e) => e.tokenId === t.id)) {
+        const fighting = s.initiative.round > 0 && s.initiative.entries.some((e) => e.tokenId === t.id);
+        if (fighting) {
           const half = t.size / 2;
           t.moved = (t.moved ?? 0) + moveCost(scene.terrain, scene.widthCells, scene.heightCells, { x: t.x + half - 0.5, y: t.y + half - 0.5 }, { x: nx + half - 0.5, y: ny + half - 0.5 });
         }
+        const from0 = { x: t.x, y: t.y };
         t.x = nx;
         t.y = ny;
+        if (fighting && t.pool && (from0.x !== nx || from0.y !== ny)) this.zoneMove(from, t, from0);
         // onto stairs, a ladder, a trapdoor leading elsewhere: down (or up) it goes
         const half = t.size / 2;
         const gate = Object.values(s.props!).find(
@@ -893,6 +918,136 @@ export class GameHost {
         this.poolWound(from, t, clampInt(action.extraDice ?? 0, -5, 10), 'Ferita');
         break;
       }
+      case 'pool.react': {
+        const t = s.tokens[action.tokenId];
+        if (!t?.pool?.pending) return { ok: false, reason: 'Nessuna scelta in sospeso' };
+        delete t.pool.pending;
+        if (action.choice === 'wound') this.poolWound(from, t, 0, 'Ferita');
+        else
+          this.log({
+            kind: 'card',
+            authorId: from,
+            text: 'Reazione',
+            private: t.hidden,
+            card: { title: `Reazione · ${t.name}`, body: t.pool.reaction ?? 'La Mostruosità usa la sua Reazione invece di subire la Ferita.' },
+          });
+        break;
+      }
+      case 'pool.check': {
+        if (!(POOL_CHECKS as readonly string[]).includes(action.check)) return { ok: false, reason: 'Prova sconosciuta' };
+        const tokens = (Array.isArray(action.tokenIds) ? action.tokenIds : []).slice(0, 30).map((id) => s.tokens[id]).filter((t): t is Token => !!t);
+        if (!tokens.length) return { ok: false, reason: 'Seleziona almeno un token' };
+        if (!isGm && tokens.some((t) => !t.ownerIds.includes(from))) return { ok: false, reason: 'Non controlli questo token' };
+        for (const t of tokens)
+          this.poolCheck(from, t, action.check, {
+            label: String(action.label ?? action.check).slice(0, 60),
+            grade: action.grade ? clampInt(action.grade, 0, 9) : undefined,
+            condition: action.condition ? String(action.condition).slice(0, 30) : undefined,
+            noWound: !!action.noWound,
+            bonus: clampInt(action.bonus ?? 0, -6, 6),
+          });
+        break;
+      }
+      case 'pool.retreat': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const tokens = (Array.isArray(action.tokenIds) ? action.tokenIds : []).slice(0, 30).map((id) => s.tokens[id]).filter((t): t is Token => !!t?.pool);
+        if (!tokens.length) return { ok: false, reason: 'Nessuno da far ritirare' };
+        const lines: string[] = [
+          action.rearguard
+            ? `${String(action.rearguard).slice(0, 60)} spende Fato e copre la ritirata.`
+            : 'Nessuno spende Fato per coprire la ritirata: il master esige un prezzo (una Ferita, un avere prezioso o una sventura).',
+        ];
+        const failed = tokens.filter((t) => !this.poolCheck(from, t, 'Atletica', { label: 'Ritirata', quiet: true }).passed);
+        if (failed.length) {
+          const r = roll(`${failed.length}d10`, this.rng);
+          this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: 'Si Salvi Chi Può!', roll: r });
+          const res = retreatFor(r.total);
+          lines.push(`Non riescono a sganciarsi: ${failed.map((t) => t.name).join(', ')}.`, `${res.name} (${r.total}): ${res.text}`);
+        } else lines.push('Tutti si sganciano senza incidenti.');
+        this.log({ kind: 'card', authorId: from, text: 'Ritirata', card: { title: 'Ritirata', subtitle: 'Si Salvi Chi Può!', body: lines.join('\n') } });
+        break;
+      }
+      case 'pool.dayEnd': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        this.system('Fine della giornata');
+        for (const t of Object.values(s.tokens)) {
+          const st = t.pool;
+          if (!st) continue;
+          const today = st.woundsToday ?? 0;
+          if (today > 0 && st.maxWounds == null && !st.vehicle) {
+            const r = this.poolCheck(from, t, 'Tempra', { label: 'Infezione', quiet: true });
+            const lines = [`Tempra: ${r.successes} successi contro ${today} Ferite subite oggi.`];
+            if (r.successes < today) {
+              st.untreated = (st.untreated ?? 0) + 1;
+              st.wounds += 1;
+              lines.push('Una Ferita si infetta: Ferita Purulenta. Conta come non medicata, non si può medicare e guarisce solo con Riposare e Rimettersi.');
+              this.writeWound(t, { name: 'Ferita Purulenta', text: 'Infetta: conta come non medicata; guarisce solo con Riposare e Rimettersi.', festering: true });
+            } else lines.push('Nessuna infezione.');
+            this.log({ kind: 'card', authorId: from, text: 'Infezione', private: t.hidden, card: { title: `Infezione · ${t.name}`, body: lines.join('\n') } });
+          }
+          if (st.exposure) {
+            const level = EXPOSURE_LEVELS.find((e) => e.level === st.exposure) ?? EXPOSURE_LEVELS[0]!;
+            const lines = [`Esposizione al Caos: ${level.name}.`];
+            let failed = level.penalty === null;
+            if (failed) lines.push('Fallimento automatico.');
+            else {
+              const r = this.poolCheck(from, t, 'Volontà', { label: 'Esposizione al Caos', bonus: -level.penalty!, quiet: true });
+              lines.push(`Volontà${level.penalty ? ` (-${level.penalty}d)` : ''}: ${r.successes} successi.`);
+              failed = !r.passed;
+            }
+            if (failed) {
+              lines.push(`La corruzione fa presa: il master sceglie se ${t.name} è Esausto, Distratto o Assordato. Ora è Vulnerabile.`);
+              const ch = t.characterId ? s.characters[t.characterId] : undefined;
+              const data = ch && this.opts.withCorruption?.(ch);
+              if (ch && data !== null && data !== undefined) {
+                ch.data = data;
+                this.opts.onCharacterChange?.(ch);
+              }
+            } else lines.push('Resiste.');
+            this.log({ kind: 'card', authorId: from, text: 'Corruzione', private: true, card: { title: `Corruzione · ${t.name}`, body: lines.join('\n') } });
+          }
+          delete st.woundsToday;
+          delete st.exposure;
+        }
+        break;
+      }
+      case 'extended.save': {
+        const t = action.test;
+        s.extended ??= {};
+        const existing = t.id ? s.extended[t.id] : undefined;
+        if (existing && !isGm) return { ok: false, reason: 'Solo il master modifica le prove prolungate' };
+        if (!existing && Object.keys(s.extended).length >= 30) return { ok: false, reason: 'Troppe prove prolungate' };
+        const next = cleanExtendedTest({ ...existing, ...t }, existing?.id ?? newId());
+        if (!next) return { ok: false, reason: 'Prova non valida' };
+        s.extended[next.id] = next;
+        break;
+      }
+      case 'extended.roll': {
+        const t = s.extended?.[action.testId];
+        if (!t) return { ok: false, reason: 'Prova inesistente' };
+        let r: RollResult;
+        try {
+          r = roll(String(action.formula).slice(0, 60), this.rng);
+        } catch (e) {
+          return { ok: false, reason: e instanceof DiceError ? e.message : 'Formula non valida' };
+        }
+        const got = successes(r) ?? 0;
+        const label = `${String(action.label ?? 'Prova').slice(0, 40)} · ${t.name}`;
+        this.log({ kind: 'roll', authorId: from, text: `${got}`, label, roll: r });
+        const before = t.have;
+        t.have = Math.min(99, t.have + Math.max(0, got));
+        this.system(t.have >= t.need && before < t.need ? `«${t.name}» completata (${t.have}/${t.need})!` : `«${t.name}»: ${t.have}/${t.need} successi`);
+        break;
+      }
+      case 'extended.delete': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!s.extended?.[action.testId]) return { ok: false, reason: 'Prova inesistente' };
+        delete s.extended[action.testId];
+        break;
+      }
       case 'zone.create': {
         const denied = gmOnly();
         if (denied) return denied;
@@ -982,6 +1137,11 @@ export class GameHost {
           const tok = current?.tokenId ? s.tokens[current.tokenId] : undefined;
           if (ini.round === 0 || !tok || !tok.ownerIds.includes(from)) return { ok: false, reason: 'Non è il tuo turno' };
         }
+        if (ini.round > 0) {
+          const ending = ini.entries[ini.turn];
+          const was = ending?.tokenId ? s.tokens[ending.tokenId] : undefined;
+          if (was) this.endTurn(from, was);
+        }
         if (ini.round === 0) {
           ini.round = 1;
           ini.turn = 0;
@@ -1015,7 +1175,10 @@ export class GameHost {
         const denied = gmOnly();
         if (denied) return denied;
         s.initiative = { round: 0, turn: 0, entries: [] };
-        for (const t of Object.values(s.tokens)) delete t.moved;
+        for (const t of Object.values(s.tokens)) {
+          delete t.moved;
+          delete t.zonesMoved;
+        }
         break;
       }
       case 'character.update': {
@@ -1427,10 +1590,15 @@ export class GameHost {
     const flags = `${a.glorious ? 'g' : ''}${a.grim ? 't' : ''}`;
     const pool = (dice: number, target: number, f = '') =>
       dice < 1 ? roll(`1d10s1${f}`, this.rng) : roll(`${clampInt(dice, 1, 20)}d10s${clampInt(target, 1, 10)}${f}`, this.rng);
-    const att = pool(Number(a.dice) || 0, Number(a.target) || 1, flags);
     const st = t.pool;
+    // what the table sees for itself: charge, numbers, high ground, range, cover, Prono
+    const mods = a.noAuto
+      ? { dice: 0, notes: [] as string[] }
+      : attackModifiers(this.sceneZones(t.sceneId), Object.values(this._state.tokens).filter((x) => x.sceneId === t.sceneId), attacker, t, { ranged: a.ranged, charge: a.charge, optimal: a.optimal });
+    const att = pool((Number(a.dice) || 0) + mods.dice, Number(a.target) || 1, flags);
     const helpless = t.conditions.includes('Indifeso');
-    const opposed = !a.unopposed && !helpless && !!st;
+    // vehicles can't dodge: every success lands
+    const opposed = !a.unopposed && !helpless && !!st && !st.vehicle;
     const defDice = st ? (a.ranged ? st.ranged : st.melee) : undefined;
     // a blinded defender opposes grimly
     const def = opposed && defDice ? pool(defDice.dice, defDice.target, t.conditions.includes('Accecato') ? 't' : '') : undefined;
@@ -1441,7 +1609,8 @@ export class GameHost {
     const hidden = t.hidden;
     this.log({ kind: 'roll', authorId: from, text: `${hits}`, label: `${name} → ${t.name}`.slice(0, 120), roll: att, private: hidden });
     if (def) this.log({ kind: 'roll', authorId: from, text: `${blocks}`, label: `${t.name} si oppone`.slice(0, 120), roll: def, private: hidden });
-    const lines: string[] = [`Successi: ${hits}${def ? ` contro ${blocks}` : a.unopposed || helpless ? ' (senza opposizione)' : ''}`];
+    const lines: string[] = [`Successi: ${hits}${def ? ` contro ${blocks}` : a.unopposed || helpless || st?.vehicle ? ' (senza opposizione)' : ''}`];
+    if (mods.notes.length) lines.unshift(`Modificatori: ${mods.notes.join(', ')}.`);
     if (!hit) {
       lines.push(def && hits > 0 ? 'Parato o schivato.' : 'Mancato.');
       // a missed melee blow leaves the attacker off balance (monsters excepted)
@@ -1453,6 +1622,11 @@ export class GameHost {
       return;
     }
     const over = def ? hits - blocks : hits;
+    // a horse's charge bowls over anything smaller than a monster (Nobile Destriero)
+    if (a.charge && !a.ranged && attacker?.pool?.mounted && /cavall|destrier/i.test(attacker.pool.mounted) && st && !st.monster && !st.vehicle && !t.conditions.includes('Prono')) {
+      t.conditions = [...t.conditions, 'Prono'];
+      lines.push(`Nobile Destriero: ${t.name} cade Prono.`);
+    }
     if (a.damage === null || a.damage === undefined) {
       const cond = String(a.condition ?? 'Barcollante').slice(0, 30);
       lines.push(`Colpito: ${cond}.`);
@@ -1467,8 +1641,34 @@ export class GameHost {
       this.poolCard(from, name, t, lines, hidden);
       return;
     }
+    if (st.vehicle) {
+      // armour-piercing shots do +1 to armoured vehicles instead
+      const vdmg = dmg + (a.ignoresArmour && st.armoured ? 1 : 0);
+      lines.push(`Danni ${vdmg} contro Resilienza ${st.resilience}.`);
+      if (vdmg > st.resilience) {
+        this.poolCard(from, name, t, lines, hidden);
+        this.poolWound(from, t, 0, name);
+        return;
+      }
+      lines.push('Nessun danno strutturale.');
+      this.poolCard(from, name, t, lines, hidden);
+      return;
+    }
     const res = a.ignoresArmour ? st.toughness : st.resilience;
     lines.push(`Danni ${dmg} contro Resilienza ${res}${a.ignoresArmour ? ' (ignora l’armatura)' : ''}.`);
+    if (st.monster && !helpless) {
+      // a Mostruosità: a wound or its Reaction, chosen by the attacker (over Resilienza) or by itself (staggered again)
+      if (dmg > res) {
+        st.pending = 'wound';
+        lines.push(`Ferita! Chi attacca sceglie se infliggerla o far scattare la Reazione${st.reaction ? `: ${st.reaction}` : '.'}`);
+      } else if (!t.conditions.includes('Barcollante')) this.stagger(from, t, lines);
+      else {
+        st.pending = 'stagger';
+        lines.push(`${t.name} era già Barcollante: sceglie se subire una Ferita o usare la Reazione${st.reaction ? `: ${st.reaction}` : '.'}`);
+      }
+      this.poolCard(from, name, t, lines, hidden);
+      return;
+    }
     if (dmg > res || helpless) {
       this.poolCard(from, name, t, lines, hidden);
       this.poolWound(from, t, clampInt(a.woundDice ?? 0, 0, 5), name);
@@ -1480,6 +1680,7 @@ export class GameHost {
 
   /** Barcollante, or, for one who already is, the choice the rules give. */
   private stagger(_from: string, t: Token, lines: string[]): void {
+    if (t.pool?.vehicle) return;
     if (!t.conditions.includes('Barcollante')) {
       t.conditions = [...t.conditions, 'Barcollante'];
       lines.push(`${t.name} è Barcollante.`);
@@ -1495,10 +1696,29 @@ export class GameHost {
   /** A wound: Servitori fall, Bruti and Mostruosità follow their track, the others roll on the wounds table. */
   private poolWound(from: string, t: Token, extraDice: number, cause: string): void {
     const st = t.pool as PoolStats;
-    st.wounds += 1;
+    const lines: string[] = [];
+    if (st.vehicle) {
+      // a wound to a vehicle is a breakdown
+      st.wounds += 1;
+      const max = st.maxWounds ?? 3;
+      t.hp = { current: Math.max(0, max - st.wounds), max };
+      if (st.wounds >= max) {
+        if (!t.conditions.includes('Sconfitto')) t.conditions = [...t.conditions, 'Sconfitto'];
+        lines.push(`${t.name} è distrutto: chi è a bordo è Barcollante e Prono; se andava veloce, Tempra contro un Pericolo (2).`);
+      } else {
+        const r = roll('1d10', this.rng);
+        this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `Guasti dei Veicoli · ${t.name}`, roll: r, private: t.hidden });
+        const f = faultFor(r.total);
+        lines.push(`Guasto ${st.wounds}/${max}. ${f.name}: ${f.text}`);
+      }
+      this.log({ kind: 'card', authorId: from, text: 'Guasto', private: t.hidden, card: { title: `Guasto · ${t.name}`, subtitle: cause, body: lines.join('\n') } });
+      return;
+    }
+    // Bruti and Mostruosità take an extra wound for each extra die on the table
+    st.wounds += st.maxWounds != null ? 1 + Math.max(0, extraDice) : 1;
+    st.woundsToday = (st.woundsToday ?? 0) + 1;
     // a wound shakes off the stagger
     t.conditions = t.conditions.filter((c) => c !== 'Barcollante');
-    const lines: string[] = [];
     if (st.maxWounds != null) {
       if (st.maxWounds > 0) t.hp = { current: Math.max(0, st.maxWounds - st.wounds), max: st.maxWounds };
       if (st.wounds >= st.maxWounds) {
@@ -1522,16 +1742,131 @@ export class GameHost {
       lines.push(`${res.name} (${r.total}): ${res.text}`);
       for (const c of res.conditions ?? []) if (!t.conditions.includes(c)) t.conditions = [...t.conditions, c];
       if (res.dead && !t.conditions.includes('Morto')) t.conditions = [...t.conditions, 'Morto'];
-      const ch = t.characterId ? this._state.characters[t.characterId] : undefined;
-      if (ch && this.opts.withWound) {
-        const data = this.opts.withWound(ch, { name: res.name, text: res.text });
-        if (data !== null && data !== undefined) {
-          ch.data = data;
-          this.opts.onCharacterChange?.(ch);
-        }
-      }
+      this.writeWound(t, { name: res.name, text: res.text });
     } else lines.push(`Totale ${r.total} sulla tabella delle Ferite.`);
     this.log({ kind: 'card', authorId: from, text: 'Ferita', private: t.hidden, card: { title: `Ferita · ${t.name}`, subtitle: cause, body: lines.join('\n') } });
+  }
+
+  /** The wound goes on the character's sheet too. */
+  private writeWound(t: Token, wound: { name: string; text: string; festering?: boolean }): void {
+    const ch = t.characterId ? this._state.characters[t.characterId] : undefined;
+    if (!ch || !this.opts.withWound) return;
+    const data = this.opts.withWound(ch, wound);
+    if (data === null || data === undefined) return;
+    ch.data = data;
+    this.opts.onCharacterChange?.(ch);
+  }
+
+  private sceneZones(sceneId: string): Zone[] {
+    return Object.values(this._state.zones ?? {}).filter((z) => z.sceneId === sceneId);
+  }
+
+  /**
+   * A test the table rolls from a token's profile. With a grade it's a
+   * hazard: that many successes avoid it, failing costs a wound (the
+   * difference in dice on the table) and the condition.
+   */
+  private poolCheck(
+    from: string,
+    t: Token,
+    check: PoolCheck,
+    o: { label: string; grade?: number; condition?: string; noWound?: boolean; bonus?: number; note?: string; quiet?: boolean },
+  ): { successes: number; passed: boolean } {
+    const st = t.pool;
+    const known = st?.checks?.[check];
+    const d = known ?? { dice: 2, target: 2 };
+    const dice = d.dice + (o.bonus ?? 0);
+    const r = dice < 1 ? roll('1d10s1', this.rng) : roll(`${clampInt(dice, 1, 20)}d10s${clampInt(d.target, 1, 10)}`, this.rng);
+    const got = r.total;
+    const need = Math.max(1, o.grade ?? 1);
+    const passed = got >= need;
+    this.log({ kind: 'roll', authorId: from, text: `${got}`, label: `${o.label} · ${t.name} (${check})`.slice(0, 120), roll: r, private: t.hidden });
+    if (o.quiet) return { successes: got, passed };
+    const lines = [`${check}${known ? '' : ' (profilo generico 2d/2)'}: ${got} successi${o.grade ? ` contro Pericolo (${o.grade})` : ''}.`];
+    if (o.note) lines.push(o.note);
+    const wound = !passed && !o.noWound && !!st && !!o.grade;
+    if (passed) lines.push('Superata.');
+    else {
+      lines.push(wound ? `Fallita: una Ferita${o.condition ? ` e ${o.condition}` : ''}.` : `Fallita${o.condition ? `: ${o.condition}` : ''}.`);
+      if (o.condition && !st?.vehicle) {
+        if (o.condition === 'Barcollante') this.stagger(from, t, lines);
+        else if (!t.conditions.includes(o.condition)) t.conditions = [...t.conditions, o.condition];
+      }
+    }
+    this.log({ kind: 'card', authorId: from, text: o.label, private: t.hidden, card: { title: `${o.label} · ${t.name}`.slice(0, 120), body: lines.join('\n') } });
+    // as many dice on the wounds table as the successes missing
+    if (wound) this.poolWound(from, t, need - got - 1, o.label);
+    return { successes: got, passed };
+  }
+
+  private hazard(from: string, t: Token, z: Zone): void {
+    this.poolCheck(from, t, z.hazardSkill ?? 'Tempra', { label: `Pericolo · ${z.name}`, grade: z.hazard, condition: z.hazardCondition, noWound: z.hazardNoWound });
+  }
+
+  /** difficult ground already tested this turn, by token */
+  private difficultDone = new Set<string>();
+
+  /** A move in combat on a map cut into zones: zones crossed, difficult ground, hazards. */
+  private zoneMove(from: string, t: Token, was: { x: number; y: number }): void {
+    const zones = this.sceneZones(t.sceneId);
+    if (!zones.length || !t.pool) return;
+    const half = t.size / 2;
+    const before = zoneAt(zones, was.x + half, was.y + half);
+    const after = zoneAt(zones, t.x + half, t.y + half);
+    const ini = this._state.initiative;
+    if (before && after && before.id !== after.id) {
+      const hops = zoneHops(zones, before, after);
+      if (Number.isFinite(hops)) {
+        const free = freeZones(t.pool.speed);
+        const prev = t.zonesMoved ?? 0;
+        t.zonesMoved = prev + hops;
+        if (t.zonesMoved > free && prev <= free + 1)
+          this.log({
+            kind: 'system',
+            authorId: 'system',
+            private: t.hidden,
+            text:
+              t.pool.speed === 'Lento'
+                ? `${t.name} ha percorso ${t.zonesMoved} Zone: è Lento, non può andare oltre ${free}.`
+                : `${t.name} ha percorso ${t.zonesMoved} Zone (gratis ${free}): oltre serve l’Azione Manovrare (Scattare: +1 Zona, una in più con Atletica).`,
+          });
+      }
+    }
+    const key = `${ini.round}:${ini.turn}:${t.id}`;
+    const rough = [after, before].find((z) => z?.difficult);
+    if (rough && !this.difficultDone.has(key)) {
+      if (this.difficultDone.size > 500) this.difficultDone.clear();
+      this.difficultDone.add(key);
+      this.poolCheck(from, t, 'Atletica', {
+        label: `Terreno Difficile · ${rough.name}`,
+        condition: 'Prono',
+        noWound: true,
+        note: 'Chi si Muove con Cautela non deve tirare. Niente Atletica per una Zona in più (Scattare, Caricare) in questo turno.',
+      });
+    }
+    if (after?.hazard && after.id !== before?.id) this.hazard(from, t, after);
+  }
+
+  /** The end of a token's turn: fire, bleeding, a hazard it stays in. */
+  private endTurn(from: string, t: Token): void {
+    if (!t.pool || t.conditions.includes('Morto')) return;
+    if (t.conditions.includes('In Fiamme')) this.poolCheck(from, t, 'Tempra', { label: 'In Fiamme', grade: 2 });
+    if (t.conditions.includes('Ferito Gravemente')) {
+      const r = this.poolCheck(from, t, 'Tempra', { label: 'Ferito Gravemente', noWound: true, quiet: true });
+      const lines = [`Tempra: ${r.successes} successi.`];
+      if (r.passed) lines.push('Resiste.');
+      else if (t.conditions.includes('Indifeso')) {
+        if (!t.conditions.includes('Morto')) t.conditions = [...t.conditions, 'Morto'];
+        lines.push(`Era già Indifeso: ${t.name} muore.`);
+      } else {
+        t.conditions = [...t.conditions, 'Indifeso'];
+        lines.push(`${t.name} è Indifeso.`);
+      }
+      this.log({ kind: 'card', authorId: from, text: 'Ferito Gravemente', private: t.hidden, card: { title: `Ferito Gravemente · ${t.name}`, body: lines.join('\n') } });
+    }
+    const half = t.size / 2;
+    const z = zoneAt(this.sceneZones(t.sceneId), t.x + half, t.y + half);
+    if (z?.hazard && z.hazardEach) this.hazard(from, t, z);
   }
 
   private hurt(t: Token, amount: number, from: string): void {
@@ -1583,6 +1918,7 @@ export class GameHost {
   /** The start of a token's turn: its movement is fresh, its timed conditions tick down. */
   private startTurn(t: Token): void {
     t.moved = 0;
+    if (t.pool) t.zonesMoved = 0;
     // action, bonus action and reaction come back; so do legendary actions
     if (t.used) delete t.used;
     if (t.legendary) t.legendary = { ...t.legendary, left: t.legendary.max };

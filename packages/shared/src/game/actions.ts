@@ -1,6 +1,6 @@
 import type { Macro } from '../macros';
 import type { MapPackage } from './library';
-import type { Zone } from './pool';
+import type { ExtendedTest, PoolCheck, Zone } from './pool';
 import type { AreaTemplate, ChatCard, GameState, Note, Prop, Quest, Scene, Token, Wall } from './state';
 
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
@@ -57,9 +57,31 @@ export type GameAction =
       condition?: string;
       /** extra dice on the wounds table */
       woundDice?: number;
+      /** melee attack as part of a Charge (+1d) */
+      charge?: boolean;
+      /** the weapon's optimal range ("Media – Estrema"): -1d beyond it */
+      optimal?: string;
+      /** leave out the modifiers the table works out (charge, numbers, high ground, range, cover, Prono) */
+      noAuto?: boolean;
     }
   /** GM (or the token's owner): roll on the wounds table for a token, as if it had taken a wound */
   | { type: 'pool.wound'; tokenId: string; extraDice?: number }
+  /** a Mostruosità's choice after a blow: take the wound, or its Reaction */
+  | { type: 'pool.react'; tokenId: string; choice: 'wound' | 'reaction' }
+  /**
+   * A test for each token, rolled by the table from its profile: against a
+   * hazard (grade: successes to avoid it; failing costs a wound with the
+   * difference in dice, and the condition), or just a test.
+   */
+  | { type: 'pool.check'; tokenIds: string[]; check: PoolCheck; label: string; grade?: number; condition?: string; noWound?: boolean; bonus?: number }
+  /** GM: the players flee; those who fail Atletica roll on Si Salvi Chi Può! */
+  | { type: 'pool.retreat'; tokenIds: string[]; rearguard?: string }
+  /** GM: the day is over: infections for the wounded, Volontà for those exposed to Chaos */
+  | { type: 'pool.dayEnd' }
+  /** extended tests shared at the table: anyone adds one or rolls for it, the GM edits or removes */
+  | { type: 'extended.save'; test: Partial<ExtendedTest> & { name: string } }
+  | { type: 'extended.roll'; testId: string; formula: string; label?: string }
+  | { type: 'extended.delete'; testId: string }
   /** GM: zones on a scene */
   | { type: 'zone.create'; sceneId?: string; zone: Partial<Omit<Zone, 'id' | 'sceneId'>> }
   | { type: 'zone.update'; zoneId: string; patch: Partial<Omit<Zone, 'id' | 'sceneId'>> }

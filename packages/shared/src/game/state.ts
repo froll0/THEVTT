@@ -1,4 +1,4 @@
-import type { PoolStats, Zone } from './pool';
+import type { ExtendedTest, PoolStats, Zone } from './pool';
 import type { RollResult } from '../dice';
 import type { Macro } from '../macros';
 import { tokenVisible, type Fog } from './fog';
@@ -145,6 +145,8 @@ export interface Token {
   conditionRounds?: Record<string, number>;
   /** cells walked in its current turn (only during combat) */
   moved?: number;
+  /** zones crossed in its current turn (success-pool systems, only during combat) */
+  zonesMoved?: number;
   /** damage types (as written in the chat: «fuoco», «taglienti»…) it takes half, none or double of */
   defenses?: Defenses;
   /** what it has spent this round: action, bonus action, reaction (back at the start of its turn) */
@@ -303,6 +305,8 @@ export interface GameState {
   drawings?: Record<string, Drawing>;
   /** regions of the scenes, for systems that count distance in zones */
   zones?: Record<string, Zone>;
+  /** extended tests the table is working on */
+  extended?: Record<string, ExtendedTest>;
   music?: MusicState;
   walls?: Record<string, Wall>;
   props?: Record<string, Prop>;
