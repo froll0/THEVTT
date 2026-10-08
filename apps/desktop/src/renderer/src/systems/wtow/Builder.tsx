@@ -647,6 +647,7 @@ function FinishStep({ c, set }: { c: C; set: Set }) {
           <small>Un tiro sulla tabella delle Risorse Casuali del tuo Status: annotala tra le Risorse.</small>
         </button>
       </div>
+      {c.finish === 'resource' && <ResourceRoll c={c} set={set} />}
       {c.finish === 'skills' && (
         <div className="row wrap" style={{ gap: 4 }}>
           {SKILLS.filter((s) => base(s) === 2 || base(s) === 3).map((s) => (
@@ -657,6 +658,97 @@ function FinishStep({ c, set }: { c: C; set: Set }) {
         </div>
       )}
       <p className="faint small">Poi: Velocità Normale, Resilienza = Resistenza + armatura ({w.resilience(c)}), e si comincia giocando il Tetro Presagio.</p>
+    </div>
+  );
+}
+
+/** Risorse Casuali: d100 sulla colonna del proprio Status, o di quella sopra per 1 PE. */
+function ResourceRoll({ c, set }: { c: C; set: Set }) {
+  const status = w.statusOf(c);
+  const [last, setLast] = useState<string | null>(null);
+  const go = (up: boolean) => {
+    const st = up ? w.statusAbove(status) : status;
+    const n = d(100);
+    const res = w.resourceFor(st, n);
+    setLast(`${n}: ${res} (${w.STATUS_LABEL[st]})`);
+    set({ resources: [c.resources.trim(), res].filter(Boolean).join('\n'), ...(up ? { xp: { ...c.xp, spent: c.xp.spent + 1 } } : {}) });
+  };
+  return (
+    <div className="col" style={{ gap: 6 }}>
+      <div className="row wrap" style={{ gap: 6 }}>
+        <button className="btn sm" onClick={() => go(false)}>
+          <Dices size={14} /> Tira d100 ({w.STATUS_LABEL[status]})
+        </button>
+        {status !== 'oro' && (
+          <button className="btn ghost sm" onClick={() => go(true)} title="Le risorse sopra il tuo Status vengono spesso confiscate o rubate">
+            <Dices size={14} /> Status {w.STATUS_LABEL[w.statusAbove(status)]} (1 PE)
+          </button>
+        )}
+      </div>
+      {last && <span className="small">{last}: aggiunta alle Risorse.</span>}
+      <div className="rows tiny wtow-table">
+        {w.RANDOM_RESOURCES.map((r) => (
+          <div key={r.min} className="r">
+            <b style={{ width: 52 }}>
+              {String(r.min).padStart(2, '0')}-{r.max === 100 ? '00' : r.max}
+            </b>
+            <span className={`grow ${status === 'bronzo' ? '' : 'muted'}`}>{r.bronzo}</span>
+            <span className={`grow ${status === 'argento' ? '' : 'muted'}`}>{r.argento}</span>
+            <span className={`grow ${status === 'oro' ? '' : 'muted'}`}>{r.oro}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Contatti: d100 sulla tabella di un gruppo, o la scelta di un rapporto. */
+function ContactPicker({ c, set }: { c: C; set: Set }) {
+  const career = w.getCareer(c);
+  const named = w.CONTACTS.filter((g) => career?.contacts.toLowerCase().includes(g.name.toLowerCase()));
+  const groups = named.length ? named : w.CONTACTS;
+  const [group, setGroup] = useState(groups[0]!.name);
+  const g = w.CONTACTS.find((x) => x.name === group) ?? groups[0]!;
+  const add = (contact: w.Contact, row: w.ContactRow) =>
+    set({ contacts: [...c.contacts.filter((x) => x.name.trim()), { name: `${contact.name} (${contact.role})`, bond: row.text }] });
+  return (
+    <div className="col" style={{ gap: 6 }}>
+      <div className="row wrap" style={{ gap: 6 }}>
+        <select className="select" value={g.name} onChange={(e) => setGroup(e.target.value)} aria-label="Gruppo di Contatti">
+          {w.CONTACTS.map((x) => (
+            <option key={x.name} value={x.name}>
+              {x.name}
+              {named.includes(x) ? ' ★' : ''}
+            </option>
+          ))}
+        </select>
+        <button
+          className="btn sm"
+          onClick={() => {
+            const r = w.contactFor(g, d(100));
+            add(r.contact, r.row);
+          }}
+        >
+          <Dices size={14} /> Tira d100
+        </button>
+      </div>
+      <div className="col wtow-contacts" style={{ gap: 4, maxHeight: 220, overflow: 'auto' }}>
+        {g.contacts.map((ct) => (
+          <div key={ct.name} className="col" style={{ gap: 2 }}>
+            <span className="small">
+              <b>{ct.name}</b> <span className="muted">{ct.role}</span> <span className="faint tiny">({ct.archetype})</span>
+            </span>
+            {ct.rows.map((r) => (
+              <button key={r.min} className="r ghost-row tiny" style={{ textAlign: 'left' }} onClick={() => add(ct, r)} title="Scegli questo rapporto">
+                <b style={{ width: 44 }}>
+                  {String(r.min).padStart(2, '0')}-{r.max === 100 ? '00' : r.max}
+                </b>
+                <span className="muted">{r.text}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -687,6 +779,7 @@ function DetailsStep({ c, set }: { c: C; set: Set }) {
         <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ contacts: [...c.contacts, { name: '', bond: '' }] })}>
           <Plus size={12} /> Contatto
         </button>
+        <ContactPicker c={c} set={set} />
       </div>
       <label className="col small">
         Tetro Presagio <span className="faint tiny">L’evento che unisce il gruppo e come affronterai l’antagonista.</span>

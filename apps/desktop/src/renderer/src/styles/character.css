@@ -663,3 +663,30 @@ button.stat:hover {
 .stat.danger b {
   color: var(--danger);
 }
+
+.magic-item {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.magic-item:last-of-type {
+  border-bottom: 0;
+}
+.wtow-table .r {
+  gap: 8px;
+}
+.wtow-contacts .ghost-row {
+  display: flex;
+  gap: 6px;
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+}
+.wtow-contacts .ghost-row:hover {
+  background: var(--accent-soft);
+}
+.npc-editor .wtow-npc-chars input {
+  width: 100%;
+}

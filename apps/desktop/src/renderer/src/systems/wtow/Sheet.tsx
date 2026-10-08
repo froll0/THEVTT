@@ -4,6 +4,7 @@ import { BookOpen, Dices, Flame, HeartCrack, MessageSquareShare, Minus, Plus, Sh
 import { useState } from 'react';
 import { Modal, Section, Switch } from '../../components/ui';
 import type { SheetProps, SheetTable } from '..';
+import { BankSection, CorruptionTab, IntermezzoTab, MagicItemsSection, MountSection, rollTest } from './Extras';
 
 type C = w.WtowCharacter;
 type Set = (patch: Partial<C>) => void;
@@ -19,6 +20,8 @@ interface PendingTest {
   magic?: boolean;
   /** attack: what happens on a hit */
   attack?: w.AttackProfile;
+  /** the weapon on the sheet (to mark it as fired) */
+  weapon?: number;
 }
 
 const rid = () => Math.random().toString(36).slice(2, 10);
@@ -26,7 +29,7 @@ const rid = () => Math.random().toString(36).slice(2, 10);
 export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, table }: SheetProps<C> & { compact?: boolean }) {
   const c = w.normalize(data);
   const set: Set = (patch) => onChange({ ...c, ...patch });
-  const [tab, setTab] = useState<'tests' | 'combat' | 'talents' | 'magic' | 'faith' | 'gear' | 'notes' | 'advance'>('tests');
+  const [tab, setTab] = useState<'tests' | 'combat' | 'talents' | 'magic' | 'faith' | 'gear' | 'notes' | 'chaos' | 'downtime' | 'advance'>('tests');
   const [pending, setPending] = useState<PendingTest | null>(null);
   const mage = w.mageLevel(c);
   const faith = w.faithRank(c);
@@ -47,6 +50,8 @@ export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, 
     { id: 'faith', label: 'Fede', show: faith > 0 },
     { id: 'gear', label: 'Averi' },
     { id: 'notes', label: 'Note' },
+    { id: 'downtime', label: 'Intermezzo' },
+    { id: 'chaos', label: 'Corruzione' },
     { id: 'advance', label: 'PE', show: editable },
   ] as const;
 
@@ -88,9 +93,9 @@ export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, 
           <small>Ferite</small>
           <b>{c.wounds.length}</b>
         </div>
-        <div className="stat">
+        <div className="stat" title={w.mountOf(c) ? `In sella: ${w.mountOf(c)!.name}` : undefined}>
           <small>Velocità</small>
-          <b className="small">{c.speed}</b>
+          <b className="small">{w.speedOf(c)}</b>
         </div>
         {!compact && (
           <div className="stat">
@@ -139,6 +144,8 @@ export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, 
       {tab === 'faith' && <FaithTab c={c} editable={editable} set={set} onShare={onShare} onTest={test} />}
       {tab === 'gear' && <GearTab c={c} editable={editable} set={set} />}
       {tab === 'notes' && <NotesTab c={c} editable={editable} set={set} />}
+      {tab === 'downtime' && <IntermezzoTab c={c} editable={editable} set={set} table={table} onShare={onShare} />}
+      {tab === 'chaos' && <CorruptionTab c={c} editable={editable} set={set} onTest={test} />}
       {tab === 'advance' && editable && <AdvanceTab c={c} set={set} />}
 
       {pending && (
@@ -147,9 +154,15 @@ export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, 
           state={{ exhausted, distracted, blinded, fate: editable ? w.fateLeft(c) : 0 }}
           onClose={() => setPending(null)}
           onRoll={(formula, label, o) => {
-            if (o.fate) set({ fate: { ...c.fate, spent: c.fate.spent + 1 } });
+            // a gun that needs reloading is empty after the shot
+            const fired = pending.weapon !== undefined && c.weapons[pending.weapon] && w.reloadNeed(c.weapons[pending.weapon]!) > 0;
+            const patch: Partial<C> = {};
+            if (o.fate) patch.fate = { ...c.fate, spent: c.fate.spent + 1 };
+            if (fired) patch.weapons = c.weapons.map((x, i) => (i === pending.weapon ? { ...x, loaded: false, reloading: undefined } : x));
+            if (Object.keys(patch).length) set(patch);
             if (pending.attack && table?.poolAttack) {
               const a = pending.attack;
+              const ranged = a.skill === 'tiro' || a.skill === 'lancio';
               // the formula already holds the dice after bonuses and the floor of one die
               const m = /^(\d+)d10s(\d+)/.exec(formula);
               const sent = table.poolAttack({
@@ -157,12 +170,14 @@ export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, 
                 dice: Number(m?.[1] ?? 1),
                 target: Number(m?.[2] ?? 1),
                 damage: a.staggerOnly ? null : a.damage,
-                ranged: a.skill === 'tiro' || a.skill === 'lancio',
+                ranged,
                 ignoresArmour: a.ignoresArmour,
                 vsArmoured: a.vsArmoured,
                 glorious: o.glorious,
                 grim: o.grim,
                 unopposed: o.unopposed,
+                charge: !ranged && o.charge,
+                optimal: ranged ? a.range : undefined,
               });
               if (sent) return setPending(null);
             }
@@ -220,7 +235,7 @@ function TestModal({
   test: PendingTest;
   state: { exhausted: boolean; distracted: boolean; blinded: boolean; fate: number };
   onClose: () => void;
-  onRoll: (formula: string, label: string, o: { mod: number; glorious: boolean; grim: boolean; fate: boolean; unopposed: boolean }) => void;
+  onRoll: (formula: string, label: string, o: { mod: number; glorious: boolean; grim: boolean; fate: boolean; unopposed: boolean; charge: boolean }) => void;
 }) {
   const [bonus, setBonus] = useState(0);
   const [penalty, setPenalty] = useState(state.distracted ? 1 : 0);
@@ -228,6 +243,8 @@ function TestModal({
   const [fate, setFate] = useState(false);
   const [grim, setGrim] = useState(state.blinded);
   const [unopposed, setUnopposed] = useState(false);
+  const [charge, setCharge] = useState(false);
+  const melee = !!test.attack && test.attack.skill !== 'tiro' && test.attack.skill !== 'lancio';
   // Esausto: no bonus dice, no Gloriosa unless Fato pays for it
   const mod = (state.exhausted ? 0 : bonus) - penalty;
   const isGlorious = (glorious && !state.exhausted) || fate;
@@ -253,7 +270,7 @@ function TestModal({
           <button className="btn ghost" onClick={onClose}>
             Annulla
           </button>
-          <button className="btn" onClick={() => onRoll(formula, label, { mod, glorious: isGlorious, grim, fate, unopposed })}>
+          <button className="btn" onClick={() => onRoll(formula, label, { mod, glorious: isGlorious, grim, fate, unopposed, charge })}>
             <Dices size={14} /> {test.attack ? 'Attacca' : 'Tira'} {formula}
           </button>
         </>
@@ -293,9 +310,15 @@ function TestModal({
               <span>Senza opposizione (sorpresa, bersaglio inerme)</span>
               <Switch on={unopposed} onChange={setUnopposed} label="Senza opposizione" />
             </label>
+            {melee && (
+              <label className="row between small">
+                <span>In Carica (+1d)</span>
+                <Switch on={charge} onChange={setCharge} label="In Carica" />
+              </label>
+            )}
             <span className="faint tiny">
-              Con un bersaglio segnato sulla mappa il tavolo tira anche la sua Protezione e applica Danni, Barcollante e Ferite. Bonus tipici: +1d Carica, superiorità numerica o
-              posizione sopraelevata; a distanza -1d fuori portata ottimale, copertura o bersaglio Prono.
+              Con un bersaglio segnato sulla mappa il tavolo tira anche la sua Protezione e applica Danni, Barcollante e Ferite. Aggiunge da solo +1d per la Carica, la superiorità
+              numerica nella Zona e la posizione sopraelevata (o il bersaglio Prono); a distanza -1d fuori Portata Ottimale, contro la copertura o un bersaglio Prono.
             </span>
           </>
         )}
@@ -366,9 +389,17 @@ function CombatTab({ c, editable, set, onTest, onRoll, table }: { c: C; editable
         <div className="rows">
           {c.weapons.map((wp, i) => {
             const a = w.attackProfile(c, wp);
+            const reload = w.reloadNeed(wp);
+            const empty = reload > 0 && wp.loaded === false;
             return (
               <div key={i} className="r">
-                <button className="btn ghost sm grow" style={{ justifyContent: 'flex-start' }} onClick={() => onTest(a.name, a.pool.dice, a.pool.target, { attack: a })} title={a.traits}>
+                <button
+                  className="btn ghost sm grow"
+                  style={{ justifyContent: 'flex-start' }}
+                  disabled={empty}
+                  onClick={() => onTest(a.name, a.pool.dice, a.pool.target, { attack: a, weapon: i })}
+                  title={empty ? 'Scarica: va ricaricata' : a.traits}
+                >
                   <Sword size={13} />
                   <span className="grow ellipsis" style={{ textAlign: 'left' }}>
                     {a.name}
@@ -379,6 +410,22 @@ function CombatTab({ c, editable, set, onTest, onRoll, table }: { c: C; editable
                   </span>
                   <b>{a.staggerOnly ? 'Barc.' : a.damage == null ? '—' : `D ${a.damage}`}</b>
                 </button>
+                {empty && (
+                  <button
+                    className="btn sm"
+                    disabled={!editable}
+                    title={`Prova Prolungata di Destrezza: ${reload} successi, una Prova per Azione`}
+                    onClick={async () => {
+                      const d = w.pool(c, 'destrezza');
+                      const r = await rollTest(table, w.testFormula(d.dice, d.target), `Ricarica ${a.name}`);
+                      if (!r) return;
+                      const have = (wp.reloading ?? 0) + (successes(r) ?? 0);
+                      set({ weapons: c.weapons.map((x, j) => (j === i ? (have >= reload ? { ...x, loaded: undefined, reloading: undefined } : { ...x, reloading: have }) : x)) });
+                    }}
+                  >
+                    Ricarica {wp.reloading ?? 0}/{reload}
+                  </button>
+                )}
                 {editable && (
                   <button className="btn ghost sm icon" aria-label="Togli" onClick={() => set({ weapons: c.weapons.filter((_, j) => j !== i) })}>
                     <Trash2 size={12} />
@@ -433,6 +480,8 @@ function CombatTab({ c, editable, set, onTest, onRoll, table }: { c: C; editable
           <span className="faint tiny">Resilienza {w.resilience(c)} · senza armatura {w.characteristic(c, 'r')}</span>
         </div>
       </Section>
+
+      <MountSection c={c} editable={editable} set={set} />
 
       <WoundsSection c={c} editable={editable} set={set} onRoll={onRoll} table={table} />
 
@@ -964,6 +1013,8 @@ function GearTab({ c, editable, set }: { c: C; editable: boolean; set: Set }) {
         </div>
         <p className="faint tiny">Gli averi di Status inferiore al tuo sono gratuiti; Mercanteggiare è Fascino contro Volontà.</p>
       </Section>
+      <BankSection c={c} editable={editable} set={set} />
+      <MagicItemsSection c={c} editable={editable} set={set} />
       <Section title="Armatura">
         <div className="row wrap" style={{ gap: 6 }}>
           <select className="select grow" disabled={!editable} value={c.armour ?? ''} onChange={(e) => set({ armour: e.target.value || null })}>

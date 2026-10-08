@@ -1,3 +1,4 @@
+import { RETREAT_TABLE, VEHICLE_FAULTS } from '@thevtt/shared';
 import { warhammer as w } from '@thevtt/systems';
 import type { ReactNode } from 'react';
 import type { CompendiumEntry } from '..';
@@ -77,7 +78,9 @@ Media | una Zona più in là
 Lunga | due Zone
 Estrema | tre o più Zone
 
-Ogni turno c’è un movimento gratuito di una Zona (due se Veloce). Sulla mappa il GM disegna le Zone con lo strumento apposito; il righello mostra la distanza in fasce.`,
+Ogni turno c’è un movimento gratuito di una Zona (due se Veloce); con l’Azione Manovrare si Scatta per una Zona in più (e un’altra con Atletica, o si diventa Barcollanti). Chi è Lento non può Manovrare per andare oltre.
+
+Sulla mappa il GM disegna le Zone con lo strumento apposito; il righello mostra la distanza in fasce e, in combattimento, il tavolo conta le Zone percorse da ognuno.`,
   },
   {
     id: 'turni',
@@ -134,7 +137,35 @@ Resistenza più armatura (leggera +1, pesante +2, piastre +3) e scudo (+1). Le a
     title: 'Arretrare e Ritirata',
     body: `Arretrare: una volta per round ci si sposta in una Zona adiacente lontano da chi ci incalza. Arretrando in una Zona con nemici si diventa Atterriti.
 
-Ritirata: il gruppo può abbandonare lo scontro; chi resta indietro a coprire la fuga spende Fato e si affida alla tabella «Si Salvi Chi Può!» del manuale.`,
+## Ritirata
+Se sono tutti d’accordo, i giocatori suonano la ritirata all’inizio del round. Uno di loro spende Fato e fa da retroguardia; se il gruppo non ha più Fato, il GM esige un prezzo in sangue (una Ferita), materiali (un avere prezioso) o sventura.
+
+Se il nemico insegue, ognuno tenta una Prova di Atletica (qualcuno può riuscire da solo grazie ai Saperi). Per ogni fallimento si tira 1d10 e si sommano i risultati sulla tabella «Si Salvi Chi Può!». Al tavolo: «Ritirata» nel pannello dell’iniziativa.`,
+  },
+  {
+    id: 'terreno',
+    category: 'Combattimento',
+    title: 'Terreno Difficile, copertura e Pericoli',
+    body: `## Terreno Difficile
+Chi lo attraversa nel suo turno tenta una Prova di Atletica: fallendo cade Prono subito dopo. In quel turno non può tirare Atletica per una Zona in più Scattando o Caricando. Alcuni Saperi Ambientali e Muoversi con Cautela evitano la Prova.
+
+## Copertura e buio
+-1d ai tiri contro chi è dietro un riparo o nascosto alla vista. Al buio non si vede nulla oltre la Distanza Media.
+
+## Pericoli
+Chi è esposto a un Pericolo tenta una Prova: fallendo subisce una Ferita e una Condizione adatta. I Pericoli con un grado si evitano con altrettanti successi; fallendo si tirano sulla tabella delle Ferite tanti dadi quanti i successi mancanti (più quelli per le Ferite non medicate).
+
+Al tavolo il master segna le Zone con Terreno Difficile, Copertura, posizione sopraelevata e Pericoli: in combattimento il tavolo tira da solo Atletica e la prova contro il Pericolo per chi entra, e a fine turno per chi resta in una Zona che brucia.`,
+  },
+  {
+    id: 'cavalcature',
+    category: 'Combattimento',
+    title: 'Cavalcature e veicoli',
+    body: `## In sella
+Cavaliere e cavalcatura sono un’unica entità con le Capacità del cavaliere e quelle in più della bestia (un Cavallo: +1 Resilienza e Velocità Veloce). Manovre complicate: Atletica; una cavalcatura spaventata: Comando. Si attacca con le proprie armi o con quelle della cavalcatura. Gli attacchi colpiscono il cavaliere, che si oppone normalmente; una Mostruosità cavalcata si può attaccare a parte. Cadendo Prono si viene disarcionati.
+
+## Veicoli
+Senza conducente non si muovono. Si muovono nel turno del conducente alla loro Velocità; gli Speronamenti si fanno solo Caricando (Destrezza del conducente per i carri). Contro un veicolo ogni successo va a segno (non ci si può opporre) ed è immune alle Condizioni tranne In Fiamme. I Danni oltre la Resilienza sono Guasti: superato il massimo è distrutto (chi è a bordo è Barcollante e Prono), altrimenti si tira sulla tabella dei Guasti.`,
   },
   {
     id: 'magia',
@@ -375,12 +406,172 @@ function rulesEntries(): CompendiumEntry[] {
     text: miscasts,
     render: () => <RuleText body={`Si tirano tutti i dadi della Riserva e si sommano.\n\n${miscasts}`} />,
   });
+  // the dice tables of the Guida del Giocatore and the Guida del Gamemaster
+  const dRange = (min: number, max: number) => (min === max ? String(min) : max >= 100 ? (min === 100 ? '00' : `${min}-00`) : `${min}-${max}`);
+  const retreat = RETREAT_TABLE.map((r) => `${r.max > 30 ? `${r.min}+` : `${r.min}-${r.max}`} | ${r.name} | ${r.text}`).join('\n');
+  out.push({
+    id: 'wtow-table-retreat',
+    category: 'Tabelle',
+    title: 'Si Salvi Chi Può!',
+    text: retreat,
+    render: () => <RuleText body={`1d10 per ogni personaggio che fallisce la Prova di Atletica, sommati.\n\n${retreat}`} />,
+  });
+  const faults = VEHICLE_FAULTS.map((r) => `${dRange(r.min, r.max)} | ${r.name} | ${r.text}`).join('\n');
+  out.push({ id: 'wtow-table-faults', category: 'Tabelle', title: 'Guasti dei Veicoli', text: faults, render: () => <RuleText body={`1d10 quando un Guasto non distrugge il veicolo.\n\n${faults}`} /> });
+  const hazards = w.HAZARDS.map((h) => `${h.name} | ${h.skill} | ${h.frequency} | ${h.grade} | ${h.noWound ? '' : 'Ferita, '}${h.condition ?? ''}`).join('\n');
+  out.push({ id: 'wtow-table-hazards', category: 'Tabelle', title: 'Esempi di Pericolo', text: hazards, render: () => <RuleText body={`Pericolo | Prova | Frequenza | Grado | Fallendo\n${hazards}`} /> });
+  const resources = w.RANDOM_RESOURCES.map((r) => `${dRange(r.min, r.max)} | ${r.bronzo} | ${r.argento} | ${r.oro}`).join('\n');
+  out.push({
+    id: 'wtow-table-resources',
+    category: 'Tabelle',
+    title: 'Risorse Casuali',
+    text: resources,
+    render: ({ onRoll }) => (
+      <>
+        {onRoll && (
+          <button className="btn sm" onClick={() => onRoll('1d100', 'Risorse Casuali')}>
+            Tira 1d100
+          </button>
+        )}
+        <RuleText body={`d100 | Bronzo | Argento | Oro\n${resources}\n\nSpendendo 1 PE si tira sulla colonna di uno Status più alto (ma queste risorse vengono spesso confiscate o rubate).`} />
+      </>
+    ),
+  });
+  const vehicles = w.VEHICLES.map((v) => `${v.name} | ${v.speedText ?? v.speed} | ${v.resilience}${v.armoured ? ' (corazzato)' : ''} | ${v.breakdowns} | ${v.ram ?? '—'} | ${v.crew}`).join('\n');
+  out.push({
+    id: 'wtow-table-vehicles',
+    category: 'Combattimento',
+    title: 'Carri e imbarcazioni',
+    text: vehicles,
+    render: () => (
+      <RuleText
+        body={`Veicolo | Velocità | Resilienza | Guasti | Speronamento | Equipaggio\n${vehicles}\n\n## Conduzione\n${w.VEHICLE_HANDLING.map((h) => `${h.vehicle} | ${h.situation} | ${h.skill}`).join('\n')}`}
+      />
+    ),
+  });
+  for (const m of w.MOUNTS) out.push({ id: `wtow-mount-${m.id}`, category: 'Combattimento', title: m.name, subtitle: 'Cavalcatura', text: m.text, render: () => <p className="small">{m.text}</p> });
+
+  for (const g of w.CONTACTS) {
+    const body = g.contacts.map((c) => `## ${c.name}\n${c.role} (Archetipo: ${c.archetype})\n\n${c.rows.map((r) => `${dRange(r.min, r.max)} | ${r.text}`).join('\n')}`).join('\n\n');
+    out.push({
+      id: `wtow-contacts-${g.name}`,
+      category: 'Talagaad',
+      title: `Contatti: ${g.name}`,
+      text: body,
+      render: ({ onRoll }) => (
+        <>
+          {onRoll && (
+            <button className="btn sm" onClick={() => onRoll('1d100', `Contatti · ${g.name}`)}>
+              Tira 1d100
+            </button>
+          )}
+          <RuleText body={body} />
+        </>
+      ),
+    });
+  }
+  const events = w.TALAGAAD_EVENTS.map((e) => `${dRange(e.min, e.max)} | ${e.text} | ${e.contacts.join(', ')}`).join('\n');
+  out.push({
+    id: 'wtow-table-events',
+    category: 'Talagaad',
+    title: 'Eventi di Talagaad',
+    text: events,
+    render: ({ onRoll }) => (
+      <>
+        {onRoll && (
+          <button className="btn sm" onClick={() => onRoll('1d100', 'Evento di Talagaad')}>
+            Tira 1d100
+          </button>
+        )}
+        <RuleText body={`Ogni Intermezzo comincia con un Evento, spesso legato ai Contatti dei personaggi.\n\nd100 | Evento | Contatti coinvolti\n${events}`} />
+      </>
+    ),
+  });
+  for (const x of w.SETTING) out.push({ id: `wtow-setting-${x.name}`, category: 'Talagaad', title: x.name, subtitle: x.group, text: x.text, render: () => <p className="small">{x.text}</p> });
+
+  for (const a of w.ACTIVITIES) {
+    out.push({
+      id: `wtow-activity-${a.id}`,
+      category: 'Intermezzo',
+      title: a.name,
+      subtitle: a.skills.length ? a.skills.map((s) => w.SKILL_INFO[s].name).join(', ') : 'Qualsiasi Abilità',
+      text: a.text,
+      render: () => (
+        <>
+          <Meta items={[['Abilità suggerite', a.skills.length ? a.skills.map((s) => w.SKILL_INFO[s].name).join(', ') : 'Qualsiasi'], ['Prova Prolungata', a.extended ? `${a.extended} successi` : '']]} />
+          <p className="small">{a.text}</p>
+        </>
+      ),
+      card: () => ({ title: a.name, subtitle: 'Attività dell’Intermezzo', body: a.text }),
+    });
+  }
+
+  for (const m of w.MAGIC_ITEMS) {
+    out.push({
+      id: `wtow-item-${m.id}`,
+      category: 'Oggetti Magici',
+      title: m.name,
+      subtitle: m.kind,
+      text: `${m.traits} ${m.text}`,
+      render: () => (
+        <>
+          <Meta
+            items={[
+              ['Tipo', m.kind],
+              ['Portata', m.weapon?.range],
+              ['Danno', m.weapon?.damage],
+              ['Mani', m.weapon ? (m.weapon.hands === 2 ? 'Due' : 'Una') : undefined],
+              ['Resilienza', m.resilience],
+              ['Tratti', m.traits],
+            ]}
+          />
+          <p className="small">{m.text}</p>
+        </>
+      ),
+      card: () => ({ title: m.name, subtitle: `Oggetto magico · ${m.kind}`, body: `${m.traits}\n\n${m.text}` }),
+    });
+  }
+
+  const exposure = `Al termine di un giorno di esposizione si tenta una Prova di Volontà con la penalità del caso (se ce ne sono diverse, la peggiore). Fallendo, il GM sceglie una Condizione (Esausto, Distratto o Assordato) e il personaggio diventa Vulnerabile.
+
+Esposizione | Penalità | Esempi
+${w.EXPOSURES.map((e) => `${e.name} | ${e.penalty} | ${e.examples}`).join('\n')}
+
+## Gli stadi
+${w.CORRUPTION_STAGES.filter((x) => x.id !== 'puro').map((x) => `- ${x.name}: ${x.text}`).join('\n')}
+
+Al tavolo il master segna l’esposizione nel pannello del token; «Fine della giornata» nell’orologio del mondo fa tirare a tutti.`;
+  out.push({ id: 'wtow-corruption', category: 'Corruzione', title: 'Esposizione e stadi', text: exposure, render: () => <RuleText body={exposure} /> });
+  for (const p of w.CORRUPTION_PATHS) {
+    const body = `Vittime favorite: ${p.victims}.\n\n## Vulnerabile\n${p.vulnerabile}\n\n## Offuscato\n${p.offuscato}\n\n${p.gifts.map((g) => `- ${g.name}: ${g.text}`).join('\n')}\n\n## Macchiato\n${p.macchiato}\n\n## Dannato\n${p.dannato}`;
+    out.push({ id: `wtow-path-${p.id}`, category: 'Corruzione', title: p.name, subtitle: 'Sentiero verso la Corruzione', text: body, render: () => <RuleText body={body} /> });
+  }
+
   const improvised = `${w.IMPROVISED.map((r) => `${r.level} | VM ${r.vm} | ${r.req} | ${r.damage}`).join('\n')}\n\n${w.IMPROVISED_MODS.map((m) => `- ${m}`).join('\n')}\n\nFormalizzare un incantesimo improvvisato ne dimezza il VM.`;
   out.push({ id: 'wtow-table-improvised', category: 'Magia', title: 'Incantesimi improvvisati', text: improvised, render: () => <RuleText body={improvised} /> });
   return out;
 }
 
 export const wtowCompendium = {
-  categories: ['Regole', 'Combattimento', 'Condizioni', 'Stirpi', 'Carriere', 'Talenti', 'Saperi', 'Armi', 'Armature', 'Magia', 'Incantesimi', 'Fede', 'Bestiario', 'Tabelle'],
+  categories: [
+    'Regole',
+    'Combattimento',
+    'Condizioni',
+    'Stirpi',
+    'Carriere',
+    'Talenti',
+    'Saperi',
+    'Armi',
+    'Armature',
+    'Oggetti Magici',
+    'Magia',
+    'Incantesimi',
+    'Fede',
+    'Intermezzo',
+    'Corruzione',
+    'Talagaad',
+    'Bestiario',
+    'Tabelle',
+  ],
   entries: () => rulesEntries(),
 };

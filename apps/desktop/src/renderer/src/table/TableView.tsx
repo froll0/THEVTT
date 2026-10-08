@@ -1,5 +1,5 @@
-import { rotatePiece } from '@thevtt/shared';
-import { getSystem } from '@thevtt/systems';
+import { POOL_CHECKS, rotatePiece, type PoolCheck } from '@thevtt/shared';
+import { getSystem, warhammer } from '@thevtt/systems';
 import { LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
@@ -618,8 +618,11 @@ function ZonesPanel({ sceneId, erase, setErase }: { sceneId: string; erase: bool
             <button className={`chip sm ${z.difficult ? 'on' : ''}`} onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { difficult: !z.difficult } })}>
               Terreno Difficile
             </button>
-            <button className={`chip sm ${z.cover ? 'on' : ''}`} onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { cover: !z.cover } })}>
+            <button className={`chip sm ${z.cover ? 'on' : ''}`} title="-1d ai tiri contro chi è dentro" onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { cover: !z.cover } })}>
               Copertura
+            </button>
+            <button className={`chip sm ${z.high ? 'on' : ''}`} title="+1d agli attacchi in mischia da qui" onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { high: !z.high } })}>
+              Sopraelevata
             </button>
             <select className="select tool-select" aria-label="Pericolo" value={z.hazard ?? 0} onChange={(e) => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazard: Number(e.target.value) } })}>
               <option value={0}>Nessun Pericolo</option>
@@ -630,8 +633,57 @@ function ZonesPanel({ sceneId, erase, setErase }: { sceneId: string; erase: bool
               ))}
             </select>
           </div>
+          {!!z.hazard && (
+            <div className="col" style={{ gap: 4 }}>
+              <select
+                className="select tool-select"
+                aria-label="Esempio di Pericolo"
+                value=""
+                onChange={(e) => {
+                  const h = warhammer.HAZARDS[Number(e.target.value)];
+                  if (h)
+                    dispatch({
+                      type: 'zone.update',
+                      zoneId: z.id,
+                      patch: { hazard: h.grade, hazardSkill: h.skill, hazardCondition: h.condition, hazardEach: h.frequency === 'Ogni turno', hazardNoWound: !!h.noWound },
+                    });
+                }}
+              >
+                <option value="">Dal manuale…</option>
+                {warhammer.HAZARDS.map((h, i) => (
+                  <option key={h.name} value={i}>
+                    {h.name} ({h.skill} {h.grade})
+                  </option>
+                ))}
+              </select>
+              <div className="row wrap" style={{ gap: 4 }}>
+                <select className="select tool-select" aria-label="Prova contro il Pericolo" value={z.hazardSkill ?? 'Tempra'} onChange={(e) => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazardSkill: e.target.value as PoolCheck } })}>
+                  {POOL_CHECKS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <select className="select tool-select" aria-label="Condizione del Pericolo" value={z.hazardCondition ?? ''} onChange={(e) => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazardCondition: e.target.value || undefined } })}>
+                  <option value="">Nessuna condizione</option>
+                  {warhammer.CONDITIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <button className={`chip sm ${z.hazardEach ? 'on' : ''}`} title="Colpisce a fine turno chi resta dentro, non solo chi entra" onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazardEach: !z.hazardEach } })}>
+                  Ogni turno
+                </button>
+                <button className={`chip sm ${z.hazardNoWound ? 'on' : ''}`} title="Fallendo si subisce solo la condizione" onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazardNoWound: !z.hazardNoWound } })}>
+                  Senza Ferita
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ))}
+      {zones.length > 0 && <span className="faint tiny">In combattimento il tavolo conta le Zone percorse, tira Atletica sul Terreno Difficile e la prova contro i Pericoli per chi entra.</span>}
       {!zones.length && <span className="faint small">Trascina sulla mappa per disegnare una Zona: stanze, cortili, tratti di strada. Le distanze si contano in Zone.</span>}
     </div>
   );

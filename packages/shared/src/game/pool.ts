@@ -372,3 +372,12 @@ export const EXPOSURE_LEVELS: { level: number; name: string; penalty: number | n
   { level: 3, name: 'Perniciosa', penalty: 2 },
   { level: 4, name: 'Strazia Anima', penalty: null },
 ];
+
+/** A sheet's fresh profile for its token, keeping what only the table tracks (today's wounds, exposure, a pending choice). */
+export function mergePool(old: PoolStats | undefined, fresh: PoolStats): PoolStats {
+  const out = { ...fresh };
+  if (old?.woundsToday) out.woundsToday = old.woundsToday;
+  if (old?.exposure) out.exposure = old.exposure;
+  if (old?.pending) out.pending = old.pending;
+  return out;
+}

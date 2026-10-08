@@ -1,4 +1,4 @@
-import { rangeBetween, zoneAt, blockingSegments, brushCells, copyPiece, ellipseCells, moveCost, pasteActions, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type MapPiece, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { freeZones, rangeBetween, zoneAt, zoneHops, blockingSegments, brushCells, copyPiece, ellipseCells, moveCost, pasteActions, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type MapPiece, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
 import { exploredTexture, updateExplored } from './explored';
 import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
@@ -798,7 +798,7 @@ export function Board({
           ctx.setLineDash([12 / cam.zoom, 6 / cam.zoom]);
           haloStroke(ctx, zc, 2 / cam.zoom, cam.zoom);
           ctx.setLineDash([]);
-          const tags = [z.name, z.difficult ? 'Terreno Difficile' : '', z.cover ? 'Copertura' : '', z.hazard ? `Pericolo (${z.hazard})` : ''].filter(Boolean).join(' · ');
+          const tags = [z.name, z.difficult ? 'Terreno Difficile' : '', z.cover ? 'Copertura' : '', z.high ? 'Sopraelevata' : '', z.hazard ? `Pericolo (${z.hazard})` : ''].filter(Boolean).join(' · ');
           ctx.font = `600 ${12 / cam.zoom}px system-ui, sans-serif`;
           ctx.textAlign = 'left';
           ctx.textBaseline = 'top';
@@ -1098,12 +1098,30 @@ export function Board({
           const speedCells = speedM !== null ? speedM / (L.scene.unit === 'ft' ? L.scene.cellDistance * 0.3048 : L.scene.cellDistance) : null;
           const used = (t.moved ?? 0) + Math.max(cost, Math.round(cells));
           const over = speedCells !== null && used > speedCells + 1e-6;
+          // success pools on a map cut into zones: the zones crossed, and what waits there
+          const zones = t.pool ? Object.values(L.state.zones ?? {}).filter((z) => z.sceneId === t.sceneId) : [];
+          const zoneLabel = (() => {
+            if (!zones.length || !t.pool) return null;
+            const from = zoneAt(zones, t.x + t.size / 2, t.y + t.size / 2);
+            const to = zoneAt(zones, nx + t.size / 2, ny + t.size / 2);
+            const hops = from && to ? zoneHops(zones, from, to) : 0;
+            const free = freeZones(t.pool.speed);
+            const total = (inCombat ? (t.zonesMoved ?? 0) : 0) + (Number.isFinite(hops) ? hops : 0);
+            const bits = [to ? to.name : 'fuori dalle Zone'];
+            if (hops) bits.push(`${hops} Zon${hops === 1 ? 'a' : 'e'}${inCombat ? ` (${total}/${free} nel turno)` : ''}`);
+            if (inCombat && total > free) bits.push(t.pool.speed === 'Lento' ? 'troppo lontano' : 'serve Manovrare');
+            if (to?.difficult || from?.difficult) bits.push('Terreno Difficile');
+            if (to?.hazard && to.id !== from?.id) bits.push(`Pericolo (${to.hazard})`);
+            return { text: bits.join(' · '), over: inCombat && total > free };
+          })();
           const label = blocked
             ? 'C’è un muro'
-            : `${fmtD(Math.max(cost, cells))} ${unit}${cost > Math.round(cells) ? ' · terreno difficile' : ''}${speedCells !== null ? ` · ${fmtD(used)}/${fmtD(speedCells)} nel turno` : ''}${over ? ' · troppo lontano' : ''}`;
+            : zoneLabel
+              ? zoneLabel.text
+              : `${fmtD(Math.max(cost, cells))} ${unit}${cost > Math.round(cells) ? ' · terreno difficile' : ''}${speedCells !== null ? ` · ${fmtD(used)}/${fmtD(speedCells)} nel turno` : ''}${over ? ' · troppo lontano' : ''}`;
           ctx.font = `700 ${14 / cam.zoom}px system-ui, sans-serif`;
           const w = ctx.measureText(label).width + 14 / cam.zoom;
-          ctx.fillStyle = blocked || over ? 'rgba(120,20,24,0.9)' : 'rgba(0,0,0,0.8)';
+          ctx.fillStyle = blocked || (zoneLabel ? zoneLabel.over : over) ? 'rgba(120,20,24,0.9)' : 'rgba(0,0,0,0.8)';
           ctx.beginPath();
           ctx.roundRect(b.x + half + 6 / cam.zoom, b.y - 12 / cam.zoom, w, 24 / cam.zoom, 6 / cam.zoom);
           ctx.fill();

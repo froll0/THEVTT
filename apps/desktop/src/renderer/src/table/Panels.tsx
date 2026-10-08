@@ -1,6 +1,6 @@
-import { describeRoll, isNat, successes, type Ambient, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
+import { describeRoll, EXPOSURE_LEVELS, freeZones, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
-import { dnd5e, getSystem } from '@thevtt/systems';
+import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
 import { MapGenerator } from './MapGenerator';
 import { MapLibrary } from './MapLibrary';
@@ -343,6 +343,7 @@ export function InitiativePanel() {
                   <Swords size={14} /> {first === 'players' ? 'Battaglia' : 'Imboscata!'}
                 </button>
               ))}
+              <Retreat />
             </div>
           ) : (
           <button
@@ -381,6 +382,7 @@ export function InitiativePanel() {
           )}
         </>
       )}
+      {sides && <ExtendedTests />}
     </div>
   );
 }
@@ -495,7 +497,10 @@ export function SheetWindow({ characterId, width, placeAt }: { characterId: stri
           for (const t of Object.values(state.tokens)) {
             if (t.characterId === selected.id && d.hp) dispatch({ type: 'token.update', tokenId: t.id, patch: { hp: d.hp } });
             // success pools: Resilienza, Protezione and wounds follow the sheet
-            if (t.characterId === selected.id && d.pool && JSON.stringify(d.pool) !== JSON.stringify(t.pool)) dispatch({ type: 'token.update', tokenId: t.id, patch: { pool: d.pool } });
+            if (t.characterId === selected.id && d.pool) {
+              const pool = mergePool(t.pool, d.pool);
+              if (JSON.stringify(pool) !== JSON.stringify(t.pool)) dispatch({ type: 'token.update', tokenId: t.id, patch: { pool } });
+            }
           }
         }}
         onRoll={(formula, label) => dispatch({ type: 'roll', formula, label: `${selected.name} · ${label}` })}
@@ -1419,6 +1424,8 @@ export function TokenInspector({ token }: { token: Token }) {
 /** Resilienza, Protezione and wounds of a success-pool token. */
 function PoolFields({ token, isGm, onChange, onWound }: { token: Token; isGm: boolean; onChange: (pool: Token['pool'] | null) => void; onWound: () => void }) {
   const p = token.pool;
+  const dispatch = useTable((s) => s.dispatch);
+  const inCombat = useTable((s) => !!s.state && s.state.initiative.round > 0 && s.state.initiative.entries.some((e) => e.tokenId === token.id));
   if (!p) {
     return isGm ? (
       <button
@@ -1450,10 +1457,44 @@ function PoolFields({ token, isGm, onChange, onWound }: { token: Token; isGm: bo
         </Field>
       </div>
       <span className="faint tiny">
-        {p.type === 'pg' ? 'Personaggio' : p.type}
-        {p.armoured ? ' · corazzato' : ''} · si oppone in mischia con {p.melee.dice}d/{p.melee.target}, a distanza con {p.ranged.dice}d/{p.ranged.target}
+        {p.vehicle ? 'Veicolo (Guasti al posto delle Ferite)' : p.type === 'pg' ? 'Personaggio' : p.type}
+        {p.armoured ? ' · corazzato' : ''}
+        {p.vehicle ? '' : ` · si oppone in mischia con ${p.melee.dice}d/${p.melee.target}, a distanza con ${p.ranged.dice}d/${p.ranged.target}`}
         {p.untreated ? ` · ${p.untreated} Ferite da medicare` : ''}
+        {p.speed ? ` · ${p.speed}` : ''}
+        {p.mounted ? ` · in sella: ${p.mounted}` : ''}
+        {inCombat ? ` · Zone percorse ${token.zonesMoved ?? 0}/${freeZones(p.speed)}` : ''}
       </span>
+      {p.pending && (
+        <div className="col pool-pending" style={{ gap: 4 }}>
+          <span className="small">
+            {p.pending === 'wound' ? 'Chi ha colpito sceglie:' : `${token.name} sceglie:`} Ferita o Reazione?
+          </span>
+          {p.reaction && <span className="faint tiny">{p.reaction}</span>}
+          <div className="row" style={{ gap: 4 }}>
+            <button className="btn sm" onClick={() => dispatch({ type: 'pool.react', tokenId: token.id, choice: 'wound' })}>
+              Ferita
+            </button>
+            <button className="btn sm" onClick={() => dispatch({ type: 'pool.react', tokenId: token.id, choice: 'reaction' })}>
+              Reazione
+            </button>
+          </div>
+        </div>
+      )}
+      {(isGm || token.ownerIds.length > 0) && <PoolCheckRow token={token} isGm={isGm} />}
+      {isGm && (
+        <label className="row between small">
+          <span className="muted">Esposto al Caos oggi</span>
+          <select className="select" value={p.exposure ?? 0} onChange={(e) => set({ exposure: Number(e.target.value) || undefined })} aria-label="Esposizione al Caos">
+            <option value={0}>No</option>
+            {EXPOSURE_LEVELS.map((x) => (
+              <option key={x.level} value={x.level}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {isGm && p.type !== 'pg' && (
         <div className="row wrap" style={{ gap: 4 }}>
           {(['Servitore', 'Bruto', 'Campione', 'Mostruosità'] as const).map((t) => (
@@ -1462,6 +1503,194 @@ function PoolFields({ token, isGm, onChange, onWound }: { token: Token; isGm: bo
             </button>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** The players flee: someone spends Fato as the rearguard, those who fail Atletica roll on Si Salvi Chi Può! */
+function Retreat() {
+  const state = useTable((s) => s.state);
+  const dispatch = useTable((s) => s.dispatch);
+  const [open, setOpen] = useState(false);
+  const [rearguard, setRearguard] = useState('');
+  if (!state) return null;
+  const party = Object.values(state.tokens).filter(
+    (t) => t.sceneId === state.activeSceneId && t.pool && t.ownerIds.length > 0 && !t.conditions.some((c) => c === 'Morto' || c === 'Sconfitto'),
+  );
+  if (!open)
+    return (
+      <button className="btn sm" title="Si Salvi Chi Può!" onClick={() => setOpen(true)} disabled={!party.length}>
+        <RotateCcw size={14} /> Ritirata
+      </button>
+    );
+  return (
+    <div className="col retreat" style={{ gap: 4, width: '100%' }}>
+      <span className="small">Chi spende Fato per coprire la ritirata?</span>
+      <select className="select" value={rearguard} onChange={(e) => setRearguard(e.target.value)} aria-label="Retroguardia">
+        <option value="">Nessuno: il master esige un prezzo</option>
+        {party.map((t) => (
+          <option key={t.id} value={t.name}>
+            {t.name}
+          </option>
+        ))}
+      </select>
+      <div className="row" style={{ gap: 4 }}>
+        <button
+          className="btn sm"
+          onClick={() => {
+            dispatch({ type: 'pool.retreat', tokenIds: party.map((t) => t.id), rearguard: rearguard || undefined });
+            setOpen(false);
+          }}
+        >
+          Atletica per tutti
+        </button>
+        <button className="btn ghost sm" onClick={() => setOpen(false)}>
+          Annulla
+        </button>
+      </div>
+      <span className="faint tiny">Se il nemico non insegue, non serve tirare. Chi ha i Saperi adatti può riuscire da solo: toglilo dal tiro chiudendo il suo token.</span>
+    </div>
+  );
+}
+
+/** Extended tests the whole table works on: a door to force, a ritual to finish. */
+export function ExtendedTests() {
+  const state = useTable((s) => s.state);
+  const dispatch = useTable((s) => s.dispatch);
+  const role = useTable((s) => s.role);
+  const [name, setName] = useState('');
+  const [need, setNeed] = useState(4);
+  const [dice, setDice] = useState<Record<string, string>>({});
+  if (!state) return null;
+  const tests = Object.values(state.extended ?? {});
+  const isGm = role === 'gm';
+  return (
+    <div className="col extended-tests" style={{ gap: 6 }}>
+      <b className="small">Prove Prolungate</b>
+      {tests.map((t) => (
+        <div key={t.id} className="col extended-row" style={{ gap: 4 }}>
+          <div className="row between">
+            <span className="small">
+              {t.name} {t.have >= t.need && <span className="chip sm on">completata</span>}
+            </span>
+            <span className="faint small">
+              {t.have}/{t.need}
+            </span>
+          </div>
+          <div className="bar">
+            <div style={{ width: `${Math.min(100, (t.have / t.need) * 100)}%` }} />
+          </div>
+          <div className="row" style={{ gap: 4 }}>
+            <input
+              className="input grow"
+              placeholder="4d10s3"
+              value={dice[t.id] ?? ''}
+              onChange={(e) => setDice({ ...dice, [t.id]: e.target.value })}
+              aria-label={`Formula per ${t.name}`}
+              title="La riserva della prova: dadi (Caratteristica) e soglia (Abilità), come 4d10s3"
+            />
+            <button
+              className="btn sm"
+              disabled={!/^\s*\d+d10s\d+[gtm]*\s*$/i.test(dice[t.id] ?? '')}
+              onClick={() => dispatch({ type: 'extended.roll', testId: t.id, formula: dice[t.id]!.trim(), label: 'Prova Prolungata' })}
+            >
+              <Dices size={13} /> Tira
+            </button>
+            {isGm && (
+              <>
+                <button className="btn ghost sm icon" aria-label="Un successo in meno" onClick={() => dispatch({ type: 'extended.save', test: { ...t, have: Math.max(0, t.have - 1) } })}>
+                  <Minus size={12} />
+                </button>
+                <button className="btn ghost sm icon" aria-label="Un successo in più" onClick={() => dispatch({ type: 'extended.save', test: { ...t, have: t.have + 1 } })}>
+                  <Plus size={12} />
+                </button>
+                <button className="btn ghost sm icon" aria-label="Elimina la prova" onClick={() => dispatch({ type: 'extended.delete', testId: t.id })}>
+                  <Trash2 size={12} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      ))}
+      <div className="row" style={{ gap: 4 }}>
+        <input className="input grow" placeholder="Nuova prova (es. Forzare il portone)" value={name} onChange={(e) => setName(e.target.value)} />
+        <input
+          className="input num"
+          type="number"
+          min={1}
+          max={99}
+          value={need}
+          onChange={(e) => setNeed(Math.max(1, Number(e.target.value) || 1))}
+          title="Successi necessari"
+          aria-label="Successi necessari"
+          style={{ width: 52 }}
+        />
+        <button
+          className="btn sm icon"
+          aria-label="Aggiungi la prova"
+          disabled={!name.trim()}
+          onClick={() => {
+            dispatch({ type: 'extended.save', test: { name: name.trim(), need, have: 0 } });
+            setName('');
+          }}
+        >
+          <Plus size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** A test the table rolls from the token's profile: a hazard (with a grade) or a plain test. */
+function PoolCheckRow({ token, isGm }: { token: Token; isGm: boolean }) {
+  const dispatch = useTable((s) => s.dispatch);
+  const [check, setCheck] = useState<PoolCheck>('Tempra');
+  const [grade, setGrade] = useState(0);
+  const [condition, setCondition] = useState('');
+  const d = token.pool?.checks?.[check];
+  return (
+    <div className="col" style={{ gap: 4 }}>
+      <div className="row" style={{ gap: 4 }}>
+        <select className="select grow" value={check} onChange={(e) => setCheck(e.target.value as PoolCheck)} aria-label="Prova">
+          {POOL_CHECKS.map((c) => (
+            <option key={c} value={c}>
+              {c} {token.pool?.checks?.[c] ? `${token.pool.checks[c]!.dice}d/${token.pool.checks[c]!.target}` : ''}
+            </option>
+          ))}
+        </select>
+        {isGm && (
+          <input
+            className="input num"
+            type="number"
+            min={0}
+            max={9}
+            value={grade}
+            onChange={(e) => setGrade(Math.max(0, Math.min(9, Number(e.target.value) || 0)))}
+            title="Grado del Pericolo (0: una prova semplice)"
+            aria-label="Grado del Pericolo"
+            style={{ width: 52 }}
+          />
+        )}
+        <button
+          className="btn sm"
+          title={grade ? `Pericolo (${grade}): fallendo, una Ferita${condition ? ` e ${condition}` : ''}` : `Prova di ${check}${d ? '' : ' (profilo generico)'}`}
+          onClick={() =>
+            dispatch({ type: 'pool.check', tokenIds: [token.id], check, label: grade ? 'Pericolo' : `Prova di ${check}`, grade: grade || undefined, condition: condition || undefined })
+          }
+        >
+          <Dices size={13} /> {grade ? 'Pericolo' : 'Prova'}
+        </button>
+      </div>
+      {isGm && grade > 0 && (
+        <select className="select" value={condition} onChange={(e) => setCondition(e.target.value)} aria-label="Condizione del fallimento">
+          <option value="">Solo la Ferita</option>
+          {warhammer.CONDITIONS.map((c) => (
+            <option key={c} value={c}>
+              e {c}
+            </option>
+          ))}
+        </select>
       )}
     </div>
   );

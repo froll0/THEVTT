@@ -88,7 +88,7 @@ export function Compendium({
       })
       .filter((r): r is { x: (typeof all)[number]; score: number } => !!r)
       .sort((a, b) => b.score - a.score || a.x.e.title.localeCompare(b.x.e.title))
-      .slice(0, 300)
+      .slice(0, 600)
       .map((r) => r.x.e);
   }, [all, query, category]);
 

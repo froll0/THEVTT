@@ -68,6 +68,10 @@ export interface PoolAttack {
   unopposed?: boolean;
   condition?: string;
   woundDice?: number;
+  /** melee as part of a Charge */
+  charge?: boolean;
+  /** the weapon's optimal range, for the -1d beyond it */
+  optimal?: string;
 }
 
 export interface BestiaryProps {

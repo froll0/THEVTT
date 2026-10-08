@@ -63,6 +63,9 @@ test('Warhammer: the guided builder makes a ready character', async () => {
   await page.locator('.chip', { hasText: 'Percezione 2→3' }).click();
   await next();
   await page.getByLabel('Nome').fill('Gunter Krebs');
+  // a Contact from the tables of the career's groups
+  await page.getByRole('button', { name: /^Tira d100$/ }).click();
+  await expect(page.locator('input[placeholder="Legame"]').first()).not.toHaveValue('');
   await next();
   await expect(page.getByText('Personaggio pronto')).toBeVisible();
   await page.getByRole('button', { name: /^Salva$/ }).click();
@@ -75,6 +78,22 @@ test('Warhammer: the guided builder makes a ready character', async () => {
   await dialog.getByRole('button', { name: 'più' }).first().click();
   await dialog.getByRole('button', { name: /Tira 4d10s4/ }).click();
   await expect(page.locator('.toast', { hasText: /Mischia: \d+ success/ })).toBeVisible();
+
+  // the Intermezzo: an activity rolled from the sheet, its failures marked on the skill
+  await page.locator('.sheet-tabs button', { hasText: 'Intermezzo' }).click();
+  await page.getByLabel('Attività', { exact: true }).selectOption('allenare');
+  await page.getByRole('button', { name: /^Tira \d+d10s\d+/ }).click();
+  await expect(page.getByText('Fatto in questo Intermezzo')).toBeVisible();
+  // a magic item from the catalogue
+  await page.locator('.sheet-tabs button', { hasText: 'Averi' }).click();
+  await page.getByLabel('Aggiungi un oggetto magico').selectOption('pozione-di-guarigione');
+  await page.locator('.row', { has: page.getByLabel('Aggiungi un oggetto magico') }).getByRole('button').click();
+  await expect(page.locator('.magic-item', { hasText: 'Pozione di Guarigione' })).toBeVisible();
+  // corruption: the stages and the paths
+  await page.locator('.sheet-tabs button', { hasText: 'Corruzione' }).click();
+  await page.locator('.chip', { hasText: 'Vulnerabile' }).click();
+  await page.getByLabel('Sentiero', { exact: true }).selectOption('il-sangue-deve-scorrere');
+  await expect(page.getByText(/attacco bonus di Mischia gratuito/)).toBeVisible();
 
   expect(run.errors, run.errors.join('\n')).toEqual([]);
   await run.app.close();
@@ -138,6 +157,18 @@ test('Warhammer at the table: opposed attacks, wounds, zones and the d10 pool', 
   await expect(G.locator('.ini-row')).toHaveCount(2);
   await expect(G.locator('.ini-row', { hasText: 'Gunter' })).toContainText('PG');
 
+  // an extended test for the whole table
+  await G.getByPlaceholder('Nuova prova (es. Forzare il portone)').fill('Forzare il portone');
+  await G.getByRole('button', { name: 'Aggiungi la prova' }).click();
+  await G.getByLabel('Formula per Forzare il portone').fill('4d10s3');
+  await G.locator('.extended-row').getByRole('button', { name: /Tira/ }).click();
+  await expect(G.locator('.extended-row')).toContainText(/\d+\/4/);
+  // the retreat: Atletica for the party, Si Salvi Chi Può! for those who fail
+  await G.getByRole('button', { name: 'Ritirata' }).click();
+  await G.getByRole('button', { name: 'Atletica per tutti' }).click();
+  await G.getByTitle('Chat e tiri').click();
+  await expect(G.locator('.log')).toContainText(/Tutti si sganciano|Non riescono a sganciarsi/);
+
   // zones: drawn by the GM, named in the panel
   await sheet.getByRole('button', { name: 'Chiudi finestra' }).click();
   await G.getByTitle('Zone: trascina per disegnarne una').click();
@@ -150,10 +181,17 @@ test('Warhammer at the table: opposed attacks, wounds, zones and the d10 pool', 
   await expect(G.locator('.zones-panel input')).toHaveValue('Zona 1');
   await G.locator('.zones-panel .chip', { hasText: 'Terreno Difficile' }).click();
   await expect(G.locator('.zones-panel .chip.on', { hasText: 'Terreno Difficile' })).toBeVisible();
+  await G.locator('.zones-panel .chip', { hasText: 'Sopraelevata' }).click();
+  await expect(G.locator('.zones-panel .chip.on', { hasText: 'Sopraelevata' })).toBeVisible();
+  await G.getByLabel('Pericolo', { exact: true }).selectOption('2');
+  await G.getByLabel('Esempio di Pericolo').selectOption({ label: 'Edificio in Fiamme (Tempra 2)' });
+  await expect(G.locator('.zones-panel .chip.on', { hasText: 'Ogni turno' })).toBeVisible();
 
   // the rules for this game
   await G.getByTitle('Compendio').click();
   await expect(G.getByText('Tabella delle Ferite').first()).toBeVisible();
+  await G.getByPlaceholder('Cerca regole, incantesimi, mostri…').fill('Salvi');
+  await expect(G.getByRole('button', { name: /Si Salvi Chi Può!/ })).toBeVisible();
 
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   expect(pl.errors, pl.errors.join('\n')).toEqual([]);

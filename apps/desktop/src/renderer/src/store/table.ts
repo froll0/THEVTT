@@ -287,6 +287,7 @@ export const useTable = create<TableStore>((set, get) => {
         // success-pool systems: the wounds table, and the wound written on the sheet
         woundResult: (total) => getSystem(state.systemId)?.woundResult?.(total) ?? { name: `Ferita (${total})`, text: '' },
         withWound: (ch, wound) => getSystem(ch.systemId)?.withWound?.(ch.data, wound) ?? null,
+        withCorruption: (ch) => getSystem(ch.systemId)?.withCorruption?.(ch.data) ?? null,
         send: (to, msg) => {
           if (to === me) apply(msg);
           else if (!links.get(to)?.send(msg)) rt.send({ t: 'relay.peer', campaignId: campaign.id, to, payload: msg });

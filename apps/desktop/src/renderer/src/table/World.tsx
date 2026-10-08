@@ -1,4 +1,4 @@
-import { newId, roll, worldTime, type GameAction, type Quest } from '@thevtt/shared';
+import { mergePool, newId, roll, worldTime, type GameAction, type Quest } from '@thevtt/shared';
 import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 import { BedDouble, ChevronLeft, Clock, Coffee, Dices, Eye, EyeOff, Moon, Plus, Sun, Sunrise, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -67,7 +67,7 @@ export function WorldClock() {
       for (const t of Object.values(st.tokens)) {
         if (t.characterId !== ch.id) continue;
         const drop = kind === 'session' ? [] : kind === 'night' ? ['Barcollante', 'Prono', 'Esausto'] : ['Barcollante', 'Prono'];
-        actions.push({ type: 'token.update', tokenId: t.id, patch: { pool, conditions: t.conditions.filter((k) => !drop.includes(k)) } });
+        actions.push({ type: 'token.update', tokenId: t.id, patch: { pool: mergePool(t.pool, pool), conditions: t.conditions.filter((k) => !drop.includes(k)) } });
       }
     }
     dispatch({ type: 'batch', actions });
@@ -126,6 +126,13 @@ export function WorldClock() {
             </button>
             <button className="chip" onClick={() => poolRest('session')} title="Il Fato speso torna a tutti">
               <Dices size={12} /> Nuova sessione
+            </button>
+            <button
+              className="chip"
+              onClick={() => dispatch({ type: 'pool.dayEnd' })}
+              title="Tempra contro le infezioni per chi è stato ferito oggi, Volontà per chi è stato esposto al Caos"
+            >
+              <Moon size={12} /> Fine della giornata
             </button>
           </div>
           ) : (
