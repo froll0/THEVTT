@@ -1,22 +1,18 @@
 ## Novità
 
-### Combattimento
-- **Attacchi contro la CA**: dalla scheda, l'attacco si tira contro la CA del bersaglio; se colpisce, i danni si applicano da soli. Il 20 naturale è un critico con dadi doppi.
-- **Bersagli**: **Ctrl+clic** su un token lo segna come bersaglio (mirino rosso), **Esc** li toglie.
-- **Condizioni a tempo**: durano un numero di round e finiscono da sole a inizio turno.
-- **Concentrazione**: chi si concentra e subisce danni riceve in chat il tiro salvezza su Costituzione con la CD giusta.
-- **Aree degli incantesimi** dalla scheda: l'area segue il mouse, un clic la posa e dice chi c'è dentro.
-- **Movimento per turno**: il terreno difficile (acqua, neve, lava…) costa il doppio.
-
-### Mappe ed editor
-- **Piani**: scale, scale a pioli e botole portano a un'altra scena; il gruppo può seguire chi le prende.
-- **Copia e incolla** di pezzi di mappa, anche ruotati.
-- **Stanze pronte**: cella, scalinata, sala del trono, ponte sul fiume, accampamento, taverna.
-- **Nuovi oggetti**: scale, botola, ponte, carro, tenda, steccato, trappola (nascosta ai giocatori).
-
-### Strumenti del master
-- **Macro del tavolo**: le scrive il master, le usano tutti.
-- **Azioni dei mostri**: selezionando un mostro, le sue azioni compaiono nella barra; un clic attacca i bersagli segnati (Maiusc: vantaggio, Alt: svantaggio).
-- **Orologio del mondo**: giorno e ora in alto, che il master fa avanzare. Le scene all'aperto possono seguire la luce dell'ora: di notte cala il buio.
-- **Missioni**: obiettivi da spuntare, stato e avanzamento; i giocatori vedono quelle rese visibili.
-- **Importazioni**: creature dai file JSON di 5e.tools nel Bestiario; personaggi esportati e importati come file.
+- **Tiri salvezza di gruppo**: i danni si tirano una volta sola; chi supera il tiro salvezza ne prende metà (nessuno, per i trucchetti). In chat una scheda riassume l'esito di ognuno.
+  - Dagli incantesimi ad area della scheda (es. Palla di fuoco): tirano tutti quelli dentro l'area appena posata.
+  - Dalle azioni dei mostri con tiro salvezza (es. soffio): tirano i bersagli segnati con Ctrl+clic.
+  - Dal pulsante **Tiro salvezza** nella selezione multipla del master, con caratteristica, CD, danni e tipo.
+- **Resistenze, immunità e vulnerabilità**: valgono per attacchi, danni e tiri salvezza, e la chat dice cosa è cambiato.
+  - Già pronte per i mostri SRD, per la razza del personaggio (nano, tiefling, dragonide) e per le creature importate da 5e.tools.
+  - Il master può cambiarle a mano sul token.
+- **Azioni del turno**: azione, azione bonus e reazione si spuntano dall'iniziativa (A/B/R) o dal pannello del token, e tornano disponibili all'inizio del turno. All'inizio di ogni turno la chat ricorda le condizioni attive e i round che restano.
+- **Azioni leggendarie e di tana**:
+  - Le leggendarie compaiono nella barra col contatore per round e si ricaricano all'inizio del turno della creatura.
+  - Le azioni di tana sono nella barra, con un promemoria privato al master all'iniziativa 20.
+  - Le hanno già draghi rossi, lich, vampiro, signore delle mummie, aboleth, kraken e tarrasque; si possono scrivere anche nell'editor delle creature.
+- **Riposi del gruppo** dall'orologio del mondo:
+  - Riposo breve: un'ora; ogni giocatore spende i dadi vita al tavolo.
+  - Riposo lungo: otto ore; tutte le schede recuperano PF, slot, dadi vita e risorse.
+- La scheda del personaggio ora segue i PF del suo token sulla mappa.
