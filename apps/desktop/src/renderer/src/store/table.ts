@@ -62,6 +62,10 @@ interface TableStore {
   pendingArea: { shape: 'circle' | 'cone' | 'line' | 'square'; size: number; label: string; originTokenId: string | null } | null;
   setPendingArea(a: TableStore['pendingArea']): void;
   setEditor(sceneId: string | null): void;
+  /** tokens marked as the targets of attacks (Ctrl+click), apart from the selection */
+  targets: string[];
+  toggleTarget(id: string): void;
+  clearTargets(): void;
 
   host(campaign: Campaign): Promise<void>;
   join(campaign: Campaign): void;
@@ -251,6 +255,9 @@ export const useTable = create<TableStore>((set, get) => {
     setClipboard: (clipboard) => set({ clipboard }),
     pendingArea: null,
     setPendingArea: (pendingArea) => set({ pendingArea }),
+    targets: [],
+    toggleTarget: (id) => set({ targets: get().targets.includes(id) ? get().targets.filter((x) => x !== id) : [...get().targets, id] }),
+    clearTargets: () => set({ targets: [] }),
     setEditor: (editorSceneId) => set({ editorSceneId, selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: NO_GROUP }),
     routes: {},
     clockOffset: 0,
@@ -259,7 +266,7 @@ export const useTable = create<TableStore>((set, get) => {
       teardown();
       const { rt, user } = useApp.getState();
       if (!rt || !user) return;
-      set({ campaignId: campaign.id, role: 'gm', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {}, editorSceneId: null });
+      set({ campaignId: campaign.id, role: 'gm', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {}, editorSceneId: null, targets: [] });
 
       const saved = await localStore.read<SavedTable>(saveKey(campaign.id));
       const state =
@@ -324,7 +331,7 @@ export const useTable = create<TableStore>((set, get) => {
       teardown();
       const { rt } = useApp.getState();
       if (!rt) return;
-      set({ campaignId: campaign.id, role: 'player', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {}, editorSceneId: null });
+      set({ campaignId: campaign.id, role: 'player', phase: 'connecting', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {}, editorSceneId: null, targets: [] });
       let hostId = campaign.session?.hostId ?? campaign.gmId;
       let retries = 0;
       let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -388,7 +395,7 @@ export const useTable = create<TableStore>((set, get) => {
 
     leave() {
       teardown();
-      set({ campaignId: null, role: null, phase: 'idle', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {}, editorSceneId: null });
+      set({ campaignId: null, role: null, phase: 'idle', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {}, editorSceneId: null, targets: [] });
     },
 
     dispatch(action) {

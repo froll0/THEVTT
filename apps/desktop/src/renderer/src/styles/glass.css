@@ -1768,3 +1768,109 @@ img.ed-swatch.stamp {
 .move-line.over {
   color: #ff453a;
 }
+.macro-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 3px;
+  background: var(--separator, rgb(127 127 127 / 0.3));
+}
+.macro-dot.shared {
+  border-radius: 2px;
+}
+.macro-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 120px;
+  padding: 0 4px 0 2px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.macro-btn.monster {
+  color: var(--fg);
+  background: rgb(255 69 58 / 0.1);
+}
+.macro-btn.monster:hover {
+  background: rgb(255 69 58 / 0.2);
+}
+.world-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.world-chip[data-light='dark'] {
+  background: rgb(94 92 230 / 0.22);
+}
+.world-chip[data-light='dim'] {
+  background: rgb(255 159 10 / 0.2);
+}
+.quest-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--fill);
+  text-align: left;
+}
+.quest-card[role='button'] {
+  cursor: pointer;
+}
+.quest-card[role='button']:hover {
+  background: var(--fill-strong, var(--selected));
+}
+.quest-card.done,
+.quest-card.failed {
+  opacity: 0.72;
+}
+.quest-desc {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.quest-status {
+  font-size: 0.68rem;
+  font-weight: 650;
+  padding: 2px 7px;
+  border-radius: var(--capsule);
+  background: rgb(10 132 255 / 0.18);
+}
+.quest-status.done {
+  background: rgb(48 209 88 / 0.2);
+}
+.quest-status.failed {
+  background: rgb(255 69 58 / 0.2);
+}
+.quest-objectives {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+}
+.quest-objectives li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.quest-objectives li.done span {
+  text-decoration: line-through;
+  color: var(--fg-faint);
+}
+.quest-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(127 127 127 / 0.2);
+  overflow: hidden;
+}
+.quest-progress span {
+  display: block;
+  height: 100%;
+  background: #30d158;
+  transition: width var(--dur) var(--ease);
+}

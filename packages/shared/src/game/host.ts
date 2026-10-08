@@ -11,11 +11,13 @@ import {
   LOG_LIMIT,
   referencedAssets,
   viewFor,
+  worldTime,
   type GameState,
   type Light,
   type LogEntry,
   type Note,
   type Prop,
+  type Quest,
   type TableCharacter,
   type TablePlayer,
   type Token,
@@ -409,6 +411,10 @@ export class GameHost {
         if (p.bgOffsetX !== undefined) scene.bgOffsetX = Math.max(-50, Math.min(50, Math.round((Number(p.bgOffsetX) || 0) * 100) / 100));
         if (p.bgOffsetY !== undefined) scene.bgOffsetY = Math.max(-50, Math.min(50, Math.round((Number(p.bgOffsetY) || 0) * 100) / 100));
         if (p.ambient !== undefined) scene.ambient = p.ambient === 'dark' || p.ambient === 'dim' ? p.ambient : 'bright';
+        if (p.daylight !== undefined) {
+          scene.daylight = !!p.daylight;
+          if (scene.daylight) this.daylight();
+        }
         if (p.background !== undefined) {
           if (p.background !== null && !this.assets[p.background]) return { ok: false, reason: 'Immagine sconosciuta' };
           scene.background = p.background;
@@ -457,6 +463,60 @@ export class GameHost {
             background: asset(sc.background),
           },
         });
+        break;
+      }
+      case 'macros.set': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        s.macros = (Array.isArray(action.macros) ? action.macros : []).slice(0, 50).map((m) => ({
+          id: String(m.id ?? newId()).slice(0, 40),
+          name: String(m.name ?? 'Macro').slice(0, 60),
+          color: /^#[0-9a-f]{3,8}$/i.test(String(m.color)) ? String(m.color) : '#8e8e93',
+          body: String(m.body ?? '').slice(0, 2000),
+        }));
+        break;
+      }
+      case 'time.advance':
+      case 'time.set': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const before = s.world?.minutes ?? 8 * 60;
+        const n = Math.round(Number(action.minutes) || 0);
+        const minutes = Math.max(0, Math.min(1440 * 100000, action.type === 'time.set' ? n : before + n));
+        s.world = { minutes };
+        const a = worldTime(before);
+        const b = worldTime(minutes);
+        if (a.light !== b.light || b.day !== a.day) this.system(`Giorno ${b.day}, ore ${b.clock}: ${b.part}`);
+        this.daylight();
+        break;
+      }
+      case 'quest.save': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const q = action.quest;
+        s.quests ??= {};
+        const old = q.id ? s.quests[q.id] : undefined;
+        const id = old?.id ?? (typeof q.id === 'string' && /^[\w-]{1,40}$/.test(q.id) ? q.id : newId());
+        const next: Quest = {
+          id,
+          title: String(q.title ?? old?.title ?? 'Missione').trim().slice(0, 120) || 'Missione',
+          description: String(q.description ?? old?.description ?? '').slice(0, 4000),
+          status: q.status === 'done' || q.status === 'failed' ? q.status : q.status === 'active' ? 'active' : (old?.status ?? 'active'),
+          objectives: (Array.isArray(q.objectives) ? q.objectives : (old?.objectives ?? [])).slice(0, 30).map((o) => ({ id: String(o.id || newId()).slice(0, 40), text: String(o.text ?? '').slice(0, 200), done: !!o.done })),
+          visible: q.visible !== undefined ? !!q.visible : (old?.visible ?? false),
+          updatedAt: this.now(),
+        };
+        s.quests[id] = next;
+        // the players hear of it when they're meant to
+        if (next.visible && !old?.visible) this.system(`Nuova missione: ${next.title}`);
+        else if (next.visible && old && old.status !== next.status && next.status !== 'active') this.system(`${next.status === 'done' ? 'Missione compiuta' : 'Missione fallita'}: ${next.title}`);
+        break;
+      }
+      case 'quest.delete': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!s.quests?.[action.questId]) return { ok: false, reason: 'Missione inesistente' };
+        delete s.quests[action.questId];
         break;
       }
       case 'terrain.set': {
@@ -1168,6 +1228,16 @@ export class GameHost {
     if (t.ownerIds.length && from.id === s.activeSceneId && party.length && party.every((x) => x.sceneId === to.id)) {
       s.activeSceneId = to.id;
       this.system(`Il gruppo è su «${to.name}»`);
+    }
+  }
+
+  /** Outdoor scenes take the light of the hour. */
+  private daylight(): void {
+    const light = worldTime(this._state.world?.minutes ?? 8 * 60).light;
+    for (const sc of Object.values(this._state.scenes)) {
+      if (!sc.daylight) continue;
+      sc.ambient = light;
+      if (light !== 'bright' && sc.vision === undefined) sc.vision = true;
     }
   }
 

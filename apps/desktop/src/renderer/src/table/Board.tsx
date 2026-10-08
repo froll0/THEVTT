@@ -452,10 +452,13 @@ export function Board({
   const clipboard = useTable((s) => s.clipboard);
   const setClipboard = useTable((s) => s.setClipboard);
   const setPendingArea = useTable((s) => s.setPendingArea);
+  const targets = useTable((s) => s.targets);
+  const toggleTarget = useTable((s) => s.toggleTarget);
+  const clearTargets = useTable((s) => s.clearTargets);
   /** a cone or line with no caster on the map: its point, set by a first click */
   const areaOrigin = useRef<{ x: number; y: number } | null>(null);
-  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard });
-  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard };
+  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard, targets });
+  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard, targets };
   const hoverWall = useRef<string | null>(null);
   dirty.current = true;
 
@@ -929,6 +932,24 @@ export function Board({
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]);
+
+        if (L.targets.includes(t.id)) {
+          // a target: a red reticle around the token
+          ctx.save();
+          ctx.strokeStyle = '#ff453a';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r + 6, 0, Math.PI * 2);
+          ctx.stroke();
+          for (let k = 0; k < 4; k++) {
+            const a = (k * Math.PI) / 2;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(a) * (r + 2), cy + Math.sin(a) * (r + 2));
+            ctx.lineTo(cx + Math.cos(a) * (r + 13), cy + Math.sin(a) * (r + 13));
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
 
         if (t.conditions.length) {
           // icon badges along the top edge of the token
@@ -1460,6 +1481,11 @@ export function Board({
     const t = tokenAt(w.x, w.y);
     setSelectedTemplate(null);
     const prop0 = !t && L.isGm ? propAt(w.x, w.y) : undefined;
+    // Ctrl (Cmd): mark a token as a target of attacks
+    if ((e.ctrlKey || e.metaKey) && t && L.tool === 'select') {
+      toggleTarget(t.id);
+      return;
+    }
     // Shift: add to (or take out of) a group, or draw a box around one
     if (e.shiftKey && L.tool === 'select') {
       if (t && canControl(t, L.me, L.isGm)) toggleInGroup('tokens', t.id);
@@ -1745,6 +1771,7 @@ export function Board({
           return;
         }
         if (e.key === 'Enter') return;
+        clearTargets();
         setGroup({ tokens: [], props: [] });
         select(null);
         selectProp(null);

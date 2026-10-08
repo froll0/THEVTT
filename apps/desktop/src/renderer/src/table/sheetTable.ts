@@ -21,7 +21,8 @@ export function useSheetTable(characterId: string): SheetTable | undefined {
   return {
     attack: (a) => {
       const attacker = own();
-      const ids = table.group.tokens.length ? table.group.tokens : table.selectedTokenId ? [table.selectedTokenId] : [];
+      // the tokens marked as targets (Ctrl+click), otherwise those selected
+      const ids = table.targets.length ? table.targets : table.group.tokens.length ? table.group.tokens : table.selectedTokenId ? [table.selectedTokenId] : [];
       const targets = ids.map((id) => state.tokens[id]).filter((t) => !!t && t.id !== attacker?.id && (isGm || !t.ownerIds.includes(me)));
       if (!targets.length) return false;
       table.dispatch({ type: 'attack', attackerId: attacker?.id ?? null, targetIds: targets.map((t) => t!.id), ...a });

@@ -1,7 +1,9 @@
 import { describeStep, expandMacro, macroQuestions, parseMacro, type Macro } from '@thevtt/shared';
-import { ArrowDown, ArrowUp, CircleAlert, Play, Plus, Settings2, Trash2, Zap } from 'lucide-react';
+import { dnd5e } from '@thevtt/systems';
+import { ArrowDown, ArrowUp, CircleAlert, Play, Plus, Settings2, Swords, Trash2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Field, Modal } from '../components/ui';
+import { findMonster } from '../lib/combat';
 import { macroTargets, macroVars, runMacro } from '../lib/runMacro';
 import { useApp } from '../store/app';
 import { MACRO_COLORS, useMacros } from '../store/macros';
@@ -86,7 +88,9 @@ function useMacroRun() {
 /** The bar of macros over the dice: a click, or keys 1 to 0. */
 export function MacroBar() {
   const me = useApp((s) => s.user?.id ?? '');
+  const toast = useApp((s) => s.toast);
   const { macros, load } = useMacros();
+  const { state, selectedTokenId, dispatch } = useTable();
   const { run, askElement } = useMacroRun();
   const [managing, setManaging] = useState(false);
   useEffect(() => {
@@ -100,6 +104,22 @@ export function MacroBar() {
     window.addEventListener('thevtt:macro', onKey);
     return () => window.removeEventListener('thevtt:macro', onKey);
   });
+  const shared = state?.macros ?? [];
+  // the GM's selected creature: its stat block's actions, one click each
+  const creature = state && state.gmId === me && selectedTokenId ? state.tokens[selectedTokenId] : undefined;
+  const monster = creature?.monsterId ? findMonster(creature.monsterId) : undefined;
+
+  const useAction = (a: dnd5e.MonsterAction, mode: 'normal' | 'adv' | 'dis') => {
+    if (!creature || !monster) return;
+    const save = a.save ? ` (TS ${dnd5e.ABILITY_LABELS[a.save.ability].short} CD ${a.save.dc})` : '';
+    if (a.attack !== undefined && a.damage) {
+      const targets = useTable.getState().targets.filter((id) => id !== creature.id && state?.tokens[id]);
+      if (!targets.length) return toast(`${a.name}: segna i bersagli con Ctrl+clic sulla mappa`, 'error');
+      dispatch({ type: 'attack', attackerId: creature.id, targetIds: targets, name: a.name, bonus: a.attack, damage: a.damage, damageType: a.damageType, mode });
+    } else if (a.damage) dispatch({ type: 'roll', formula: a.damage, label: `${creature.name} · ${a.name}${a.damageType ? ` · danni ${a.damageType}` : ''}${save}` });
+    else dispatch({ type: 'chat', text: `${creature.name} usa ${a.name}${save}${a.description ? `: ${a.description}` : ''}` });
+  };
+
   return (
     <>
       <div className="float macrobar glass" role="toolbar" aria-label="Macro">
@@ -110,8 +130,34 @@ export function MacroBar() {
             <kbd>{(i + 1) % 10}</kbd>
           </button>
         ))}
-        <button className={`macro-btn ${macros.length ? 'icon-only' : ''}`} onClick={() => setManaging(true)} title="Crea e modifica le tue macro" aria-label="Gestisci le macro">
-          {macros.length ? <Settings2 size={14} /> : (
+        {shared.length > 0 && <span className="macro-sep" aria-hidden />}
+        {shared.map((m) => (
+          <button key={m.id} className="macro-btn" onClick={() => run(m)} title={`${m.name} · del tavolo\n${m.body}`}>
+            <span className="macro-dot shared" style={{ background: m.color }} />
+            <span className="ellipsis">{m.name}</span>
+          </button>
+        ))}
+        {monster && creature && (
+          <>
+            <span className="macro-sep" aria-hidden />
+            <span className="macro-who ellipsis" title={monster.name}>
+              <Swords size={12} /> {creature.name}
+            </span>
+            {monster.actions.map((a) => (
+              <button
+                key={a.name}
+                className="macro-btn monster"
+                onClick={(e) => useAction(a, e.shiftKey ? 'adv' : e.altKey ? 'dis' : 'normal')}
+                title={`${a.name}${a.attack !== undefined ? ` · ${dnd5e.fmtMod(a.attack)} a colpire` : ''}${a.damage ? ` · ${a.damage} ${a.damageType ?? ''}` : ''}${a.save ? ` · TS CD ${a.save.dc}` : ''}${a.description ? `\n${a.description}` : ''}${a.attack !== undefined ? '\nSui bersagli segnati (Ctrl+clic). Maiusc: vantaggio · Alt: svantaggio' : ''}`}
+              >
+                <span className="ellipsis">{a.name}</span>
+                {a.attack !== undefined && <kbd>{dnd5e.fmtMod(a.attack)}</kbd>}
+              </button>
+            ))}
+          </>
+        )}
+        <button className={`macro-btn ${macros.length || shared.length ? 'icon-only' : ''}`} onClick={() => setManaging(true)} title="Crea e modifica le macro" aria-label="Gestisci le macro">
+          {macros.length || shared.length ? <Settings2 size={14} /> : (
             <>
               <Zap size={14} /> Macro
             </>
@@ -126,9 +172,32 @@ export function MacroBar() {
 
 /** Make, change and try one's macros, seeing what each line will do. */
 function MacroManager({ onClose, onRun }: { onClose: () => void; onRun: (m: Macro) => void }) {
-  const { macros, save, remove, move, create } = useMacros();
-  const { state, selectedTokenId, group } = useTable();
+  const own = useMacros();
+  const { state, selectedTokenId, group, dispatch } = useTable();
   const me = useApp((s) => s.user?.id ?? '');
+  const isGm = !!state && state.gmId === me;
+  // one's own macros, or the table's: the GM writes those, everyone uses them
+  const [scope, setScope] = useState<'mine' | 'table'>('mine');
+  const shared = state?.macros ?? [];
+  const setShared = (list: Macro[]) => dispatch({ type: 'macros.set', macros: list });
+  const { macros, save, remove, move, create } =
+    scope === 'mine'
+      ? own
+      : {
+          macros: shared,
+          save: (m: Macro) => setShared(shared.some((x) => x.id === m.id) ? shared.map((x) => (x.id === m.id ? m : x)) : [...shared, m]),
+          remove: (id: string) => setShared(shared.filter((x) => x.id !== id)),
+          move: (id: string, by: -1 | 1) => {
+            const list = [...shared];
+            const i = list.findIndex((m) => m.id === id);
+            const j = i + by;
+            if (i < 0 || j < 0 || j >= list.length) return;
+            [list[i], list[j]] = [list[j]!, list[i]!];
+            setShared(list);
+          },
+          create: (partial?: Partial<Macro>) => own.create({ color: MACRO_COLORS[shared.length % MACRO_COLORS.length], ...partial }),
+        };
+  const readOnly = scope === 'table' && !isGm;
   const [editing, setEditing] = useState<Macro | null>(macros[0] ?? null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const dirty = !!editing && JSON.stringify(macros.find((m) => m.id === editing.id)) !== JSON.stringify(editing);
@@ -156,24 +225,54 @@ function MacroManager({ onClose, onRun }: { onClose: () => void; onRun: (m: Macr
   };
 
   return (
-    <Modal title="Macro" wide onClose={() => (dirty && editing && save(editing), onClose())}>
+    <Modal title="Macro" wide onClose={() => (dirty && editing && !readOnly && save(editing), onClose())}>
       <div className="macro-manager">
         <div className="col macro-list">
+          <div className="seg row" role="tablist" aria-label="Quali macro">
+            {(
+              [
+                ['mine', 'Mie'],
+                ['table', 'Del tavolo'],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                role="tab"
+                aria-selected={scope === k}
+                className={scope === k ? 'on' : ''}
+                onClick={() => {
+                  if (dirty && editing && !readOnly) save(editing);
+                  setScope(k);
+                  setEditing((k === 'mine' ? own.macros : shared)[0] ?? null);
+                  setConfirmDelete(false);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {scope === 'table' && <span className="faint tiny">{isGm ? 'Le vedono e le usano tutti al tavolo.' : 'Le prepara il master: puoi usarle, non cambiarle.'}</span>}
           {macros.map((m, i) => (
             <div key={m.id} className={`macro-row ${editing?.id === m.id ? 'on' : ''}`}>
               <button className="grow macro-row-name" onClick={() => pick(m)}>
                 <span className="macro-dot" style={{ background: m.color }} />
                 <span className="ellipsis">{m.name}</span>
-                {i < 10 && <kbd>{(i + 1) % 10}</kbd>}
+                {scope === 'mine' && i < 10 && <kbd>{(i + 1) % 10}</kbd>}
               </button>
+              {!readOnly && (
+                <>
               <button className="icon-btn" disabled={i === 0} onClick={() => move(m.id, -1)} aria-label={`Sposta su ${m.name}`}>
                 <ArrowUp size={12} />
               </button>
               <button className="icon-btn" disabled={i === macros.length - 1} onClick={() => move(m.id, 1)} aria-label={`Sposta giù ${m.name}`}>
                 <ArrowDown size={12} />
               </button>
+                </>
+              )}
             </div>
           ))}
+          {!readOnly && (
+            <>
           <button className="btn sm" onClick={() => add()}>
             <Plus size={13} /> Nuova macro
           </button>
@@ -187,22 +286,25 @@ function MacroManager({ onClose, onRun }: { onClose: () => void; onRun: (m: Macr
               </button>
             ))}
           </div>
+            </>
+          )}
         </div>
 
         {editing ? (
           <div className="col macro-edit">
             <div className="row" style={{ gap: 8 }}>
               <Field label="Nome">
-                <input className="input" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} aria-label="Nome della macro" />
+                <input className="input" readOnly={readOnly} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} aria-label="Nome della macro" />
               </Field>
               <div className="row macro-colors" role="radiogroup" aria-label="Colore">
                 {MACRO_COLORS.map((c) => (
-                  <button key={c} role="radio" aria-checked={editing.color === c} className={`swatch ${editing.color === c ? 'on active' : ''}`} style={{ background: c }} onClick={() => setEditing({ ...editing, color: c })} aria-label={`Colore ${c}`} />
+                  <button key={c} role="radio" disabled={readOnly} aria-checked={editing.color === c} className={`swatch ${editing.color === c ? 'on active' : ''}`} style={{ background: c }} onClick={() => setEditing({ ...editing, color: c })} aria-label={`Colore ${c}`} />
                 ))}
               </div>
             </div>
             <textarea
               className="input macro-body"
+              readOnly={readOnly}
               value={editing.body}
               onChange={(e) => setEditing({ ...editing, body: e.target.value })}
               placeholder={'/r 1d20+@for+@comp Attacco\n/danno ?{Danni|1d8+@for} Spada'}
@@ -230,17 +332,19 @@ function MacroManager({ onClose, onRun }: { onClose: () => void; onRun: (m: Macr
                 <button
                   className="btn primary sm"
                   onClick={() => {
-                    save(editing);
+                    if (!readOnly) save(editing);
                     onRun(editing);
                   }}
                 >
                   <Play size={13} /> Prova
                 </button>
-                <button className="btn sm" disabled={!dirty} onClick={() => save(editing)}>
-                  {dirty ? 'Salva' : 'Salvata'}
-                </button>
+                {!readOnly && (
+                  <button className="btn sm" disabled={!dirty} onClick={() => save(editing)}>
+                    {dirty ? 'Salva' : 'Salvata'}
+                  </button>
+                )}
               </div>
-              {confirmDelete ? (
+              {readOnly ? null : confirmDelete ? (
                 <button
                   className="btn sm danger"
                   onClick={() => {
@@ -273,7 +377,7 @@ function MacroManager({ onClose, onRun }: { onClose: () => void; onRun: (m: Macr
           </div>
         ) : (
           <div className="col macro-edit faint small" style={{ justifyContent: 'center', textAlign: 'center' }}>
-            Le macro fanno in un clic ciò che scriveresti in chat: tiri, danni, cure, condizioni, iniziativa. Parti da un esempio a sinistra.
+            {scope === 'table' && !isGm ? 'Il master non ha ancora preparato macro per il tavolo.' : <>Le macro fanno in un clic ciò che scriveresti in chat: tiri, danni, cure, condizioni, iniziativa. Parti da un esempio a sinistra.</>}
           </div>
         )}
       </div>

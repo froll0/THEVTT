@@ -33,6 +33,7 @@ export * from './encounters';
 export * from './equipment';
 export * from './feats';
 export * from './monsters';
+export * from './import';
 export * from './rules';
 export * from './rules-text';
 export * from './species';

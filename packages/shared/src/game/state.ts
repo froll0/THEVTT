@@ -1,4 +1,5 @@
 import type { RollResult } from '../dice';
+import type { Macro } from '../macros';
 import { tokenVisible, type Fog } from './fog';
 import { sightFor, tokenPoints } from './sight';
 
@@ -39,6 +40,8 @@ export interface Scene {
   buildingWalls?: boolean;
   /** where the painting's little details come from (the scene's id unless it came from the library) */
   seed?: string;
+  /** outdoors: its light follows the hour of the world's clock */
+  daylight?: boolean;
 }
 
 export type Ambient = 'bright' | 'dim' | 'dark';
@@ -275,6 +278,40 @@ export interface GameState {
   paused?: boolean;
   /** what the GM can undo/redo right now (labels of the steps, latest first) */
   history?: { undo: string[]; redo: string[] };
+  /** macros the GM shares with the table */
+  macros?: Macro[];
+  /** the world's clock: minutes since the first morning of the campaign */
+  world?: { minutes: number };
+  /** quests: players see those the GM made visible */
+  quests?: Record<string, Quest>;
+}
+
+export interface QuestObjective {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface Quest {
+  id: string;
+  title: string;
+  description: string;
+  status: 'active' | 'done' | 'failed';
+  objectives: QuestObjective[];
+  /** the players know about it */
+  visible: boolean;
+  updatedAt: number;
+}
+
+/** Day and time of the world's clock, and the light outside. */
+export function worldTime(minutes: number) {
+  const day = Math.floor(minutes / 1440) + 1;
+  const m = ((minutes % 1440) + 1440) % 1440;
+  const hour = Math.floor(m / 60);
+  const minute = m % 60;
+  const light: Ambient = hour >= 7 && hour < 19 ? 'bright' : hour === 6 || hour === 19 ? 'dim' : 'dark';
+  const part = hour < 5 ? 'notte' : hour < 7 ? 'alba' : hour < 12 ? 'mattina' : hour < 14 ? 'mezzogiorno' : hour < 18 ? 'pomeriggio' : hour < 20 ? 'sera' : 'notte';
+  return { day, hour, minute, light, part, clock: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}` };
 }
 
 export function emptyMusic(): MusicState {
@@ -363,6 +400,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     props: Object.fromEntries(Object.entries(state.props ?? {}).filter(([, p]) => p.sceneId === state.activeSceneId && !p.hidden)),
     gmNotes: '',
     history: undefined,
+    quests: Object.fromEntries(Object.entries(state.quests ?? {}).filter(([, q]) => q.visible)),
   });
 }
 

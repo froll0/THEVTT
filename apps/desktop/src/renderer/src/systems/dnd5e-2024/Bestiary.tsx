@@ -111,7 +111,10 @@ export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps
   const importFile = async (f: File) => {
     try {
       const parsed = JSON.parse(await f.text()) as { monsters?: (dnd5e.MonsterDef & { image?: unknown })[] };
-      const items = (parsed.monsters ?? []).filter((m) => m && typeof m.name === 'string' && Array.isArray(m.actions));
+      // our own export, or creatures from 5e.tools (one, a list, or a bestiary file)
+      const items: (dnd5e.MonsterDef & { image?: unknown })[] = Array.isArray(parsed.monsters)
+        ? parsed.monsters.filter((m) => m && typeof m.name === 'string' && Array.isArray(m.actions))
+        : dnd5e.importFiveEtools(parsed);
       for (const m of items) {
         const { id: _id, image, ...data } = { ...dnd5e.blankMonster(), ...m };
         const id = saveMonster(SYSTEM_ID, data);
@@ -211,7 +214,11 @@ export function Dnd5eBestiary({ onAdd, onRoll, partyLevels = [] }: BestiaryProps
           </button>
           <label className="btn ghost sm">
             <Upload size={13} /> Importa
-            <input type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && void importFile(e.target.files[0]).then(() => (e.target.value = ''))} />
+            <input aria-label="Importa creature" type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && void importFile(e.target.files[0]).then(() => (e.target.value = ''))} />
+          </label>
+          <label className="btn ghost sm" title="Un file JSON di 5e.tools: una creatura, una lista o un intero bestiario (i testi restano in inglese)">
+            <Upload size={13} /> Da 5e.tools
+            <input aria-label="Importa da 5e.tools" type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && void importFile(e.target.files[0]).then(() => (e.target.value = ''))} />
           </label>
         </div>
       )}

@@ -361,7 +361,7 @@ function CombatTab({
               </div>
               <button
                 className="btn sm"
-                title={table ? 'Attacca il bersaglio selezionato sulla mappa (Maiusc: vantaggio · Alt: svantaggio)' : undefined}
+                title={table ? 'Attacca i bersagli segnati (Ctrl+clic sulla mappa) o il token selezionato (Maiusc: vantaggio · Alt: svantaggio)' : undefined}
                 onClick={(e) => {
                   const mode = e.shiftKey ? 'adv' : e.altKey ? 'dis' : 'normal';
                   if (table?.attack({ name: a.name, bonus: a.bonus, damage: a.damage, damageType: a.damageType, mode })) return;

@@ -1,5 +1,6 @@
+import type { Macro } from '../macros';
 import type { MapPackage } from './library';
-import type { AreaTemplate, ChatCard, GameState, Note, Prop, Scene, Token, Wall } from './state';
+import type { AreaTemplate, ChatCard, GameState, Note, Prop, Quest, Scene, Token, Wall } from './state';
 
 export type TokenPatch = Partial<Omit<Token, 'id' | 'sceneId'>>;
 export type ScenePatch = Partial<Omit<Scene, 'id' | 'fog' | 'terrain' | 'seed'>>;
@@ -61,6 +62,14 @@ export type GameAction =
   | { type: 'music.play'; trackId?: string; position?: number }
   | { type: 'music.pause' }
   | { type: 'game.pause'; paused: boolean }
+  /** GM: the macros shared with everyone at the table */
+  | { type: 'macros.set'; macros: Macro[] }
+  /** GM: the world's clock moves on (or is set) */
+  | { type: 'time.advance'; minutes: number }
+  | { type: 'time.set'; minutes: number }
+  /** GM: a quest, new or changed */
+  | { type: 'quest.save'; quest: Partial<Omit<Quest, 'updatedAt'>> & { title: string } }
+  | { type: 'quest.delete'; questId: string }
   /** GM: take back (or redo) their last change to the map */
   | { type: 'game.undo' }
   | { type: 'game.redo' }

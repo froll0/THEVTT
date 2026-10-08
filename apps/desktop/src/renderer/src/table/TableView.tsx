@@ -1,6 +1,6 @@
 import { rotatePiece } from '@thevtt/shared';
 import { getSystem } from '@thevtt/systems';
-import { PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -14,6 +14,7 @@ import { DiceLayer } from './DiceLayer';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { PROP_KINDS } from './props';
 import { CallControls, CallTiles, type CallPerson } from './Call';
+import { QuestsPanel, WorldClock } from './World';
 import { MacroBar } from './Macros';
 import { useCall } from '../store/call';
 import { EditorBanner, EditorPanel, EditorRail, type EditorTool } from './MapEditor';
@@ -24,7 +25,7 @@ import { Journal } from '../components/Journal';
 
 const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
 
-type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'scene' | 'notes' | 'music' | 'rules';
+type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'scene' | 'notes' | 'quests' | 'music' | 'rules';
 
 export function TableView({ campaignId }: { campaignId: string }) {
   const { campaigns, user, go, status } = useApp();
@@ -215,6 +216,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     { id: 'bestiary', label: 'Bestiario', icon: BookOpen, gm: true },
     { id: 'scene', label: 'Scene', icon: MapIcon, gm: true },
     { id: 'notes', label: 'Note e dispense', icon: NotebookPen },
+    { id: 'quests', label: 'Missioni', icon: ListChecks },
     { id: 'music', label: 'Musica', icon: Music, gm: true },
     { id: 'rules', label: 'Compendio', icon: Library },
   ];
@@ -233,6 +235,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
           <div className="row no-drag" style={{ gap: 'var(--s3)', marginLeft: 'var(--s3)' }}>
             <ConnectionBadge isGm={isGm} onlinePlayers={players.filter((p) => p.online).map((p) => p.id)} />
             <CallControls people={people} />
+            <WorldClock />
             <MusicChip />
             {isGm && (
               <button
@@ -520,6 +523,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 {tab === 'bestiary' && isGm && <BestiaryPanel placeAt={viewCenter} />}
                 {tab === 'scene' && isGm && <ScenePanel />}
                 {tab === 'notes' && <NotesPanel />}
+                {tab === 'quests' && <QuestsPanel />}
                 {tab === 'music' && isGm && <MusicPanel />}
                 {tab === 'rules' && (
                   <div className="panel-body">
@@ -661,6 +665,7 @@ const SHORTCUTS: { title: string; gm?: boolean; keys: [string, string, boolean?]
       ['Alt + trascina', 'Il contrario dell’aggancio, per una volta'],
       ['Shift + clic', 'Aggiungi o togli dalla selezione'],
       ['Shift + trascina', 'Seleziona un’area'],
+      ['Ctrl + clic su un token', 'Segnalo come bersaglio degli attacchi (Esc li toglie)'],
       ['Canc', 'Elimina ciò che è selezionato'],
       ['Esc', 'Deseleziona · chiudi i muri'],
       ['Clic su una porta', 'Aprila o chiudila', false],
