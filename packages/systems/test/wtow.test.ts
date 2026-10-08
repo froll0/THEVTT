@@ -111,3 +111,71 @@ describe('Warhammer: the Old World', () => {
     expect(w.getNpc('ecatombe')!.maxWounds).toBe(6);
   });
 });
+
+describe('Warhammer: beyond creation', () => {
+  it('a horse, magic armour and the gifts of Chaos raise Resilienza', () => {
+    const c = soldier();
+    const base = w.resilience(c);
+    expect(w.resilience({ ...c, mount: 'cavallo' })).toBe(base + 1);
+    expect(w.speedOf({ ...c, mount: 'cavallo' })).toBe('Veloce');
+    // the better of the two armours, not both
+    expect(w.resilience({ ...c, items: [{ id: 'x', ref: 'armatura-ferro-meteoritico', name: 'Ferro' }] })).toBe(base + 2);
+    expect(w.resilience({ ...c, corruption: { ...c.corruption, gifts: ['Pelle Corazzata'] } })).toBe(base + 1);
+    const pool = getSystem('wtow')!.tokenDefaults(c).pool!;
+    expect(pool.checks!.Tempra).toEqual({ dice: w.characteristic(c, 'r'), target: w.skill(c, 'tempra') });
+  });
+
+  it('magic weapons attack from the sheet', () => {
+    const c = { ...soldier(), weapons: [{ ref: 'lame-del-duellante', name: 'Lame del Duellante' }] };
+    const a = w.attackProfile(c, c.weapons[0]!);
+    expect(a.damage).toBe(w.characteristic(c, 'f') + 2);
+    expect(a.traits).toContain('due volte');
+  });
+
+  it('the Intermezzo: failures raise skills, coins reset, festering wounds heal', () => {
+    let c = soldier();
+    const before = w.skill(c, 'tempra');
+    c = w.activityFailures(c, 'tempra', 10);
+    expect(w.skill(c, 'tempra')).toBe(before + 1);
+    expect(c.marks.tempra).toBe(0);
+    c = w.resetCoins({ ...c, sessions: 2 }, 2);
+    expect(c.coins[w.statusOf(c)]).toEqual({ owned: 5, spent: 0 });
+    expect(c.sessions).toBe(0);
+    c = w.restAndRecover({
+      ...c,
+      wounds: [
+        { id: '1', name: 'Escoriazione', treated: true, heal: 'Riprendere Fiato' },
+        { id: '2', name: 'Ginocchio Distrutto', treated: true, heal: 'Riposare e Rimettersi' },
+        { id: '3', name: 'Ferita Purulenta', treated: false, festering: true },
+      ],
+    });
+    expect(c.wounds.map((x) => x.name)).toEqual(['Escoriazione']);
+  });
+
+  it('tables: contacts, random resources, Talagaad events', () => {
+    const { contact, row } = w.contactFor(w.CONTACTS[0]!, 23);
+    expect(contact.name).toBe('Giselbert Almayda');
+    expect(row.min).toBe(21);
+    expect(w.resourceFor('argento', 50)).toBe('Taverna');
+    expect(w.eventFor(100).contacts).toContain('Van Obelmann');
+    expect(w.TALAGAAD_EVENTS).toHaveLength(23);
+    expect(w.CONTACTS.flatMap((g) => g.contacts)).toHaveLength(20);
+  });
+
+  it('creatures: table tests, reactions and homebrew profiles', () => {
+    const giant = w.getNpc('gigante')!;
+    const p = w.npcPool(giant)!;
+    expect(p.reaction).toContain('Prono');
+    expect(p.checks.Tempra).toEqual({ dice: giant.chars.r, target: 5 });
+    const mine = w.normalizeNpc({ name: 'Ratto Gigante', type: 'Bruto', maxWounds: 2, attacks: [{ name: 'Morso', dice: 3, target: 3, damage: 3 }] })!;
+    expect(mine.id).toBe('custom-ratto-gigante');
+    expect(w.npcPool(mine)!.maxWounds).toBe(2);
+    expect(w.normalizeNpc({ name: '' })).toBeNull();
+  });
+
+  it('exposure to Chaos makes one Vulnerabile', () => {
+    const sys = getSystem('wtow')!;
+    const c = sys.withCorruption!(soldier()) as ReturnType<typeof soldier>;
+    expect(c.corruption.stage).toBe('vulnerabile');
+  });
+});

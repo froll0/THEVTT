@@ -1,5 +1,6 @@
 import type { CharId, SkillId, Speed } from './data';
-import { CHARACTERISTICS } from './data';
+import { CHARACTERISTICS, SKILL_INFO } from './data';
+import type { Vehicle } from './extras';
 
 /**
  * Profili dei PNG dalla Guida del Gamemaster. Servitori: sconfitti alla prima
@@ -254,5 +255,103 @@ export function npcPool(n: Npc) {
     maxWounds: n.maxWounds,
     track: n.track,
     monster: n.type === 'Mostruosità' || undefined,
+    speed: n.speed === 'Lenta' ? ('Lento' as const) : n.speed,
+    checks: {
+      Atletica: npcCheck(n, 'atletica'),
+      Percezione: npcCheck(n, 'percezione'),
+      Tempra: npcCheck(n, 'tempra'),
+      Sopravvivenza: npcCheck(n, 'sopravvivenza'),
+      Volontà: npcCheck(n, 'volonta'),
+      Destrezza: npcCheck(n, 'destrezza'),
+    },
+    reaction: npcReaction(n),
+  };
+}
+
+/** a test of the creature: dice from the characteristic, target from the skill (or «Altro») */
+export const npcCheck = (n: Npc, s: SkillId) => ({ dice: n.chars[SKILL_INFO[s].char], target: n.skills[s] ?? n.other });
+
+/** what a Mostruosità's Reaction does (its abilities marked «Reazione») */
+export function npcReaction(n: Npc): string | undefined {
+  const r = n.abilities.filter((a) => /reazione/i.test(a.name));
+  return r.length ? r.map((a) => `${a.name.replace(/\s*\(Reazione\)/i, '')}: ${a.text}`).join(' ') : undefined;
+}
+
+/** A vehicle on the map: hits can't be opposed, breakdowns instead of wounds. */
+export function vehiclePool(v: Vehicle) {
+  return {
+    type: 'Bruto' as const,
+    resilience: v.resilience,
+    toughness: v.resilience,
+    armoured: !!v.armoured,
+    melee: { dice: 0, target: 1 },
+    ranged: { dice: 0, target: 1 },
+    wounds: 0,
+    maxWounds: v.breakdowns,
+    vehicle: true,
+    speed: v.speed,
+  };
+}
+
+/** A blank profile for the GM's own creatures. */
+export function blankNpc(): Npc {
+  return {
+    id: '',
+    name: '',
+    group: 'I miei PNG',
+    type: 'Servitore',
+    chars: { ac: 3, ab: 2, f: 3, r: 3, i: 3, ag: 3, ra: 2, soc: 2 },
+    speed: 'Normale',
+    resilience: 3,
+    armoured: false,
+    maxWounds: 1,
+    skills: {},
+    other: 2,
+    attacks: [{ name: 'Arma', range: 'Ravvicinata', dice: 3, target: 3, damage: 4 }],
+    protection: [{ skill: 'Atletica', dice: 3, target: 2 }],
+    abilities: [],
+  };
+}
+
+/** Anything (a saved homebrew profile) to a complete Npc. */
+export function normalizeNpc(raw: unknown): Npc | null {
+  const r = raw as Partial<Npc> | null;
+  if (!r || typeof r !== 'object' || typeof r.name !== 'string' || !r.name.trim()) return null;
+  const b = blankNpc();
+  const n = (v: unknown, min: number, max: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : d);
+  const type: NpcType = (['Servitore', 'Bruto', 'Campione', 'Mostruosità'] as const).includes(r.type as NpcType) ? (r.type as NpcType) : 'Servitore';
+  const chars = Object.fromEntries(CHARACTERISTICS.map((k) => [k, n(r.chars?.[k], 0, 10, b.chars[k])])) as Record<CharId, number>;
+  const resilience = r.resilience === null ? null : n(r.resilience, 0, 30, 3);
+  const track = Array.isArray(r.track) ? r.track.slice(0, 8).map((t) => ({ at: String(t?.at ?? ''), effect: String(t?.effect ?? '') })) : undefined;
+  return {
+    id: typeof r.id === 'string' && r.id ? r.id : `custom-${slug(r.name)}`,
+    name: r.name.trim().slice(0, 60),
+    group: typeof r.group === 'string' && r.group.trim() ? r.group.trim().slice(0, 40) : b.group,
+    type,
+    chars,
+    speed: r.speed === 'Lenta' || r.speed === 'Veloce' ? r.speed : 'Normale',
+    resilience,
+    armoured: !!r.armoured,
+    track: track?.length ? track : undefined,
+    maxWounds: resilience === null ? null : type === 'Servitore' ? 1 : type === 'Campione' ? null : n(r.maxWounds, 1, 30, 3),
+    skills: Object.fromEntries(Object.entries(r.skills ?? {}).filter(([k, v]) => k in SKILL_INFO && typeof v === 'number').map(([k, v]) => [k, n(v, 1, 6, 2)])),
+    other: n(r.other, 1, 6, 2),
+    attacks: (Array.isArray(r.attacks) ? r.attacks : []).slice(0, 8).map((a) => ({
+      name: String(a?.name ?? 'Attacco').slice(0, 40),
+      range: String(a?.range ?? 'Ravvicinata').slice(0, 40),
+      dice: n(a?.dice, 0, 20, 3),
+      target: n(a?.target, 1, 10, 3),
+      damage: a?.damage === null ? null : n(a?.damage, 0, 30, 3),
+      traits: typeof a?.traits === 'string' && a.traits.trim() ? a.traits.slice(0, 200) : undefined,
+      ignoresArmour: !!a?.ignoresArmour || undefined,
+    })),
+    protection: (Array.isArray(r.protection) && r.protection.length ? r.protection : b.protection).slice(0, 3).map((p) => ({
+      skill: p?.skill === 'Difesa' || p?.skill === 'Furtività' ? p.skill : 'Atletica',
+      dice: n(p?.dice, 0, 20, 3),
+      target: n(p?.target, 1, 10, 2),
+      shield: !!p?.shield || undefined,
+    })),
+    abilities: (Array.isArray(r.abilities) ? r.abilities : []).slice(0, 12).map((a) => ({ name: String(a?.name ?? '').slice(0, 60), text: String(a?.text ?? '').slice(0, 600) })).filter((a) => a.name),
+    gear: typeof r.gear === 'string' ? r.gear.slice(0, 300) : undefined,
   };
 }

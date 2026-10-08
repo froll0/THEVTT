@@ -18,14 +18,46 @@ import {
 } from './data';
 import { ARMOURS, SHIELD, TALENTS, WEAPONS, talentByName, type Talent, type Weapon } from './catalog';
 import { GODS, SPELLS, type MagicLore } from './magic';
+import { MAGIC_ITEMS, MOUNTS, type CorruptionStage } from './extras';
 
 /* --------------------------------------------------------------- Modello */
 
 export interface WtowWeapon {
-  /** id del catalogo, o assente per un’arma personalizzata */
+  /** id del catalogo (o di un oggetto magico), o assente per un’arma personalizzata */
   ref?: string;
   name: string;
   note?: string;
+  /** armi da ricaricare: false dopo aver sparato */
+  loaded?: boolean;
+  /** successi accumulati nella Prova Prolungata di ricarica */
+  reloading?: number;
+}
+
+export interface WtowMagicItem {
+  id: string;
+  /** id in MAGIC_ITEMS, o assente per un oggetto inventato dal GM */
+  ref?: string;
+  name: string;
+  note?: string;
+  /** cariche o usi rimasti */
+  charges?: number;
+}
+
+/** Prove Prolungate personali dell’Intermezzo (un Sapere da studiare, un avere da creare…) */
+export interface WtowProject {
+  id: string;
+  name: string;
+  need: number;
+  have: number;
+}
+
+export interface WtowCorruption {
+  stage: CorruptionStage;
+  /** id del Sentiero verso la Corruzione */
+  path: string | null;
+  /** doni e mutazioni ricevuti */
+  gifts: string[];
+  notes: string;
 }
 
 export interface WtowWound {
@@ -96,6 +128,15 @@ export interface WtowCharacter {
   extended: string;
   clues: string;
   favours: string;
+  corruption: WtowCorruption;
+  items: WtowMagicItem[];
+  /** id in MOUNTS: in sella è una sola entità col cavaliere */
+  mount: string | null;
+  /** Monete depositate in banca */
+  bank: Record<Status, number>;
+  /** sessioni dall’ultimo Intermezzo (una Attività ciascuna, fino a 3) */
+  sessions: number;
+  projects: WtowProject[];
 }
 
 export function createCharacter(): WtowCharacter {
@@ -136,6 +177,12 @@ export function createCharacter(): WtowCharacter {
     extended: '',
     clues: '',
     favours: '',
+    corruption: { stage: 'puro', path: null, gifts: [], notes: '' },
+    items: [],
+    mount: null,
+    bank: { bronzo: 0, argento: 0, oro: 0 },
+    sessions: 0,
+    projects: [],
   };
 }
 
@@ -180,7 +227,11 @@ export function normalize(raw: unknown): WtowCharacter {
     speed: r.speed === 'Lenta' || r.speed === 'Veloce' ? r.speed : 'Normale',
     armour: ARMOURS.some((a) => a.id === r.armour) ? r.armour : null,
     shield: !!r.shield,
-    weapons: arr(r.weapons, (x): x is WtowWeapon => !!x && typeof (x as any).name === 'string'),
+    weapons: arr(r.weapons, (x): x is WtowWeapon => !!x && typeof (x as any).name === 'string').map((w) => ({
+      ...w,
+      ...(w.loaded === false ? { loaded: false } : { loaded: undefined }),
+      reloading: num(w.reloading) || undefined,
+    })),
     gear: str(r.gear),
     resources: str(r.resources),
     contacts: arr(r.contacts, (x): x is { name: string; bond: string } => !!x && typeof (x as any).name === 'string').map((x) => ({ name: x.name, bond: str(x.bond) })),
@@ -200,6 +251,28 @@ export function normalize(raw: unknown): WtowCharacter {
     extended: str(r.extended),
     clues: str(r.clues),
     favours: str(r.favours),
+    corruption: {
+      stage: (['puro', 'vulnerabile', 'offuscato', 'macchiato', 'dannato'] as const).includes(r.corruption?.stage) ? r.corruption.stage : 'puro',
+      path: str(r.corruption?.path) || null,
+      gifts: arr(r.corruption?.gifts, isStr),
+      notes: str(r.corruption?.notes),
+    },
+    items: arr(r.items, (x): x is WtowMagicItem => !!x && typeof (x as any).name === 'string').map((i) => ({
+      id: str(i.id) || Math.random().toString(36).slice(2, 10),
+      ref: str(i.ref) || undefined,
+      name: i.name,
+      note: str(i.note) || undefined,
+      charges: typeof i.charges === 'number' ? i.charges : undefined,
+    })),
+    mount: MOUNTS.some((m) => m.id === r.mount) ? r.mount : null,
+    bank: { bronzo: num(r.bank?.bronzo), argento: num(r.bank?.argento), oro: num(r.bank?.oro) },
+    sessions: num(r.sessions),
+    projects: arr(r.projects, (x): x is WtowProject => !!x && typeof (x as any).name === 'string').map((p) => ({
+      id: str(p.id) || Math.random().toString(36).slice(2, 10),
+      name: p.name,
+      need: Math.max(1, num(p.need, 4)),
+      have: num(p.have),
+    })),
   };
 }
 
@@ -259,12 +332,30 @@ export function faithRank(c: WtowCharacter): number {
 
 export const armourOf = (c: WtowCharacter) => ARMOURS.find((a) => a.id === c.armour);
 
-/** Resilienza: Resistenza più armatura e scudo */
+export const mountOf = (c: WtowCharacter) => MOUNTS.find((m) => m.id === c.mount);
+
+/** le armature magiche possedute (si beneficia solo della migliore tra queste e quella normale) */
+const magicArmour = (c: WtowCharacter) =>
+  c.items.map((i) => MAGIC_ITEMS.find((m) => m.id === i.ref)).filter((m) => m?.kind === 'Armatura' && m.id !== 'scudo-di-rovi' && m.id !== 'elmo-della-caccia');
+
+/** Pelle Corazzata e simili: +1 Resilienza dai doni del Caos */
+const giftResilience = (c: WtowCharacter) => (c.corruption.gifts.some((g) => g === 'Pelle Corazzata' || g === 'Pelle Intorpidita') ? 1 : 0);
+
+/** Resilienza: Resistenza più armatura e scudo (e cavalcatura, oggetti magici, doni) */
 export function resilience(c: WtowCharacter): number {
-  return characteristic(c, 'r') + (armourOf(c)?.bonus ?? 0) + (c.shield ? SHIELD.bonus : 0);
+  const worn = Math.max(armourOf(c)?.bonus ?? 0, ...magicArmour(c).map((m) => m!.bonus ?? 0));
+  const shield = c.shield || c.items.some((i) => i.ref === 'scudo-di-rovi') ? SHIELD.bonus : 0;
+  const helm = c.items.some((i) => i.ref === 'elmo-della-caccia') && worn === 0 ? 1 : 0;
+  return characteristic(c, 'r') + worn + shield + helm + (mountOf(c)?.resilience ?? 0) + giftResilience(c);
 }
 
-export const isArmoured = (c: WtowCharacter): boolean => !!armourOf(c)?.armour || c.shield;
+export const isArmoured = (c: WtowCharacter): boolean => !!armourOf(c)?.armour || c.shield || magicArmour(c).length > 0;
+
+/** Velocità con la cavalcatura */
+export const speedOf = (c: WtowCharacter): 'Lento' | 'Normale' | 'Veloce' => {
+  if (mountOf(c)?.speed === 'Veloce' || c.items.some((i) => i.ref === 'tappeto-volante')) return 'Veloce';
+  return c.speed === 'Lenta' ? 'Lento' : c.speed === 'Veloce' ? 'Veloce' : 'Normale';
+};
 
 export interface Pool {
   dice: number;
@@ -343,8 +434,28 @@ export interface AttackProfile {
   staggerOnly: boolean;
 }
 
+/** la ricarica dell’arma: successi della Prova Prolungata di Destrezza (0: si ricarica da sola) */
+export const reloadNeed = (w: WtowWeapon): number => weaponOf(w)?.reload ?? 0;
+
+/** un oggetto magico come arma del catalogo */
+function magicWeapon(ref: string | undefined): Weapon | undefined {
+  const m = MAGIC_ITEMS.find((x) => x.id === ref);
+  if (!m?.weapon) return undefined;
+  return {
+    id: m.id,
+    name: m.name,
+    kind: m.weapon.ranged ? 'distanza' : 'mischia',
+    status: 'oro',
+    range: m.weapon.range,
+    damage: m.weapon.damage,
+    hands: m.weapon.hands,
+    traits: m.traits,
+    skill: m.weapon.ranged ? 'tiro' : 'mischia',
+  };
+}
+
 export function attackProfile(c: WtowCharacter, w: WtowWeapon): AttackProfile {
-  const def = weaponOf(w);
+  const def = weaponOf(w) ?? magicWeapon(w.ref);
   const sk: SkillId = def?.skill ?? (def?.kind === 'distanza' ? 'tiro' : def?.kind === 'lancio' ? 'lancio' : 'mischia');
   const p = pool(c, sk);
   return {
@@ -463,5 +574,48 @@ export function nightRest(c: WtowCharacter): WtowCharacter {
   return { ...b, wounds: b.wounds.filter((x) => x.heal !== 'Una Notte di Riposo'), conditions: b.conditions.filter((k) => k !== 'Esausto') };
 }
 
-/** Inizio sessione: il Fato speso torna. */
-export const newSession = (c: WtowCharacter): WtowCharacter => ({ ...c, fate: { ...c.fate, spent: 0 } });
+/** Inizio sessione: il Fato speso torna; una sessione in più verso l’Intermezzo. */
+export const newSession = (c: WtowCharacter): WtowCharacter => ({ ...c, fate: { ...c.fate, spent: 0 }, sessions: c.sessions + 1 });
+
+/** Un’Attività per sessione dall’ultimo Intermezzo, fino a 3. */
+export const activitiesAllowed = (c: WtowCharacter): number => Math.min(3, Math.max(1, c.sessions));
+
+/** Una Prova di Attività: i fallimenti segnati (uno in più per Allenare), l’abilità che sale. */
+export function activityFailures(c: WtowCharacter, s: SkillId, failures: number): WtowCharacter {
+  let next = c;
+  for (let i = 0; i < failures; i++) {
+    const before = skill(next, s);
+    next = markFailure(next, s);
+    // superato il valore l’abilità sale e i fallimenti in più vanno persi
+    if (skill(next, s) > before) break;
+  }
+  return next;
+}
+
+/** Rivedere le finanze: tre Monete del proprio Status (più gli straordinari), le altre perse. */
+export function resetCoins(c: WtowCharacter, extra = 0): WtowCharacter {
+  const st = statusOf(c);
+  const zero = { owned: 0, spent: 0 };
+  return { ...c, coins: { bronzo: { ...zero }, argento: { ...zero }, oro: { ...zero }, [st]: { owned: 3 + extra, spent: 0 } }, sessions: 0 };
+}
+
+/** Riposare e Rimettersi: guarisce una Ferita (la più grave medicata) e tutte le Purulente. */
+export function restAndRecover(c: WtowCharacter): WtowCharacter {
+  const left = c.wounds.filter((w) => !w.festering);
+  const order = ['Operazione, Riposare e Rimettersi', 'Riposare e Rimettersi', 'Una Notte di Riposo', 'Riprendere Fiato'];
+  const heal = [...left].sort((a, b) => order.indexOf(a.heal ?? '') - order.indexOf(b.heal ?? ''))[0];
+  return { ...c, wounds: left.filter((w) => w !== heal) };
+}
+
+/** La corruzione fa presa: Vulnerabile, se non era già più in là. */
+export const corrupt = (c: WtowCharacter): WtowCharacter =>
+  c.corruption.stage === 'puro' ? { ...c, corruption: { ...c.corruption, stage: 'vulnerabile' } } : c;
+
+/** Le prove che il tavolo tira da solo (Pericoli, fine turno, ritirata, fine giornata). */
+export function tableChecks(c: WtowCharacter): Record<'Atletica' | 'Percezione' | 'Tempra' | 'Sopravvivenza' | 'Volontà' | 'Destrezza', { dice: number; target: number }> {
+  const p = (s: SkillId) => {
+    const x = pool(c, s);
+    return { dice: Math.max(0, x.dice), target: x.target };
+  };
+  return { Atletica: p('atletica'), Percezione: p('percezione'), Tempra: p('tempra'), Sopravvivenza: p('sopravvivenza'), Volontà: p('volonta'), Destrezza: p('destrezza') };
+}

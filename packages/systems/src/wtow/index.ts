@@ -3,6 +3,7 @@ import { CHAR_INFO, CHARACTERISTICS, SKILL_INFO, SKILLS } from './data';
 import { CONDITION_INFO, CONDITIONS, WOUND_TABLE, woundFor } from './catalog';
 import {
   characteristic,
+  corrupt,
   createCharacter,
   fateLeft,
   fateMax,
@@ -15,9 +16,12 @@ import {
   pool,
   protection,
   resilience,
+  speedOf,
   statusLabel,
+  tableChecks,
   testFormula,
   untreatedWounds,
+  mountOf,
   validate,
   type WtowCharacter,
 } from './rules';
@@ -27,6 +31,8 @@ export * from './catalog';
 export * from './magic';
 export * from './bestiary';
 export * from './rules';
+export * from './extras';
+export * from './tables';
 
 export function characterPool(c: WtowCharacter): NonNullable<TokenDefaults['pool']> {
   const p = protection(c);
@@ -41,6 +47,9 @@ export function characterPool(c: WtowCharacter): NonNullable<TokenDefaults['pool
     wounds: c.wounds.length,
     untreated: untreatedWounds(c),
     hardy: c.talents.some((t) => t.id === 'gagliardo') || undefined,
+    speed: speedOf(c),
+    checks: tableChecks(c),
+    mounted: mountOf(c)?.name,
   };
 }
 
@@ -84,7 +93,11 @@ export const wtow: GameSystem<WtowCharacter> = {
   withWound(raw, wound) {
     const c = normalize(raw);
     const row = WOUND_TABLE.find((x) => x.name === wound.name);
-    return { ...c, wounds: [...c.wounds, { id: Math.random().toString(36).slice(2, 10), name: wound.name, text: wound.text, treated: false, heal: row?.heal }] };
+    const heal = wound.festering ? 'Riposare e Rimettersi' : row?.heal;
+    return { ...c, wounds: [...c.wounds, { id: Math.random().toString(36).slice(2, 10), name: wound.name, text: wound.text, treated: false, heal, ...(wound.festering ? { festering: true } : {}) }] };
+  },
+  withCorruption(raw) {
+    return corrupt(normalize(raw));
   },
   woundResult(total) {
     const w = woundFor(total);

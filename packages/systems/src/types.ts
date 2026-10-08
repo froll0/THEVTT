@@ -39,6 +39,11 @@ export interface TokenDefaults {
     untreated?: number;
     hardy?: boolean;
     monster?: boolean;
+    speed?: 'Lento' | 'Normale' | 'Veloce';
+    checks?: Partial<Record<'Atletica' | 'Percezione' | 'Tempra' | 'Sopravvivenza' | 'Volontà' | 'Destrezza', { dice: number; target: number }>>;
+    reaction?: string;
+    vehicle?: boolean;
+    mounted?: string;
   };
 }
 
@@ -65,7 +70,9 @@ export interface GameSystem<TCharacter = unknown> {
   /** what each condition does, for tooltips */
   conditionInfo?: Record<string, string>;
   /** the character with a wound from the table written on it (success-pool systems) */
-  withWound?(character: TCharacter, wound: { name: string; text: string }): TCharacter;
+  withWound?(character: TCharacter, wound: { name: string; text: string; festering?: boolean }): TCharacter;
+  /** success-pool systems: the corruption got hold of the character (Vulnerabile) */
+  withCorruption?(character: TCharacter): TCharacter;
   /** what a total on the wounds table means (success-pool systems) */
   woundResult?(total: number): { name: string; text: string; conditions?: string[]; dead?: boolean };
   /** how the table plays: d20 and squares, or success pools, sides and zones */
