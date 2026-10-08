@@ -1,5 +1,5 @@
 import type { GameSystem } from '../types';
-import { ABILITIES, ABILITY_LABELS, CONDITIONS, SKILL_IDS, SKILLS } from './data';
+import { ABILITIES, ABILITY_LABELS, CONDITION_INFO, CONDITIONS, SKILL_IDS, SKILLS } from './data';
 import {
   abilityMod,
   armorClass,
@@ -49,6 +49,7 @@ export const dnd5e2024: GameSystem<Dnd5eCharacter> = {
   shortName: 'D&D 5.5',
   description: 'Regole 2024 basate sul System Reference Document 5.2 (CC-BY-4.0).',
   conditions: CONDITIONS,
+  conditionInfo: CONDITION_INFO,
   createCharacter,
   validate: (c) => validate(normalize(c)),
   headline: (c) => headline(normalize(c)),

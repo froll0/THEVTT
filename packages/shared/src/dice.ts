@@ -1,6 +1,11 @@
 /**
  * Dice notation: `1d20+5`, `2d20kh1` (advantage), `4d6dl1`, `d%`, `3d8-1d4+2`.
  * Supported modifiers: kh/kl (keep highest/lowest), dh/dl (drop highest/lowest), k = kh.
+ *
+ * Success pools (Warhammer: the Old World): `4d10s3` rolls four d10 and counts
+ * those showing 3 or less; the term is worth its successes. Flags after the
+ * target: `g` Gloriosa (failures rerolled once), `t` Tetra (successes rerolled
+ * once; both together cancel out), `m` a magic test (nines are never rerolled).
  */
 
 export type Rng = (sides: number) => number;
@@ -20,10 +25,28 @@ export const cryptoRng: Rng = (sides) => {
 export interface DieRoll {
   value: number;
   dropped: boolean;
+  /** in a success pool: whether this die counts */
+  success?: boolean;
+  /** the first result, when the die was rolled again (Gloriosa / Tetra) */
+  was?: number;
 }
 
 export type RollPart =
-  | { type: 'dice'; sign: 1 | -1; count: number; sides: number; modifier?: string; rolls: DieRoll[]; subtotal: number }
+  | {
+      type: 'dice';
+      sign: 1 | -1;
+      count: number;
+      sides: number;
+      modifier?: string;
+      rolls: DieRoll[];
+      subtotal: number;
+      /** a success pool: dice at or under this count */
+      target?: number;
+      /** Gloriosa or Tetra (after they cancel out) */
+      pool?: 'glorious' | 'grim';
+      /** nines rolled (the rule of nine in magic tests) */
+      nines?: number;
+    }
   | { type: 'const'; sign: 1 | -1; value: number };
 
 export interface RollResult {
@@ -36,7 +59,7 @@ export class DiceError extends Error {}
 
 const MAX_DICE = 100;
 const MAX_SIDES = 1000;
-const TERM = /^(\d*)d(\d+|%)(?:(kh|kl|dh|dl|k)(\d+))?$|^(\d+)$/i;
+const TERM = /^(\d*)d(\d+|%)(?:(kh|kl|dh|dl|k)(\d+))?$|^(\d+)$|^(\d*)d(\d+)s(\d+)([gtm]*)$/i;
 
 export function roll(formula: string, rng: Rng = cryptoRng): RollResult {
   const clean = formula.replace(/\s+/g, '').toLowerCase();
@@ -56,6 +79,39 @@ export function roll(formula: string, rng: Rng = cryptoRng): RollResult {
       const value = Number(m[5]);
       parts.push({ type: 'const', sign, value });
       total += sign * value;
+      continue;
+    }
+
+    if (m[8] !== undefined) {
+      const count = m[6] ? Number(m[6]) : 1;
+      const sides = Number(m[7]);
+      const target = Number(m[8]);
+      if (count < 1 || count > MAX_DICE) throw new DiceError(`Numero di dadi fuori limite (1-${MAX_DICE})`);
+      if (sides < 2 || sides > MAX_SIDES) throw new DiceError(`Facce fuori limite (2-${MAX_SIDES})`);
+      const flags = (m[9] ?? '').toLowerCase();
+      const g = flags.includes('g');
+      const t = flags.includes('t');
+      const magic = flags.includes('m');
+      const pool = g && !t ? 'glorious' : t && !g ? 'grim' : undefined;
+      const rolls: DieRoll[] = Array.from({ length: count }, () => {
+        const value = rng(sides);
+        return { value, dropped: false, success: value <= target };
+      });
+      if (pool) {
+        for (const d of rolls) {
+          // in magic tests a nine stays where it fell
+          if (magic && d.value === 9) continue;
+          if ((pool === 'glorious' && !d.success) || (pool === 'grim' && d.success)) {
+            d.was = d.value;
+            d.value = rng(sides);
+            d.success = d.value <= target;
+          }
+        }
+      }
+      const subtotal = rolls.filter((d) => d.success).length;
+      const nines = sides === 10 ? rolls.filter((d) => d.value === 9).length : undefined;
+      parts.push({ type: 'dice', sign, count, sides, modifier: `s${target}${flags}`, rolls, subtotal, target, pool, nines });
+      total += sign * subtotal;
       continue;
     }
 
@@ -90,6 +146,7 @@ export function describeRoll(r: RollResult): string {
     .map((p, idx) => {
       const sign = p.sign < 0 ? '- ' : idx > 0 ? '+ ' : '';
       if (p.type === 'const') return `${sign}${p.value}`;
+      if (p.target !== undefined) return `${sign}[${p.rolls.map((d) => `${d.was !== undefined ? `${d.was}→` : ''}${d.value}${d.success ? '✓' : ''}`).join(', ')}]`;
       return `${sign}[${p.rolls.map((d) => (d.dropped ? `~${d.value}~` : String(d.value))).join(', ')}]`;
     })
     .join(' ');
@@ -99,4 +156,9 @@ export function isNat(r: RollResult, value: number): boolean {
   const d20 = r.parts.find((p) => p.type === 'dice' && p.sides === 20);
   if (!d20 || d20.type !== 'dice') return false;
   return d20.rolls.some((x) => !x.dropped && x.value === value);
+}
+
+/** Successes of the pools in a roll (constants count as automatic successes). */
+export function successes(r: RollResult): number | null {
+  return r.parts.some((p) => p.type === 'dice' && p.target !== undefined) ? r.total : null;
 }

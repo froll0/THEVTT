@@ -471,7 +471,7 @@ export class DiceTray {
 }
 
 /** Dice to show for a roll: standard dice only, at most `max`. d100 = tens + units d10. */
-export function diceFor(parts: { type: string; sides?: number; rolls?: { value: number; dropped: boolean }[] }[], max = 16): DieSpec[] {
+export function diceFor(parts: { type: string; sides?: number; rolls?: { value: number; dropped: boolean; success?: boolean }[] }[], max = 16): DieSpec[] {
   const out: DieSpec[] = [];
   for (const p of parts) {
     if (p.type !== 'dice' || !p.rolls) continue;
@@ -481,7 +481,8 @@ export function diceFor(parts: { type: string; sides?: number; rolls?: { value: 
         out.push({ sides: 10, value: r.value, labels: 'tens', dim: r.dropped });
         out.push({ sides: 10, value: r.value % 10, dim: r.dropped });
       } else if (p.sides === 4 || p.sides === 6 || p.sides === 8 || p.sides === 10 || p.sides === 12 || p.sides === 20) {
-        out.push({ sides: p.sides, value: r.value, dim: r.dropped });
+        // in a success pool the dice that failed stay dim
+        out.push({ sides: p.sides, value: r.value, dim: r.dropped || r.success === false });
       }
     }
   }

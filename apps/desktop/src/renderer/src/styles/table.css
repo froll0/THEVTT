@@ -967,3 +967,24 @@ kbd {
   color: var(--fg);
   white-space: nowrap;
 }
+
+/* success pools (Warhammer: the Old World) */
+.pool-outcome {
+  margin-top: 2px;
+  color: var(--text-2, inherit);
+}
+.pool-outcome.o0 {
+  color: var(--danger);
+}
+.pool-outcome.o2,
+.pool-outcome.o3 {
+  color: var(--success);
+}
+.pool-outcome.o3 {
+  font-weight: 600;
+}
+.zone-label {
+  pointer-events: none;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}

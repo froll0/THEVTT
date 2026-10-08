@@ -1,3 +1,4 @@
+import type { PoolStats, Zone } from './pool';
 import type { RollResult } from '../dice';
 import type { Macro } from '../macros';
 import { tokenVisible, type Fog } from './fog';
@@ -152,6 +153,8 @@ export interface Token {
   legendary?: { max: number; left: number } | null;
   /** its lair's actions, by name: a reminder at initiative 20 */
   lair?: string[];
+  /** success-pool systems: Resilienza, Protezione and wounds (see pool.ts) */
+  pool?: PoolStats;
 }
 
 export interface Defenses {
@@ -298,6 +301,8 @@ export interface GameState {
   gmNotes: string;
   notes?: Record<string, Note>;
   drawings?: Record<string, Drawing>;
+  /** regions of the scenes, for systems that count distance in zones */
+  zones?: Record<string, Zone>;
   music?: MusicState;
   walls?: Record<string, Wall>;
   props?: Record<string, Prop>;
@@ -383,6 +388,7 @@ export function createInitialState(opts: {
     gmNotes: '',
     notes: {},
     drawings: {},
+    zones: {},
     music: emptyMusic(),
     walls: {},
     props: {},
@@ -425,6 +431,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     characters: Object.fromEntries(Object.entries(state.characters).filter(([, c]) => c.ownerId === userId)),
     notes: Object.fromEntries(Object.entries(state.notes ?? {}).filter(([, n]) => noteVisibleTo(n, userId, state.gmId))),
     drawings: Object.fromEntries(Object.entries(state.drawings ?? {}).filter(([, d]) => d.sceneId === state.activeSceneId)),
+    zones: Object.fromEntries(Object.entries(state.zones ?? {}).filter(([, z]) => z.sceneId === state.activeSceneId)),
     walls: Object.fromEntries(Object.entries(state.walls ?? {}).filter(([, w]) => w.sceneId === state.activeSceneId)),
     props: Object.fromEntries(Object.entries(state.props ?? {}).filter(([, p]) => p.sceneId === state.activeSceneId && !p.hidden)),
     gmNotes: '',

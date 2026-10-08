@@ -5,6 +5,7 @@ import { emptyMask, paintRect, resizeMask } from './fog';
 import { isMapPackage } from './library';
 import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
 import { lineOfSight } from './vision';
+import { cleanPoolStats, cleanZone, trackRow, type PoolStats } from './pool';
 import {
   createScene,
   emptyMusic,
@@ -28,12 +29,15 @@ import {
 export type ActionResult = { ok: true } | { ok: false; reason: string };
 
 /** The map collections a GM action may change, for undo. */
-type UndoCol = 'tokens' | 'walls' | 'props' | 'drawings' | 'templates' | 'scenes';
+type UndoCol = 'tokens' | 'walls' | 'props' | 'drawings' | 'templates' | 'scenes' | 'zones';
 const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: string }>> = {
   'token.create': { cols: ['tokens'], label: 'nuovo token' },
   'token.move': { cols: ['tokens'], label: 'spostamento' },
   'token.update': { cols: ['tokens'], label: 'modifica del token' },
   'token.delete': { cols: ['tokens'], label: 'token eliminato' },
+  'zone.create': { cols: ['zones'], label: 'nuova zona' },
+  'zone.update': { cols: ['zones'], label: 'modifica della zona' },
+  'zone.delete': { cols: ['zones'], label: 'zona eliminata' },
   'wall.create': { cols: ['walls', 'scenes'], label: 'muri' },
   'wall.update': { cols: ['walls'], label: 'porta' },
   'wall.delete': { cols: ['walls'], label: 'muro eliminato' },
@@ -85,6 +89,10 @@ export interface GameHostOptions {
   saveBonus?: (token: Token, ability: Ability) => number | null;
   /** a character's sheet with the hit points its token now has (null: leave it) */
   withHp?: (character: TableCharacter, current: number) => unknown;
+  /** success-pool systems: what a total on the wounds table means */
+  woundResult?: (total: number) => { name: string; text: string; conditions?: string[]; dead?: boolean };
+  /** success-pool systems: the character's sheet with a new wound written on it (null: leave it) */
+  withWound?: (character: TableCharacter, wound: { name: string; text: string }) => unknown;
 }
 
 const ABILITY_NAMES: Record<Ability, string> = { str: 'Forza', dex: 'Destrezza', con: 'Costituzione', int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
@@ -103,7 +111,7 @@ function cleanDefenses(v: unknown): Defenses | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
-const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'conditionRounds', 'color', 'name', 'light', 'aura', 'used'];
+const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'conditionRounds', 'color', 'name', 'light', 'aura', 'used', 'pool'];
 
 function cleanAura(a: unknown): { radius: number; color: string } | null {
   const v = a as { radius?: unknown; color?: unknown } | null;
@@ -566,6 +574,7 @@ export class GameHost {
         delete s.scenes[action.sceneId];
         for (const t of Object.values(s.tokens)) if (t.sceneId === action.sceneId) delete s.tokens[t.id];
         for (const t of Object.values(s.templates ?? {})) if (t.sceneId === action.sceneId) delete s.templates![t.id];
+        for (const z of Object.values(s.zones ?? {})) if (z.sceneId === action.sceneId) delete s.zones![z.id];
         for (const w of Object.values(s.walls ?? {})) if (w.sceneId === action.sceneId) delete s.walls![w.id];
         for (const p of Object.values(s.props ?? {})) if (p.sceneId === action.sceneId) delete s.props![p.id];
         for (const d of Object.values(s.drawings ?? {})) if (d.sceneId === action.sceneId) delete s.drawings![d.id];
@@ -611,6 +620,11 @@ export class GameHost {
           if (max > 0) token.legendary = { max, left: max };
         }
         if (isGm && Array.isArray(t.lair) && t.lair.length) token.lair = t.lair.slice(0, 10).map((x) => String(x).slice(0, 60));
+        const pool = cleanPoolStats(t.pool);
+        if (pool) {
+          token.pool = pool;
+          if (pool.maxWounds) token.hp = { current: Math.max(0, pool.maxWounds - pool.wounds), max: pool.maxWounds };
+        }
         s.tokens[token.id] = token;
         break;
       }
@@ -681,6 +695,15 @@ export class GameHost {
           t.legendary = max > 0 ? { max, left: clampInt(patch.legendary?.left ?? max, 0, max) } : null;
         }
         if (patch.lair !== undefined) t.lair = Array.isArray(patch.lair) ? patch.lair.slice(0, 10).map((x) => String(x).slice(0, 60)) : [];
+        if (patch.pool !== undefined) {
+          const pool = cleanPoolStats(patch.pool);
+          if (pool) {
+            t.pool = pool;
+            // the bar shows the wounds a Servitore, Bruto or Mostruosità can still take
+            if (pool.maxWounds) t.hp = { current: Math.max(0, pool.maxWounds - pool.wounds), max: pool.maxWounds };
+            if (pool.maxWounds && pool.wounds < pool.maxWounds) t.conditions = t.conditions.filter((c) => c !== 'Sconfitto');
+          } else delete t.pool;
+        }
         if (patch.light !== undefined) t.light = cleanLight(patch.light);
         if (patch.aura !== undefined) t.aura = cleanAura(patch.aura);
         if (patch.darkvision !== undefined) t.darkvision = Math.min(60, Math.max(0, Number(patch.darkvision) || 0));
@@ -851,6 +874,54 @@ export class GameHost {
         }
         break;
       }
+      case 'pool.attack': {
+        const attacker = action.attackerId ? s.tokens[action.attackerId] : undefined;
+        if (!isGm && attacker && !attacker.ownerIds.includes(from)) return { ok: false, reason: 'Non controlli questo token' };
+        const targets = (Array.isArray(action.targetIds) ? action.targetIds : [])
+          .slice(0, 20)
+          .map((id) => s.tokens[id])
+          .filter((t): t is Token => !!t && t.id !== attacker?.id);
+        if (!targets.length) return { ok: false, reason: 'Seleziona un bersaglio sulla mappa' };
+        for (const t of targets) this.poolAttack(from, attacker, t, action);
+        break;
+      }
+      case 'pool.wound': {
+        const t = s.tokens[action.tokenId];
+        if (!t) return { ok: false, reason: 'Token inesistente' };
+        if (!isGm && !t.ownerIds.includes(from)) return { ok: false, reason: 'Non controlli questo token' };
+        if (!t.pool) return { ok: false, reason: 'Questo token non ha un profilo di combattimento' };
+        this.poolWound(from, t, clampInt(action.extraDice ?? 0, -5, 10), 'Ferita');
+        break;
+      }
+      case 'zone.create': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const sceneId = action.sceneId && s.scenes[action.sceneId] ? action.sceneId : s.activeSceneId;
+        const scene = s.scenes[sceneId]!;
+        s.zones ??= {};
+        if (Object.values(s.zones).filter((z) => z.sceneId === sceneId).length >= 60) return { ok: false, reason: 'Troppe zone in questa scena' };
+        const zone = cleanZone(action.zone, sceneId, newId(), { w: scene.widthCells, h: scene.heightCells });
+        if (!zone) return { ok: false, reason: 'Zona non valida' };
+        s.zones[zone.id] = zone;
+        break;
+      }
+      case 'zone.update': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const z = s.zones?.[action.zoneId];
+        if (!z) return { ok: false, reason: 'Zona inesistente' };
+        const scene = s.scenes[z.sceneId]!;
+        const next = cleanZone({ ...z, ...action.patch }, z.sceneId, z.id, { w: scene.widthCells, h: scene.heightCells });
+        if (next) s.zones![z.id] = next;
+        break;
+      }
+      case 'zone.delete': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!s.zones?.[action.zoneId]) return { ok: false, reason: 'Zona inesistente' };
+        delete s.zones[action.zoneId];
+        break;
+      }
       case 'card': {
         const c = action.card;
         if (!c || typeof c.title !== 'string' || !c.title.trim()) return { ok: false, reason: 'Scheda vuota' };
@@ -871,7 +942,9 @@ export class GameHost {
         if (action.tokenId && !token) return { ok: false, reason: 'Token inesistente' };
         if (!isGm && (!token || !token.ownerIds.includes(from))) return { ok: false, reason: 'Puoi aggiungere solo i tuoi token' };
         let value = action.value;
-        if (value === undefined || !isGm) {
+        // a whole side acts together: the players' first
+        if (action.side) value = action.side === 'players' ? 2 : 1;
+        else if (value === undefined || !isGm) {
           const mod = clampInt(action.modifier ?? 0, -20, 20);
           const r = roll(`1d20${mod >= 0 ? '+' : ''}${mod}`, this.rng);
           value = r.total;
@@ -1348,6 +1421,119 @@ export class GameHost {
   }
 
   /** A token takes damage; if it was keeping a spell up, it must try to hold on. */
+  /** One success-pool attack against one target. */
+  private poolAttack(from: string, attacker: Token | undefined, t: Token, a: Extract<GameAction, { type: 'pool.attack' }>): void {
+    const name = String(a.name ?? 'Attacco').slice(0, 60);
+    const flags = `${a.glorious ? 'g' : ''}${a.grim ? 't' : ''}`;
+    const pool = (dice: number, target: number, f = '') =>
+      dice < 1 ? roll(`1d10s1${f}`, this.rng) : roll(`${clampInt(dice, 1, 20)}d10s${clampInt(target, 1, 10)}${f}`, this.rng);
+    const att = pool(Number(a.dice) || 0, Number(a.target) || 1, flags);
+    const st = t.pool;
+    const helpless = t.conditions.includes('Indifeso');
+    const opposed = !a.unopposed && !helpless && !!st;
+    const defDice = st ? (a.ranged ? st.ranged : st.melee) : undefined;
+    // a blinded defender opposes grimly
+    const def = opposed && defDice ? pool(defDice.dice, defDice.target, t.conditions.includes('Accecato') ? 't' : '') : undefined;
+    const hits = att.total;
+    const blocks = def?.total ?? 0;
+    // ties go to the attacker; nobody hits with no successes
+    const hit = hits > 0 && hits >= blocks;
+    const hidden = t.hidden;
+    this.log({ kind: 'roll', authorId: from, text: `${hits}`, label: `${name} → ${t.name}`.slice(0, 120), roll: att, private: hidden });
+    if (def) this.log({ kind: 'roll', authorId: from, text: `${blocks}`, label: `${t.name} si oppone`.slice(0, 120), roll: def, private: hidden });
+    const lines: string[] = [`Successi: ${hits}${def ? ` contro ${blocks}` : a.unopposed || helpless ? ' (senza opposizione)' : ''}`];
+    if (!hit) {
+      lines.push(def && hits > 0 ? 'Parato o schivato.' : 'Mancato.');
+      // a missed melee blow leaves the attacker off balance (monsters excepted)
+      if (!a.ranged && attacker && !attacker.pool?.monster) {
+        lines.push(`${attacker.name} è Barcollante.`);
+        this.stagger(from, attacker, lines);
+      }
+      this.poolCard(from, name, t, lines, hidden);
+      return;
+    }
+    const over = def ? hits - blocks : hits;
+    if (a.damage === null || a.damage === undefined) {
+      const cond = String(a.condition ?? 'Barcollante').slice(0, 30);
+      lines.push(`Colpito: ${cond}.`);
+      if (cond === 'Barcollante') this.stagger(from, t, lines);
+      else if (!t.conditions.includes(cond)) t.conditions = [...t.conditions, cond];
+      this.poolCard(from, name, t, lines, hidden);
+      return;
+    }
+    const dmg = Math.max(0, Math.round(Number(a.damage) || 0)) + over + (st?.armoured ? clampInt(a.vsArmoured ?? 0, 0, 5) : 0);
+    if (!st) {
+      lines.push(`Colpito: ${dmg} Danni (il bersaglio non ha Resilienza sulla scheda).`);
+      this.poolCard(from, name, t, lines, hidden);
+      return;
+    }
+    const res = a.ignoresArmour ? st.toughness : st.resilience;
+    lines.push(`Danni ${dmg} contro Resilienza ${res}${a.ignoresArmour ? ' (ignora l’armatura)' : ''}.`);
+    if (dmg > res || helpless) {
+      this.poolCard(from, name, t, lines, hidden);
+      this.poolWound(from, t, clampInt(a.woundDice ?? 0, 0, 5), name);
+      return;
+    }
+    this.stagger(from, t, lines);
+    this.poolCard(from, name, t, lines, hidden);
+  }
+
+  /** Barcollante, or, for one who already is, the choice the rules give. */
+  private stagger(_from: string, t: Token, lines: string[]): void {
+    if (!t.conditions.includes('Barcollante')) {
+      t.conditions = [...t.conditions, 'Barcollante'];
+      lines.push(`${t.name} è Barcollante.`);
+      return;
+    }
+    lines.push(`${t.name} era già Barcollante: sceglie se Arretrare, cadere Prono o subire una Ferita.`);
+  }
+
+  private poolCard(from: string, title: string, t: Token, lines: string[], hidden: boolean): void {
+    this.log({ kind: 'card', authorId: from, text: title, private: hidden, card: { title: `${title} → ${t.name}`.slice(0, 120), body: lines.join('\n') } });
+  }
+
+  /** A wound: Servitori fall, Bruti and Mostruosità follow their track, the others roll on the wounds table. */
+  private poolWound(from: string, t: Token, extraDice: number, cause: string): void {
+    const st = t.pool as PoolStats;
+    st.wounds += 1;
+    // a wound shakes off the stagger
+    t.conditions = t.conditions.filter((c) => c !== 'Barcollante');
+    const lines: string[] = [];
+    if (st.maxWounds != null) {
+      if (st.maxWounds > 0) t.hp = { current: Math.max(0, st.maxWounds - st.wounds), max: st.maxWounds };
+      if (st.wounds >= st.maxWounds) {
+        if (!t.conditions.includes('Sconfitto')) t.conditions = [...t.conditions, 'Sconfitto'];
+        lines.push(`${t.name} è sconfitto: chi l’ha colpito sceglie se ucciderlo, stordirlo o costringerlo alla resa.`);
+      } else {
+        const row = trackRow(st.track, st.wounds);
+        lines.push(`${t.name} subisce una Ferita (${st.wounds}/${st.maxWounds})${row && row.effect !== '—' ? `: ${row.effect}` : ''}.`);
+      }
+      this.log({ kind: 'card', authorId: from, text: 'Ferita', private: t.hidden, card: { title: `Ferita · ${t.name}`, subtitle: cause, body: lines.join('\n') } });
+      return;
+    }
+    // characters and Campioni roll: 1d10 and one more per untreated wound
+    const untreated = st.untreated ?? 0;
+    const dice = Math.max(1, 1 + untreated + extraDice - (st.hardy ? 1 : 0));
+    const r = roll(`${dice}d10`, this.rng);
+    st.untreated = untreated + 1;
+    this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `Tabella delle Ferite · ${t.name}`, roll: r, private: t.hidden });
+    const res = this.opts.woundResult?.(r.total);
+    if (res) {
+      lines.push(`${res.name} (${r.total}): ${res.text}`);
+      for (const c of res.conditions ?? []) if (!t.conditions.includes(c)) t.conditions = [...t.conditions, c];
+      if (res.dead && !t.conditions.includes('Morto')) t.conditions = [...t.conditions, 'Morto'];
+      const ch = t.characterId ? this._state.characters[t.characterId] : undefined;
+      if (ch && this.opts.withWound) {
+        const data = this.opts.withWound(ch, { name: res.name, text: res.text });
+        if (data !== null && data !== undefined) {
+          ch.data = data;
+          this.opts.onCharacterChange?.(ch);
+        }
+      }
+    } else lines.push(`Totale ${r.total} sulla tabella delle Ferite.`);
+    this.log({ kind: 'card', authorId: from, text: 'Ferita', private: t.hidden, card: { title: `Ferita · ${t.name}`, subtitle: cause, body: lines.join('\n') } });
+  }
+
   private hurt(t: Token, amount: number, from: string): void {
     if (!t.hp || amount <= 0) return;
     t.hp = { ...t.hp, current: Math.max(0, t.hp.current - amount) };

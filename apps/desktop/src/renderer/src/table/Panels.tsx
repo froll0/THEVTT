@@ -1,4 +1,4 @@
-import { describeRoll, isNat, type Ambient, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
+import { describeRoll, isNat, successes, type Ambient, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
@@ -111,6 +111,9 @@ function LogLine({
   if (e.kind === 'roll' && e.roll) {
     const crit = isNat(e.roll, 20) && e.roll.parts.some((p) => p.type === 'dice' && p.sides === 20);
     const fumble = isNat(e.roll, 1) && e.roll.parts.some((p) => p.type === 'dice' && p.sides === 20);
+    // success pools: how many, and what that means
+    const hits = successes(e.roll);
+    const nines = e.roll.parts.reduce((n, p) => n + (p.type === 'dice' && p.modifier?.includes('m') ? (p.nines ?? 0) : 0), 0);
     return (
       <div className={`log-roll ${crit ? 'crit' : ''} ${fumble ? 'fumble' : ''}`}>
         <div className="row between small">
@@ -125,9 +128,17 @@ function LogLine({
           <span className="mono faint small">
             {e.roll.formula} → {describeRoll(e.roll).replace(/~(\d+)~/g, '($1)')}
           </span>
-          <span className="roll-total">{e.roll.total}</span>
+          <span className="roll-total" title={hits !== null ? 'Successi' : undefined}>
+            {e.roll.total}
+          </span>
         </div>
-        {target && e.roll.total > 0 && !e.label?.includes(' → ') && (
+        {hits !== null && !e.label?.includes(' → ') && !e.label?.includes('si oppone') && (
+          <div className={`small pool-outcome o${Math.min(3, Math.max(0, hits))}`}>
+            {hits === 1 ? '1 successo' : `${hits} successi`} · {POOL_OUTCOME[Math.min(3, Math.max(0, hits))]}
+            {nines > 0 && <span className="badge" style={{ marginLeft: 6 }}>{nines === 1 ? 'un 9: Incidente Magico' : `${nines} nove: Incidenti Magici`}</span>}
+          </div>
+        )}
+        {target && hits === null && e.roll.total > 0 && !e.label?.includes(' → ') && (
           <div className="roll-apply">
             <span className="faint tiny ellipsis">a {target.name}:</span>
             <button className="btn ghost sm" title="Infliggi come danni" onClick={() => target.apply(-e.roll!.total)}>
@@ -224,6 +235,9 @@ export function InitiativePanel() {
   const isGm = role === 'gm';
   const current = ini.entries[ini.turn];
   const myTurn = !!current?.tokenId && !!state.tokens[current.tokenId]?.ownerIds.includes(meId);
+  // success-pool systems: sides, one Action each
+  const sides = getSystem(state.systemId)?.table === 'pool';
+  const sideOf = (t: Token) => (t.characterId || t.ownerIds.length ? 'players' : 'enemies') as 'players' | 'enemies';
 
   return (
     <div className="panel-body col">
@@ -258,12 +272,13 @@ export function InitiativePanel() {
               )}
               {ini.round > 0 && t && (isGm || t.ownerIds.includes(meId)) && (
                 <span className="ini-economy" role="group" aria-label={`Azioni di ${e.name}`}>
-                  {(
-                    [
-                      ['action', 'A', 'Azione'],
-                      ['bonus', 'B', 'Azione bonus'],
-                      ['reaction', 'R', 'Reazione'],
-                    ] as const
+                  {(sides
+                    ? ([['action', 'A', 'Azione']] as const)
+                    : ([
+                        ['action', 'A', 'Azione'],
+                        ['bonus', 'B', 'Azione bonus'],
+                        ['reaction', 'R', 'Reazione'],
+                      ] as const)
                   ).map(([k, short, label]) => (
                     <button
                       key={k}
@@ -278,7 +293,11 @@ export function InitiativePanel() {
                   ))}
                 </span>
               )}
-              {isGm ? (
+              {sides ? (
+                <span className="faint tiny" title="Schieramento">
+                  {e.value >= 2 ? 'PG' : 'Nemici'}
+                </span>
+              ) : isGm ? (
                 <input
                   key={e.value}
                   className="input ini-value"
@@ -301,6 +320,31 @@ export function InitiativePanel() {
       </div>
       {isGm && (
         <>
+          {sides ? (
+            <div className="row wrap" style={{ gap: 6 }}>
+              {(['players', 'enemies'] as const).map((first) => (
+                <button
+                  key={first}
+                  className="btn sm"
+                  title={first === 'players' ? 'Prima i PG, poi i nemici' : 'Imboscata: prima i nemici'}
+                  onClick={() => {
+                    const actions = ini.entries.map((e) => ({ type: 'initiative.remove' as const, entryId: e.id }));
+                    const add = Object.values(state.tokens)
+                      .filter((t) => t.sceneId === state.activeSceneId && !t.conditions.includes('Sconfitto') && !t.conditions.includes('Morto'))
+                      .map((t) => {
+                        // the side ambushed goes second
+                        const side = sideOf(t);
+                        const value = first === 'players' ? (side === 'players' ? 2 : 1) : side === 'enemies' ? 2 : 1;
+                        return { type: 'initiative.add' as const, name: t.name, tokenId: t.id, value };
+                      });
+                    dispatch({ type: 'batch', actions: [...actions, ...add] });
+                  }}
+                >
+                  <Swords size={14} /> {first === 'players' ? 'Battaglia' : 'Imboscata!'}
+                </button>
+              ))}
+            </div>
+          ) : (
           <button
             className="btn sm"
             onClick={() => {
@@ -313,6 +357,7 @@ export function InitiativePanel() {
           >
             <Swords size={14} /> Tira per tutti i token
           </button>
+          )}
           <div className="row">
             <input className="input grow" placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} />
             <input className="input" style={{ width: 64 }} placeholder="Val" type="number" value={value} onChange={(e) => setValue(e.target.value)} />
@@ -428,6 +473,7 @@ export function SheetWindow({ characterId, width, placeAt }: { characterId: stri
         color: owner?.color,
         darkvision: d.darkvision && state.scenes[state.activeSceneId] ? metresToCells(state.scenes[state.activeSceneId]!, d.darkvision) : 0,
         defenses: d.defenses,
+        pool: d.pool,
       },
     });
   };
@@ -448,6 +494,8 @@ export function SheetWindow({ characterId, width, placeAt }: { characterId: stri
           const d = system.tokenDefaults(data);
           for (const t of Object.values(state.tokens)) {
             if (t.characterId === selected.id && d.hp) dispatch({ type: 'token.update', tokenId: t.id, patch: { hp: d.hp } });
+            // success pools: Resilienza, Protezione and wounds follow the sheet
+            if (t.characterId === selected.id && d.pool && JSON.stringify(d.pool) !== JSON.stringify(t.pool)) dispatch({ type: 'token.update', tokenId: t.id, patch: { pool: d.pool } });
           }
         }}
         onRoll={(formula, label) => dispatch({ type: 'roll', formula, label: `${selected.name} · ${label}` })}
@@ -1173,6 +1221,9 @@ export function TokenInspector({ token }: { token: Token }) {
       </div>
       {canEdit ? (
         <>
+          {system?.table === 'pool' ? (
+            <PoolFields token={token} isGm={isGm} onChange={(pool) => upd({ pool: pool ?? undefined })} onWound={() => dispatch({ type: 'pool.wound', tokenId: token.id })} />
+          ) : (
           <div className="insp-stats">
             <Field label="PF">
               <div className="row" style={{ gap: 4 }}>
@@ -1187,6 +1238,7 @@ export function TokenInspector({ token }: { token: Token }) {
               </Field>
             )}
           </div>
+          )}
           <div className="insp-stats">
             <Field label="Colore">
               <input type="color" value={token.color} onChange={(e) => upd({ color: e.target.value })} />
@@ -1224,7 +1276,7 @@ export function TokenInspector({ token }: { token: Token }) {
                   key={c}
                   className={`chip ${token.conditions.includes(c) ? 'on' : ''}`}
                   style={{ padding: '2px 8px', fontSize: '0.78rem' }}
-                  title={dnd5e.CONDITION_INFO[c]}
+                  title={system.conditionInfo?.[c]}
                   onClick={() => upd({ conditions: token.conditions.includes(c) ? token.conditions.filter((x) => x !== c) : [...token.conditions, c] })}
                 >
                   <ConditionIcon name={c} /> {c}
@@ -1262,12 +1314,12 @@ export function TokenInspector({ token }: { token: Token }) {
               <span className="faint tiny">Le durate scalano all’inizio di ogni turno del token, in iniziativa.</span>
             </div>
           )}
-          {inInitiative && state.initiative.round > 0 && <TurnEconomy token={token} />}
+          {system?.table !== 'pool' && inInitiative && state.initiative.round > 0 && <TurnEconomy token={token} />}
           {isGm && token.legendary && <LegendaryCounter token={token} />}
-          {inInitiative && state.initiative.round > 0 && state.scenes[token.sceneId] && (
+          {system?.table !== 'pool' && inInitiative && state.initiative.round > 0 && state.scenes[token.sceneId] && (
             <MovementLine token={token} />
           )}
-          {isGm ? (
+          {system?.table === 'pool' ? null : isGm ? (
             <DefensesEditor defenses={token.defenses} onChange={(defenses) => upd({ defenses })} />
           ) : (
             token.defenses && <p className="faint tiny">{describeDefenses(token.defenses)}</p>
@@ -1316,7 +1368,17 @@ export function TokenInspector({ token }: { token: Token }) {
                 Scheda del mostro
               </summary>
               <div style={{ paddingTop: 8 }}>
-                <ui.StatBlock monsterId={token.monsterId} onRoll={(formula, label) => dispatch({ type: 'roll', formula, label, private: true })} />
+                <ui.StatBlock
+                  monsterId={token.monsterId}
+                  onRoll={(formula, label) => dispatch({ type: 'roll', formula, label, private: true })}
+                  onAttack={(a) => {
+                    const t = useTable.getState();
+                    const targets = (t.targets.length ? t.targets : []).filter((id) => id !== token.id);
+                    if (!targets.length) return false;
+                    dispatch({ type: 'pool.attack', attackerId: token.id, targetIds: targets, ...a });
+                    return true;
+                  }}
+                />
               </div>
             </details>
           )}
@@ -1324,9 +1386,16 @@ export function TokenInspector({ token }: { token: Token }) {
             <button
               className="btn sm grow"
               disabled={inInitiative}
-              onClick={() => dispatch({ type: 'initiative.add', name: token.name, tokenId: token.id, modifier: iniMod })}
+              onClick={() =>
+                dispatch(
+                  system?.table === 'pool'
+                    ? // a whole side acts together: the players first, unless ambushed
+                      { type: 'initiative.add', name: token.name, tokenId: token.id, side: token.characterId || token.ownerIds.length ? 'players' : 'enemies' }
+                    : { type: 'initiative.add', name: token.name, tokenId: token.id, modifier: iniMod },
+                )
+              }
             >
-              <Swords size={14} /> {inInitiative ? 'In iniziativa' : 'Tira iniziativa'}
+              <Swords size={14} /> {inInitiative ? 'Nel turno' : system?.table === 'pool' ? 'Entra in battaglia' : 'Tira iniziativa'}
             </button>
             <button
               className="btn sm icon danger"
@@ -1347,9 +1416,126 @@ export function TokenInspector({ token }: { token: Token }) {
   );
 }
 
+/** Resilienza, Protezione and wounds of a success-pool token. */
+function PoolFields({ token, isGm, onChange, onWound }: { token: Token; isGm: boolean; onChange: (pool: Token['pool'] | null) => void; onWound: () => void }) {
+  const p = token.pool;
+  if (!p) {
+    return isGm ? (
+      <button
+        className="btn ghost sm"
+        onClick={() => onChange({ type: 'Servitore', resilience: 3, toughness: 3, armoured: false, melee: { dice: 3, target: 3 }, ranged: { dice: 3, target: 3 }, wounds: 0, maxWounds: 1 })}
+      >
+        Aggiungi Resilienza e Ferite
+      </button>
+    ) : null;
+  }
+  const set = (patch: Partial<NonNullable<Token['pool']>>) => onChange({ ...p, ...patch });
+  const num = (v: string) => Math.max(0, Number(v) || 0);
+  return (
+    <div className="col" style={{ gap: 6 }}>
+      <div className="insp-stats">
+        <Field label="Resilienza">
+          <input className="input" type="number" disabled={!isGm || p.type === 'pg'} value={p.resilience} onChange={(e) => set({ resilience: num(e.target.value) })} />
+        </Field>
+        <Field label={p.maxWounds ? `Ferite (su ${p.maxWounds})` : 'Ferite'}>
+          <div className="row" style={{ gap: 4 }}>
+            <button className="btn ghost sm icon" aria-label="Una Ferita in meno" disabled={!isGm || p.wounds < 1} onClick={() => set({ wounds: p.wounds - 1 })}>
+              <Minus size={12} />
+            </button>
+            <b>{p.wounds}</b>
+            <button className="btn ghost sm icon" aria-label="Una Ferita" title={p.maxWounds ? 'Una Ferita' : 'Ferita: tira sulla tabella'} onClick={onWound}>
+              <Plus size={12} />
+            </button>
+          </div>
+        </Field>
+      </div>
+      <span className="faint tiny">
+        {p.type === 'pg' ? 'Personaggio' : p.type}
+        {p.armoured ? ' · corazzato' : ''} · si oppone in mischia con {p.melee.dice}d/{p.melee.target}, a distanza con {p.ranged.dice}d/{p.ranged.target}
+        {p.untreated ? ` · ${p.untreated} Ferite da medicare` : ''}
+      </span>
+      {isGm && p.type !== 'pg' && (
+        <div className="row wrap" style={{ gap: 4 }}>
+          {(['Servitore', 'Bruto', 'Campione', 'Mostruosità'] as const).map((t) => (
+            <button key={t} className={`chip sm ${p.type === t ? 'on' : ''}`} onClick={() => set({ type: t, maxWounds: t === 'Servitore' ? 1 : t === 'Campione' ? null : (p.maxWounds ?? 2), monster: t === 'Mostruosità' || undefined })}>
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const POOL_OUTCOME = ['Fallimento', 'Successo Marginale', 'Successo', 'Successo Totale'];
+
 // ---------- dice bar ----------
 
 export function DiceBar() {
+  const systemId = useTable((s) => s.state?.systemId ?? '');
+  return getSystem(systemId)?.table === 'pool' ? <PoolDiceBar /> : <D20DiceBar />;
+}
+
+/** Success pools: so many d10, each at or under the target is a success. */
+function PoolDiceBar() {
+  const { dispatch, role } = useTable();
+  const [dice, setDice] = useState(3);
+  const [target, setTarget] = useState(3);
+  const [mode, setMode] = useState<'' | 'g' | 't'>('');
+  const [hidden, setHidden] = useState(false);
+  const rollPool = () =>
+    dispatch({ type: 'roll', formula: `${dice}d10s${target}${mode}`, label: `Prova ${dice}d/${target}${mode === 'g' ? ' (Gloriosa)' : mode === 't' ? ' (Tetra)' : ''}`, private: hidden });
+  return (
+    <div className="dicebar glass" aria-label="Dadi">
+      <button className="die" onClick={() => setDice(Math.max(1, dice - 1))} aria-label="Un dado in meno">
+        −
+      </button>
+      <span className="mod-value" title="Dadi (la Caratteristica)">
+        {dice}d
+      </span>
+      <button className="die" onClick={() => setDice(Math.min(20, dice + 1))} aria-label="Un dado in più">
+        +
+      </button>
+      <span className="sep" />
+      <button className="die" onClick={() => setTarget(Math.max(1, target - 1))} aria-label="Soglia più bassa">
+        −
+      </button>
+      <span className="mod-value" title="Soglia (l’Abilità): successo con questo o meno">
+        ≤{target}
+      </span>
+      <button className="die" onClick={() => setTarget(Math.min(10, target + 1))} aria-label="Soglia più alta">
+        +
+      </button>
+      <span className="sep" />
+      <button className={`die wide ${mode === 'g' ? 'on' : ''}`} onClick={() => setMode(mode === 'g' ? '' : 'g')} title="Gloriosa: ritira i fallimenti">
+        GLO
+      </button>
+      <button className={`die wide ${mode === 't' ? 'on' : ''}`} onClick={() => setMode(mode === 't' ? '' : 't')} title="Tetra: ritira i successi">
+        TET
+      </button>
+      <button className="die wide" onClick={rollPool} title="Tira la riserva">
+        <Dices size={14} />
+      </button>
+      <span className="sep" />
+      <button className="die" onClick={() => dispatch({ type: 'roll', formula: '1d10', private: hidden })} title="Tira 1d10">
+        d10
+      </button>
+      <button className="die" onClick={() => dispatch({ type: 'roll', formula: '1d100', private: hidden })} title="Tira 1d100">
+        d100
+      </button>
+      {role === 'gm' && (
+        <>
+          <span className="sep" />
+          <button className={`die wide ${hidden ? 'on' : ''}`} onClick={() => setHidden(!hidden)} title="Tiri nascosti ai giocatori">
+            {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function D20DiceBar() {
   const { dispatch, role } = useTable();
   const [mod, setMod] = useState(0);
   const [hidden, setHidden] = useState(false);

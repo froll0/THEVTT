@@ -1,8 +1,10 @@
 import type { GameSystem } from './types';
 import { dnd5e2024 } from './dnd5e-2024';
+import { wtow } from './wtow';
 
 export * from './types';
 export * as dnd5e from './dnd5e-2024';
+export * as warhammer from './wtow';
 
 const registry = new Map<string, GameSystem<any>>();
 
@@ -19,3 +21,4 @@ export function listSystems(): GameSystem<any>[] {
 }
 
 registerSystem(dnd5e2024);
+registerSystem(wtow);

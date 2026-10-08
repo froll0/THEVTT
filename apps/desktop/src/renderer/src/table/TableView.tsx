@@ -1,6 +1,6 @@
 import { rotatePiece } from '@thevtt/shared';
 import { getSystem } from '@thevtt/systems';
-import { ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -194,7 +194,11 @@ export function TableView({ campaignId }: { campaignId: string }) {
     setTool('select');
   };
   const boardTool: Tool = editing ? (editorTool === 'labels' ? 'draw' : editorTool) : tool;
-  const boardOptions: ToolOptions = editing ? { ...options, drawText: editorTool === 'labels' && !options.erase, drawColor: options.drawColor || '#ffffff' } : { ...options, showTokens: true };
+  // success-pool systems count distances in zones
+  const zoned = getSystem(state?.systemId ?? '')?.table === 'pool';
+  const boardOptions: ToolOptions = editing
+    ? { ...options, zones: zoned, drawText: editorTool === 'labels' && !options.erase, drawColor: options.drawColor || '#ffffff' }
+    : { ...options, zones: zoned, showTokens: true };
   const selected = table.selectedTokenId ? state?.tokens[table.selectedTokenId] : undefined;
   const players = Object.values(state?.players ?? {});
 
@@ -339,6 +343,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                   ...(isGm
                     ? ([
                         { id: 'fog', icon: CloudFog, label: 'Nebbia di guerra' },
+                        ...(zoned ? ([{ id: 'zones', icon: LayoutGrid, label: 'Zone: trascina per disegnarne una' }] as const) : []),
                       ] as const)
                     : []),
                 ] as const
@@ -358,7 +363,12 @@ export function TableView({ campaignId }: { campaignId: string }) {
                     title="Aggiungi token"
                     onClick={() => {
                       table.selectNextToken();
-                      table.dispatch({ type: 'token.create', token: { name: 'PNG', ...viewCenter(), color: '#9a9ba3', hp: { current: 10, max: 10 }, ac: 12 } });
+                      table.dispatch({
+                        type: 'token.create',
+                        token: zoned
+                          ? { name: 'PNG', ...viewCenter(), color: '#9a9ba3', pool: { type: 'Servitore', resilience: 3, toughness: 3, armoured: false, melee: { dice: 3, target: 3 }, ranged: { dice: 3, target: 3 }, wounds: 0, maxWounds: 1 } }
+                          : { name: 'PNG', ...viewCenter(), color: '#9a9ba3', hp: { current: 10, max: 10 }, ac: 12 },
+                      });
                     }}
                   >
                     <UserRoundPlus size={16} />
@@ -444,6 +454,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
               )}
             </div>
           )}
+          {state && scene && !editing && tool === 'zones' && isGm && <ZonesPanel sceneId={scene.id} erase={!!options.zoneErase} setErase={(zoneErase) => setOptions({ ...options, zoneErase })} />}
           {state && scene && !editing && tool === 'fog' && isGm && (
             <div className="float tool-options glass">
               <button className={`tool wide ${options.fogReveal ? 'active' : ''}`} onClick={() => setOptions({ ...options, fogReveal: true })}>
@@ -578,6 +589,54 @@ export function TableView({ campaignId }: { campaignId: string }) {
   );
 }
 
+/** GM: the zones of the scene, to name them and mark difficult ground, cover and hazards. */
+function ZonesPanel({ sceneId, erase, setErase }: { sceneId: string; erase: boolean; setErase: (v: boolean) => void }) {
+  const { state, dispatch } = useTable();
+  const zones = Object.values(state?.zones ?? {}).filter((z) => z.sceneId === sceneId);
+  return (
+    <div className="float tool-options glass zones-panel" style={{ flexDirection: 'column', alignItems: 'stretch', maxHeight: '60vh', overflow: 'auto', width: 300 }}>
+      <div className="row between">
+        <b className="small">Zone</b>
+        <span className="row" style={{ gap: 4 }}>
+          <button className={`tool ${!erase ? 'active' : ''}`} title="Disegna: trascina sulla mappa" onClick={() => setErase(false)}>
+            <Square size={14} />
+          </button>
+          <button className={`tool ${erase ? 'active' : ''}`} title="Cancella: clic su una zona" onClick={() => setErase(true)}>
+            <Eraser size={14} />
+          </button>
+        </span>
+      </div>
+      {zones.map((z) => (
+        <div key={z.id} className="col" style={{ gap: 4, borderTop: '1px solid var(--border)', paddingTop: 6 }}>
+          <div className="row" style={{ gap: 4 }}>
+            <input className="input grow" defaultValue={z.name} key={z.name} aria-label="Nome della zona" onBlur={(e) => e.target.value !== z.name && dispatch({ type: 'zone.update', zoneId: z.id, patch: { name: e.target.value } })} />
+            <button className="btn ghost sm icon" aria-label="Elimina la zona" onClick={() => dispatch({ type: 'zone.delete', zoneId: z.id })}>
+              <Trash2 size={12} />
+            </button>
+          </div>
+          <div className="row wrap" style={{ gap: 4 }}>
+            <button className={`chip sm ${z.difficult ? 'on' : ''}`} onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { difficult: !z.difficult } })}>
+              Terreno Difficile
+            </button>
+            <button className={`chip sm ${z.cover ? 'on' : ''}`} onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { cover: !z.cover } })}>
+              Copertura
+            </button>
+            <select className="select tool-select" aria-label="Pericolo" value={z.hazard ?? 0} onChange={(e) => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazard: Number(e.target.value) } })}>
+              <option value={0}>Nessun Pericolo</option>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  Pericolo ({n})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      ))}
+      {!zones.length && <span className="faint small">Trascina sulla mappa per disegnare una Zona: stanze, cortili, tratti di strada. Le distanze si contano in Zone.</span>}
+    </div>
+  );
+}
+
 function ConnectionBadge({ isGm, onlinePlayers }: { isGm: boolean; onlinePlayers: string[] }) {
   const routes = useTable((s) => s.routes);
   if (isGm) {
@@ -624,7 +683,7 @@ function GroupBar({ isGm }: { isGm: boolean }) {
         </button>
       </div>
       <p className="faint small">Trascina uno di loro per spostarli insieme. Shift+clic aggiunge o toglie, Shift+trascina seleziona un’area.</p>
-      {isGm && tokens.length > 0 && <GroupSaveForm tokenIds={tokens.map((t) => t.id)} />}
+      {isGm && tokens.length > 0 && getSystem(state.systemId)?.table !== 'pool' && <GroupSaveForm tokenIds={tokens.map((t) => t.id)} />}
       <div className="row wrap">
         {isGm && (
           <button className="btn sm" onClick={() => setHidden(anyVisible)}>

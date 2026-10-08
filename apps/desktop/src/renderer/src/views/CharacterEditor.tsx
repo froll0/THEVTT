@@ -1,4 +1,4 @@
-import { describeRoll, roll } from '@thevtt/shared';
+import { describeRoll, roll, successes } from '@thevtt/shared';
 import { getSystem, listSystems } from '@thevtt/systems';
 import { ArrowLeft, MoreHorizontal } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -76,7 +76,8 @@ export function CharacterEditor({ id, systemId: requestedSystem, assignTo }: { i
   const localRoll = (formula: string, label: string) => {
     try {
       const r = roll(formula);
-      toast(`${label}: ${r.total}  (${describeRoll(r).replace(/~(\d+)~/g, '($1)')})`);
+      const hits = successes(r);
+      toast(`${label}: ${hits !== null ? `${hits} ${hits === 1 ? 'successo' : 'successi'}` : r.total}  (${describeRoll(r).replace(/~(\d+)~/g, '($1)')})`);
     } catch {
       toast(label);
     }

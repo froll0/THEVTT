@@ -18,6 +18,7 @@ test('builds a wizard with the guided flow, casts and levels up', async () => {
 
   await nav(page, 'Personaggi');
   await page.getByRole('main').getByRole('button', { name: 'Nuovo personaggio' }).click();
+  await page.getByRole('button', { name: /Dungeons & Dragons/ }).click();
   await page.getByRole('button', { name: /^Mago/ }).click();
   await expect(page.getByText('Recupero arcano.')).toBeVisible();
   await next();

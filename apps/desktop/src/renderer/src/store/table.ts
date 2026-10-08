@@ -284,6 +284,9 @@ export const useTable = create<TableStore>((set, get) => {
         saveBonus: (t, ability) => (host ? tokenSave(host.state, t, ability) : null),
         // the sheet follows its token's hit points
         withHp: (ch, current) => getSystem(ch.systemId)?.withHp?.(ch.data, current) ?? null,
+        // success-pool systems: the wounds table, and the wound written on the sheet
+        woundResult: (total) => getSystem(state.systemId)?.woundResult?.(total) ?? { name: `Ferita (${total})`, text: '' },
+        withWound: (ch, wound) => getSystem(ch.systemId)?.withWound?.(ch.data, wound) ?? null,
         send: (to, msg) => {
           if (to === me) apply(msg);
           else if (!links.get(to)?.send(msg)) rt.send({ t: 'relay.peer', campaignId: campaign.id, to, payload: msg });

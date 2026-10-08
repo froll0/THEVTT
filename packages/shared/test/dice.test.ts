@@ -45,3 +45,31 @@ describe('roll', () => {
     }
   });
 });
+
+describe('success pools', () => {
+  it('counts dice at or under the target', () => {
+    const r = roll('4d10s3', seq(2, 7, 3, 10));
+    expect(r.total).toBe(2);
+    expect(describeRoll(r)).toBe('[2✓, 7, 3✓, 10]');
+  });
+
+  it('Gloriosa rerolls the failures once, Tetra the successes', () => {
+    expect(roll('3d10s4g', seq(1, 8, 9, 2, 6)).total).toBe(2);
+    expect(roll('3d10s4t', seq(1, 8, 2, 9, 3)).total).toBe(1);
+    // both at once cancel out: no rerolls
+    expect(roll('2d10s4gt', seq(1, 8, 2, 2)).total).toBe(1);
+  });
+
+  it('keeps nines in magic tests and counts them', () => {
+    const r = roll('3d10s5gm', seq(9, 7, 2, 1));
+    const p = r.parts[0]!;
+    expect(p.type === 'dice' && p.nines).toBe(1);
+    expect(p.type === 'dice' && p.rolls[0]!.was).toBeUndefined();
+    // 9 stays, 7 becomes a 1, 2 already succeeded
+    expect(r.total).toBe(2);
+  });
+
+  it('adds constants as automatic successes', () => {
+    expect(roll('2d10s5+1', seq(1, 9)).total).toBe(2);
+  });
+});

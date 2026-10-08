@@ -1,4 +1,4 @@
-import type { Token } from '@thevtt/shared';
+import type { RollResult, Token } from '@thevtt/shared';
 import type { SheetTable } from '../systems';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
@@ -56,5 +56,42 @@ export function useSheetTable(characterId: string): SheetTable | undefined {
       delete rounds.Concentrazione;
       table.dispatch({ type: 'token.update', tokenId: t.id, patch: { conditions: [...t.conditions, 'Concentrazione'], conditionRounds: rounds } });
     },
+    poolAttack: (a) => {
+      const attacker = own();
+      const targets = targetsFor(attacker?.id);
+      if (!targets.length) return false;
+      table.dispatch({ type: 'pool.attack', attackerId: attacker?.id ?? null, targetIds: targets.map((t) => t.id), ...a });
+      return true;
+    },
+    rollFor: (formula, label) => {
+      const full = `${state.characters[characterId]?.name ?? ''} · ${label}`.slice(0, 120);
+      const since = Date.now() - 2000;
+      const seen = new Set((useTable.getState().state?.log ?? []).map((e) => e.id));
+      return new Promise<RollResult | null>((resolve) => {
+        let done = false;
+        const finish = (r: RollResult | null) => {
+          if (done) return;
+          done = true;
+          stop();
+          clearTimeout(timer);
+          resolve(r);
+        };
+        const stop = useTable.subscribe((s) => {
+          const hit = s.state?.log.find((e) => !seen.has(e.id) && e.kind === 'roll' && e.authorId === me && e.label === full && e.ts >= since && e.roll);
+          if (hit) finish(hit.roll!);
+        });
+        const timer = setTimeout(() => finish(null), 8000);
+        table.dispatch({ type: 'roll', formula, label: full });
+      });
+    },
+    token: (() => {
+      const t = own();
+      if (!t) return null;
+      return {
+        conditions: t.conditions,
+        setConditions: (conditions: string[]) => table.dispatch({ type: 'token.update', tokenId: t.id, patch: { conditions } }),
+        woundRoll: () => table.dispatch({ type: 'pool.wound', tokenId: t.id }),
+      };
+    })(),
   };
 }

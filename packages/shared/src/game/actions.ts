@@ -1,5 +1,6 @@
 import type { Macro } from '../macros';
 import type { MapPackage } from './library';
+import type { Zone } from './pool';
 import type { AreaTemplate, ChatCard, GameState, Note, Prop, Quest, Scene, Token, Wall } from './state';
 
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
@@ -31,6 +32,38 @@ export type GameAction =
   | { type: 'card'; card: ChatCard; private?: boolean }
   /** an attack against each target: d20+bonus against its AC; on a hit the damage is applied (doubled dice on a 20) */
   | { type: 'attack'; attackerId?: string | null; targetIds: string[]; name: string; bonus: number; damage: string; damageType?: string; mode?: 'normal' | 'adv' | 'dis' }
+  /**
+   * Success-pool attack (Warhammer: the Old World): attacker's pool against each
+   * target's Protezione, ties to the attacker; damage = weapon + successes over
+   * the defender (all of them when unopposed) against Resilienza.
+   */
+  | {
+      type: 'pool.attack';
+      attackerId?: string | null;
+      targetIds: string[];
+      name: string;
+      dice: number;
+      target: number;
+      /** null: the hit inflicts `condition` (Barcollante by default) instead of damage */
+      damage: number | null;
+      ranged?: boolean;
+      ignoresArmour?: boolean;
+      /** extra damage against armoured targets */
+      vsArmoured?: number;
+      glorious?: boolean;
+      grim?: boolean;
+      /** the defender doesn't get to oppose (surprise, Indifeso…) */
+      unopposed?: boolean;
+      condition?: string;
+      /** extra dice on the wounds table */
+      woundDice?: number;
+    }
+  /** GM (or the token's owner): roll on the wounds table for a token, as if it had taken a wound */
+  | { type: 'pool.wound'; tokenId: string; extraDice?: number }
+  /** GM: zones on a scene */
+  | { type: 'zone.create'; sceneId?: string; zone: Partial<Omit<Zone, 'id' | 'sceneId'>> }
+  | { type: 'zone.update'; zoneId: string; patch: Partial<Omit<Zone, 'id' | 'sceneId'>> }
+  | { type: 'zone.delete'; zoneId: string }
   /** damage (or healing) rolled once and applied to these tokens */
   | { type: 'hp.roll'; formula: string; tokenIds: string[]; heal?: boolean; label?: string; damageType?: string }
   /**
@@ -40,7 +73,8 @@ export type GameAction =
   | { type: 'save.group'; casterId?: string | null; tokenIds: string[]; ability: Ability; dc: number; label: string; damage?: string; damageType?: string; half?: boolean }
   /** GM: the group rests (the clock moves on; on a short rest each player spends hit dice) */
   | { type: 'rest'; kind: 'short' | 'long' }
-  | { type: 'initiative.add'; name: string; tokenId?: string | null; modifier?: number; value?: number }
+  /** side: systems where a whole side acts together (players first, then the enemies) */
+  | { type: 'initiative.add'; name: string; tokenId?: string | null; modifier?: number; value?: number; side?: 'players' | 'enemies' }
   | { type: 'initiative.set'; entryId: string; value: number }
   | { type: 'initiative.remove'; entryId: string }
   | { type: 'initiative.next' }

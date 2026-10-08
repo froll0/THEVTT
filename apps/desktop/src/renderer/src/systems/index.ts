@@ -1,9 +1,13 @@
-import type { Ability, ChatCard, Token } from '@thevtt/shared';
+import type { Ability, ChatCard, RollResult, Token } from '@thevtt/shared';
 import type { FC, ReactNode } from 'react';
 import { Dnd5eBestiary, dnd5eMonsterInitiative, Dnd5eStatBlock } from './dnd5e-2024/Bestiary';
 import { Dnd5eBuilder } from './dnd5e-2024/Builder';
 import { dnd5eCompendium } from './dnd5e-2024/Compendium';
 import { Dnd5eSheet } from './dnd5e-2024/Sheet';
+import { WtowBestiary, WtowStatBlock } from './wtow/Bestiary';
+import { WtowBuilder } from './wtow/Builder';
+import { wtowCompendium } from './wtow/Compendium';
+import { WtowSheet } from './wtow/Sheet';
 
 export interface BuilderProps<T = any> {
   value: T;
@@ -43,6 +47,27 @@ export interface SheetTable {
   save(a: GroupSave & { label: string }): boolean;
   /** the caster now keeps a spell up */
   concentrate(): void;
+  /** success-pool attack against the marked (or selected) tokens; false when nobody is targeted */
+  poolAttack?(a: PoolAttack): boolean;
+  /** roll in the chat and read the result back (null if it doesn't come back in time) */
+  rollFor?(formula: string, label: string): Promise<RollResult | null>;
+  /** the character's token on the current map: its conditions live there during play */
+  token?: { conditions: string[]; setConditions(conditions: string[]): void; woundRoll(): void } | null;
+}
+
+export interface PoolAttack {
+  name: string;
+  dice: number;
+  target: number;
+  damage: number | null;
+  ranged?: boolean;
+  ignoresArmour?: boolean;
+  vsArmoured?: number;
+  glorious?: boolean;
+  grim?: boolean;
+  unopposed?: boolean;
+  condition?: string;
+  woundDice?: number;
 }
 
 export interface BestiaryProps {
@@ -56,6 +81,8 @@ export interface BestiaryProps {
 export interface StatBlockProps {
   monsterId: string;
   onRoll: (formula: string, label: string) => void;
+  /** success-pool systems: the creature attacks the marked tokens (false: nobody marked) */
+  onAttack?: (a: PoolAttack) => boolean;
 }
 
 /** One page of the rules compendium. */
@@ -90,6 +117,15 @@ const uis: Record<string, SystemUi> = {
     StatBlock: Dnd5eStatBlock,
     monsterInitiative: dnd5eMonsterInitiative,
     compendium: dnd5eCompendium,
+  },
+  wtow: {
+    Builder: WtowBuilder,
+    Sheet: WtowSheet,
+    Bestiary: WtowBestiary,
+    StatBlock: WtowStatBlock,
+    // sides, not initiative rolls
+    monsterInitiative: () => 0,
+    compendium: wtowCompendium,
   },
 };
 

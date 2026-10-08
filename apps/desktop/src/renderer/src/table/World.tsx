@@ -1,5 +1,5 @@
 import { newId, roll, worldTime, type GameAction, type Quest } from '@thevtt/shared';
-import { dnd5e } from '@thevtt/systems';
+import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 import { BedDouble, ChevronLeft, Clock, Coffee, Dices, Eye, EyeOff, Moon, Plus, Sun, Sunrise, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Popover, Switch } from '../components/ui';
@@ -53,6 +53,26 @@ export function WorldClock() {
     }
     dispatch({ type: 'batch', actions });
   };
+  // success pools: the whole party catches its breath, sleeps, or starts a session
+  const poolRest = (kind: 'breath' | 'night' | 'session') => {
+    const st = useTable.getState().state;
+    if (!st) return;
+    const actions: GameAction[] = kind === 'night' ? [{ type: 'time.advance', minutes: 480 }] : [];
+    for (const ch of Object.values(st.characters)) {
+      if (ch.systemId !== 'wtow') continue;
+      const c = warhammer.normalize(ch.data);
+      const data = kind === 'breath' ? warhammer.catchBreath(c) : kind === 'night' ? warhammer.nightRest(c) : warhammer.newSession(c);
+      actions.push({ type: 'character.update', characterId: ch.id, data });
+      const pool = warhammer.characterPool(data);
+      for (const t of Object.values(st.tokens)) {
+        if (t.characterId !== ch.id) continue;
+        const drop = kind === 'session' ? [] : kind === 'night' ? ['Barcollante', 'Prono', 'Esausto'] : ['Barcollante', 'Prono'];
+        actions.push({ type: 'token.update', tokenId: t.id, patch: { pool, conditions: t.conditions.filter((k) => !drop.includes(k)) } });
+      }
+    }
+    dispatch({ type: 'batch', actions });
+  };
+  const pool = getSystem(useTable.getState().state?.systemId ?? '')?.table === 'pool';
   const set = () => {
     const [h, m] = clock.split(':').map(Number);
     const d = Math.max(1, Math.round(Number(day) || 1));
@@ -96,6 +116,19 @@ export function WorldClock() {
             </label>
           )}
           <span className="faint tiny">Per le scene all’aperto: giorno dalle 7 alle 19, penombra all’alba e al tramonto, buio di notte.</span>
+          {pool ? (
+          <div className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
+            <button className="chip" onClick={() => poolRest('breath')} title="Fine dello scontro: tutte le Ferite medicate, le più lievi guarite, la magia si disperde">
+              <Coffee size={12} /> Riprendere Fiato
+            </button>
+            <button className="chip" onClick={() => poolRest('night')} title="Otto ore: guariscono anche le Ferite da Notte di Riposo">
+              <BedDouble size={12} /> Notte di Riposo
+            </button>
+            <button className="chip" onClick={() => poolRest('session')} title="Il Fato speso torna a tutti">
+              <Dices size={12} /> Nuova sessione
+            </button>
+          </div>
+          ) : (
           <div className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
             <button className="chip" onClick={() => dispatch({ type: 'rest', kind: 'short' })} title="Un’ora: ognuno può spendere i suoi dadi vita">
               <Coffee size={12} /> Riposo breve
@@ -104,6 +137,7 @@ export function WorldClock() {
               <BedDouble size={12} /> Riposo lungo
             </button>
           </div>
+          )}
         </div>
       )}
     </Popover>

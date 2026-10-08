@@ -9,6 +9,7 @@ export * from './game/mapgen';
 export * from './game/terrain';
 export * from './game/library';
 export * from './game/piece';
+export * from './game/pool';
 export * from './macros';
 export * from './game/actions';
 export * from './game/host';

@@ -25,6 +25,21 @@ export interface TokenDefaults {
   darkvision?: number;
   /** damage types it resists, ignores or suffers double from */
   defenses?: { resist?: string[]; immune?: string[]; vulnerable?: string[] };
+  /** success-pool systems: Resilienza, Protezione and wounds for the host (PoolStats in @thevtt/shared) */
+  pool?: {
+    type: 'pg' | 'Servitore' | 'Bruto' | 'Campione' | 'Mostruosità';
+    resilience: number;
+    toughness: number;
+    armoured: boolean;
+    melee: { dice: number; target: number };
+    ranged: { dice: number; target: number };
+    wounds: number;
+    maxWounds?: number | null;
+    track?: { at: string; effect: string }[];
+    untreated?: number;
+    hardy?: boolean;
+    monster?: boolean;
+  };
 }
 
 export interface GameSystem<TCharacter = unknown> {
@@ -47,4 +62,12 @@ export interface GameSystem<TCharacter = unknown> {
   withHp?(character: TCharacter, current: number): TCharacter;
   /** conditions offered by the token menu */
   conditions: string[];
+  /** what each condition does, for tooltips */
+  conditionInfo?: Record<string, string>;
+  /** the character with a wound from the table written on it (success-pool systems) */
+  withWound?(character: TCharacter, wound: { name: string; text: string }): TCharacter;
+  /** what a total on the wounds table means (success-pool systems) */
+  woundResult?(total: number): { name: string; text: string; conditions?: string[]; dead?: boolean };
+  /** how the table plays: d20 and squares, or success pools, sides and zones */
+  table?: 'd20' | 'pool';
 }

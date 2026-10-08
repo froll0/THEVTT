@@ -1,4 +1,4 @@
-import { blockingSegments, brushCells, copyPiece, ellipseCells, moveCost, pasteActions, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type MapPiece, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { rangeBetween, zoneAt, blockingSegments, brushCells, copyPiece, ellipseCells, moveCost, pasteActions, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type MapPiece, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
 import { exploredTexture, updateExplored } from './explored';
 import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
@@ -13,7 +13,7 @@ import { useCall } from '../store/call';
 import { tokenSpeed } from '../lib/combat';
 
 export const CELL = 70;
-export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props' | 'light' | 'terrain' | 'copy';
+export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' | 'walls' | 'props' | 'light' | 'terrain' | 'copy' | 'zones';
 
 export interface ToolOptions {
   fogReveal: boolean;
@@ -48,6 +48,10 @@ export interface ToolOptions {
   showTokens: boolean;
   /** the copy tool: take a piece of the map, or put the copied one down */
   pieceMode: 'copy' | 'paste';
+  /** zones tool: rub out instead of drawing */
+  zoneErase?: boolean;
+  /** distances in zones (success-pool systems): zones drawn and the ruler in range bands */
+  zones?: boolean;
 }
 
 /** A light preset as placed by the light tool, in cells for a scene. */
@@ -295,6 +299,7 @@ type Gesture =
   | { kind: 'measure'; fx: number; fy: number; tx: number; ty: number }
   | { kind: 'fog'; fx: number; fy: number; tx: number; ty: number }
   | { kind: 'template'; fx: number; fy: number; tx: number; ty: number }
+  | { kind: 'zone'; fx: number; fy: number; tx: number; ty: number }
   /** points in world pixels */
   | { kind: 'draw'; points: number[] }
   | { kind: 'erase' }
@@ -781,6 +786,44 @@ export function Board({
 
       const acc = accent();
       const g0 = gesture.current;
+      const sceneZones = Object.values(L.state.zones ?? {}).filter((z) => z.sceneId === L.scene!.id);
+      if (L.options.zones || L.tool === 'zones') {
+        for (const z of sceneZones) {
+          const zc = z.color ?? '#e0b85a';
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(z.x * CELL, z.y * CELL, z.w * CELL, z.h * CELL);
+          ctx.fillStyle = hexToRgba(zc, L.tool === 'zones' ? 0.16 : 0.07);
+          ctx.fill();
+          ctx.setLineDash([12 / cam.zoom, 6 / cam.zoom]);
+          haloStroke(ctx, zc, 2 / cam.zoom, cam.zoom);
+          ctx.setLineDash([]);
+          const tags = [z.name, z.difficult ? 'Terreno Difficile' : '', z.cover ? 'Copertura' : '', z.hazard ? `Pericolo (${z.hazard})` : ''].filter(Boolean).join(' · ');
+          ctx.font = `600 ${12 / cam.zoom}px system-ui, sans-serif`;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.lineWidth = 3 / cam.zoom;
+          ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+          ctx.strokeText(tags, z.x * CELL + 6 / cam.zoom, z.y * CELL + 5 / cam.zoom);
+          ctx.fillStyle = '#fff';
+          ctx.fillText(tags, z.x * CELL + 6 / cam.zoom, z.y * CELL + 5 / cam.zoom);
+          ctx.restore();
+        }
+      }
+      if (g0.kind === 'zone') {
+        const x0 = Math.floor(Math.min(g0.fx, g0.tx) / CELL);
+        const y0 = Math.floor(Math.min(g0.fy, g0.ty) / CELL);
+        const x1 = Math.floor(Math.max(g0.fx, g0.tx) / CELL) + 1;
+        const y1 = Math.floor(Math.max(g0.fy, g0.ty) / CELL) + 1;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x0 * CELL, y0 * CELL, (x1 - x0) * CELL, (y1 - y0) * CELL);
+        ctx.fillStyle = hexToRgba(acc, 0.16);
+        ctx.fill();
+        ctx.setLineDash([12 / cam.zoom, 6 / cam.zoom]);
+        haloStroke(ctx, acc, 2 / cam.zoom, cam.zoom);
+        ctx.restore();
+      }
       for (const t of Object.values(L.state.templates ?? {})) {
         if (t.sceneId !== L.scene.id) continue;
         ctx.save();
@@ -1203,7 +1246,9 @@ export function Board({
         }
         const unit = L.scene.unit ?? 'ft';
         const dist = Math.round(cells * L.scene.cellDistance * 10) / 10;
-        const label = `${String(dist).replace('.', ',')} ${unit}`;
+        const label = L.options.zones
+          ? `${rangeBetween(sceneZones, { x: fx + 0.5, y: fy + 0.5 }, { x: tx + 0.5, y: ty + 0.5 })}${sceneZones.length ? '' : ` · ${cells} quadretti`}`
+          : `${String(dist).replace('.', ',')} ${unit}`;
         ctx.font = `700 ${14 / cam.zoom}px system-ui, sans-serif`;
         const w = ctx.measureText(label).width + 14 / cam.zoom;
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
@@ -1371,6 +1416,15 @@ export function Board({
     }
     if (L.tool === 'fog' && L.isGm) {
       gesture.current = { kind: 'fog', fx: w.x, fy: w.y, tx: w.x, ty: w.y };
+      return;
+    }
+    if (L.tool === 'zones' && L.isGm && L.scene) {
+      if (L.options.zoneErase) {
+        const z = zoneAt(Object.values(L.state?.zones ?? {}).filter((x) => x.sceneId === L.scene!.id), w.x / CELL, w.y / CELL);
+        if (z) dispatch({ type: 'zone.delete', zoneId: z.id });
+        return;
+      }
+      gesture.current = { kind: 'zone', fx: w.x, fy: w.y, tx: w.x, ty: w.y };
       return;
     }
     if (L.tool === 'walls' && L.isGm) {
@@ -1608,7 +1662,7 @@ export function Board({
       }
     } else if (g.kind === 'erase') {
       eraseAt(w.x, w.y);
-    } else if (g.kind === 'measure' || g.kind === 'fog' || g.kind === 'template') {
+    } else if (g.kind === 'measure' || g.kind === 'fog' || g.kind === 'template' || g.kind === 'zone') {
       g.tx = w.x;
       g.ty = w.y;
       dirty.current = true;
@@ -1722,6 +1776,14 @@ export function Board({
       dispatch({ type: 'drawing.create', sceneId: L.scene?.id, points: pts.slice(0, 4000).map((v) => v / CELL), color: drawColor(L), width: L.options.drawWidth });
     }
     if (g.kind === 'erase') erased.current.clear();
+    if (g.kind === 'zone' && L.scene) {
+      const x0 = Math.floor(Math.min(g.fx, g.tx) / CELL);
+      const y0 = Math.floor(Math.min(g.fy, g.ty) / CELL);
+      const x1 = Math.floor(Math.max(g.fx, g.tx) / CELL) + 1;
+      const y1 = Math.floor(Math.max(g.fy, g.ty) / CELL) + 1;
+      const n = Object.values(L.state?.zones ?? {}).filter((z) => z.sceneId === L.scene!.id).length + 1;
+      dispatch({ type: 'zone.create', sceneId: L.scene.id, zone: { name: `Zona ${n}`, x: x0, y: y0, w: x1 - x0, h: y1 - y0 } });
+    }
     if (g.kind === 'template') {
       const size = Math.hypot(g.tx - g.fx, g.ty - g.fy) / CELL;
       if (size >= 0.5) {
@@ -1812,7 +1874,7 @@ export function Board({
   }, [dispatch, select, selectProp, selectWall, setGroup]);
 
   const toolCursor =
-    tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' || tool === 'walls' || tool === 'props' || tool === 'light' || tool === 'terrain' || tool === 'copy' || pendingArea
+    tool === 'measure' || tool === 'template' || tool === 'fog' || tool === 'draw' || tool === 'walls' || tool === 'props' || tool === 'light' || tool === 'terrain' || tool === 'copy' || tool === 'zones' || pendingArea
       ? 'crosshair'
       : tool === 'ping'
         ? 'cell'

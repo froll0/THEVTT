@@ -601,3 +601,65 @@ button.stat:hover {
 .danger-text {
   color: var(--danger);
 }
+
+/* Warhammer: the Old World sheet */
+.wtow-chars {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--s3);
+}
+.wtow-char {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 10px);
+}
+.wtow-char-val {
+  font-size: 1.25rem;
+}
+.wtow-skill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+}
+.wtow-skill:hover {
+  background: var(--hover, rgba(127, 127, 127, 0.12));
+}
+.pip.sm {
+  width: 9px;
+  height: 9px;
+}
+.wtow-boosts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--s2, 6px);
+}
+.wtow-skilltable {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 2px var(--s4);
+}
+.wtow-npc-chars {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+.wtow-npc-chars small {
+  display: block;
+  font-size: 0.68rem;
+  opacity: 0.7;
+}
+.stat.danger b {
+  color: var(--danger);
+}
