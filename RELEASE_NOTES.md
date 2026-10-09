@@ -1,29 +1,22 @@
 ## Novità
 
-- **Warhammer: the Old World – Gioco di Ruolo**: un secondo gioco, accanto a D&D. Si sceglie quando si crea una campagna o un personaggio.
-  - **Prove a riserva di d10**: si tirano tanti d10 quanto la Caratteristica, ogni dado pari o sotto l'Abilità è un successo. La chat scrive l'esito: Fallimento, Successo Marginale, Successo o Successo Totale.
-    - Si possono aggiungere dadi bonus o penalità e rendere la prova Gloriosa (si ritirano i fallimenti) o Tetra (si ritirano i successi).
-    - Anche dalla barra dei dadi e in chat, con formule come `4d10s3g`.
-  - **Creazione guidata del personaggio**:
-    - Stirpe, tre +1 alle Caratteristiche o al Fato, Carriera (30), Abilità di Stirpe e di Carriera, Talenti, Saperi, equipaggiamento, Tocchi finali, Contatti e Tetro Presagio.
-    - Ogni passo si può tirare a caso, con il PE bonus.
-  - **Scheda**:
-    - Caratteristiche e Abilità con i fallimenti dell'Intermezzo e Fato da spendere o bruciare.
-    - Armi, Resilienza e Protezione, Ferite con la loro guarigione e Condizioni.
-    - Talenti e Saperi, Monete per Status, note e Contatti, spesa dei PE.
-  - **Magia**:
-    - La Prova di Magia accumula i successi e mette i 9 nella Riserva degli Incidenti Magici.
-    - 41 incantesimi dei quattro Saperi Magici e la tabella degli Incidenti.
-  - **Fede**: i dieci dei con Favore, Preghiere e Miracoli.
-  - **Combattimento al tavolo**:
-    - L'attacco dalla scheda (o dal profilo di un PNG) contro il bersaglio segnato è risolto da solo. È una prova contrapposta contro la Protezione, con i pareggi all'attaccante.
-    - Danni contro Resilienza: Barcollante o Ferita. Chi manca in mischia diventa Barcollante.
-    - Una Ferita sconfigge i Servitori; Bruti e Mostruosità seguono il loro tracciato.
-    - Personaggi e Campioni tirano sulla tabella delle Ferite, e la Ferita finisce sulla scheda.
-  - **Turni a schieramenti**: «Battaglia» fa agire prima i PG, «Imboscata!» prima i nemici, con un'Azione a testa.
-  - **Zone**:
-    - Il master disegna le Zone sulla mappa e segna Terreno Difficile, Copertura e Pericoli.
-    - Il righello mostra la distanza come Ravvicinata, Corta, Media, Lunga o Estrema.
-  - **Bestiario**: 76 profili dalla Guida del Gamemaster, da popolani e soldati a Uominibestia, Orchi e Goblin, Nonmorti e Mostruosità.
-  - **Compendio** con le regole riassunte, Condizioni, Stirpi, Carriere, Talenti, armi, incantesimi, dei, bestiario e tabelle. Anche dal launcher, dove si sceglie il gioco.
-  - Dall'orologio del mondo, il master usa **Riprendere Fiato**, **Notte di Riposo** e **Nuova sessione**, che fa tornare il Fato a tutti.
+- **Warhammer: the Old World, regole al tavolo**:
+  - **Pericoli**: il master segna sulle Zone il Pericolo, la prova (Tempra, Atletica…), la Condizione e se colpisce a ogni turno, anche partendo dagli esempi del manuale. In combattimento chi entra tira da solo: fallendo subisce la Ferita, con tanti dadi quanti i successi mancanti, e la Condizione.
+  - **Terreno Difficile**: Atletica una volta per turno; chi fallisce cade Prono.
+  - **Fine del turno**: In Fiamme fa tirare Tempra contro un Pericolo (2); Ferito Gravemente fa diventare Indifeso chi fallisce, e muore chi lo era già.
+  - **Ritirata**: dal pannello dell'iniziativa si sceglie la retroguardia, tutti tirano Atletica e chi fallisce tira su «Si Salvi Chi Può!».
+  - **Fine della giornata**: dall'orologio del mondo, Tempra contro le infezioni (Ferite Purulente) per chi è stato ferito e Volontà per chi il master ha segnato come esposto al Caos.
+  - **Mostruosità**: dopo un colpo si sceglie tra Ferita e Reazione; dal profilo si lanciano «Tutti gli attacchi».
+  - **Prove Prolungate condivise**: chiunque al tavolo ne aggiunge una e tira, e i successi si sommano.
+- **Combattimento sulla mappa**:
+  - Bonus e penalità d'attacco calcolati dal tavolo: Carica, superiorità numerica, posizione sopraelevata, bersaglio Prono, Portata Ottimale, copertura.
+  - Trascinando un token si vedono le Zone percorse nel turno e gli avvisi di Terreno Difficile e Pericolo.
+  - Le armi da fuoco restano scariche dopo lo sparo e si ricaricano con la Prova Prolungata di Destrezza.
+  - Cavalcature (il Cavallo dà +1 Resilienza e la Velocità Veloce) e veicoli: ogni colpo li prende senza opposizione e al posto delle Ferite subiscono Guasti.
+- **Scheda**:
+  - Scheda «Intermezzo» con le 17 Attività, i fallimenti segnati, straordinari, banca, Prove Prolungate personali e gli Eventi di Talagaad.
+  - Scheda «Corruzione» con gli stadi, i 5 Sentieri e i loro doni.
+  - I 34 oggetti magici del manuale: le armi si impugnano, le armature contano nella Resilienza.
+- **Creazione del personaggio**: Contatti e Risorse si tirano sulle tabelle del manuale.
+- **Bestiario**: si creano PNG propri con l'editor; ci sono anche carri e imbarcazioni.
+- **Compendio**: oggetti magici, Corruzione, Attività dell'Intermezzo, Talagaad e le sue fazioni, Contatti, Eventi e nuove tabelle. Il testo della tabella delle Ferite segue quello del manuale.
