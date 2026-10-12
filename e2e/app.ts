@@ -34,8 +34,8 @@ export async function launchApp(opts: { hostPort?: number; release?: unknown; pr
     env: { ...process.env, THEVTT_E2E: '1', THEVTT_USER_DATA: profile, VITE_DEV_SERVER_URL: '', ...updates, ...(opts.fakeMedia ? { THEVTT_FAKE_MEDIA: '1' } : {}) },
   });
   const page = await app.firstWindow();
-  // CI screens can be smaller than the app's window (macOS clamps it): the same size everywhere
-  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setBounds({ x: 0, y: 0, width: 1360, height: 860 }));
+  // CI screens can be smaller than the app's window and macOS clamps it: the same size there too
+  if (process.platform === 'darwin') await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setBounds({ x: 0, y: 0, width: 1360, height: 860 }));
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
