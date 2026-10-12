@@ -34,8 +34,10 @@ test('table rules: group saves with immunities, legendary actions, turn economy,
   await nav(P, 'Campagne');
   await P.getByText('Tana').click();
   await P.getByRole('button', { name: 'Siediti al tavolo' }).click();
-  const size = await P.evaluate(() => `${innerWidth}×${innerHeight}`);
-  await expect(P.locator('.log'), `the player's chat, window ${size}`).toBeVisible();
+  await expect(P.locator('.log')).toBeVisible().catch(async (e) => {
+    // what the player sees instead, for the CI log
+    throw new Error(`${e}\n--- player page ---\n${await P.locator('body').innerText()}`);
+  });
 
   // Elara and a red dragon on the map
   await G.getByTitle('Scheda').click();

@@ -60,7 +60,7 @@ function createWindow(): BrowserWindow {
     minWidth: 980,
     minHeight: 640,
     // the end-to-end tests want the same window on every CI runner, whatever its screen
-    enableLargerThanScreen: !!process.env.THEVTT_E2E,
+    enableLargerThanScreen: isMac && !!process.env.THEVTT_E2E,
     show: false,
     frame: isMac,
     titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
