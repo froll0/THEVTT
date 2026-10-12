@@ -94,3 +94,25 @@ describe('weather', () => {
     expect(viewFor(host.state, 'p1').scenes.s1?.weather).toBeNull();
   });
 });
+
+describe('handouts revealed in pieces', () => {
+  it('players only get the picture with the covered pieces painted over', () => {
+    const state = createInitialState({ campaignId: 'c', campaignName: 'T', systemId: 'dnd5e-2024', gmId: 'gm', sceneId: 's1' });
+    state.players.p1 = { id: 'p1', displayName: 'Ada', color: '#f00', online: true, characterId: null };
+    const host = new GameHost({ state, send: () => {}, now: () => 0 });
+    const img = 'data:image/png;base64,AAAA';
+    host.dispatch('gm', { type: 'note.create', note: { title: 'Mappa del tesoro', shared: 'all' } } as never);
+    const id = Object.keys(host.state.notes!)[0]!;
+    host.dispatch('gm', { type: 'asset.add', dataUrl: img, attachTo: { noteId: id } });
+    const full = host.state.notes![id]!.image!;
+    expect(viewFor(host.state, 'p1').notes![id]!.image).toBe(full);
+    host.dispatch('gm', { type: 'note.update', noteId: id, patch: { reveal: '1' } });
+    expect(host.state.notes![id]!.reveal).toHaveLength(24);
+    expect(viewFor(host.state, 'p1').notes![id]!.image).toBeNull();
+    host.dispatch('gm', { type: 'asset.add', dataUrl: 'data:image/png;base64,BBBB', attachTo: { noteShown: id } });
+    const view = viewFor(host.state, 'p1').notes![id]!;
+    expect(view.image).not.toBe(full);
+    expect(view.image).toBe(host.state.notes![id]!.shownImage);
+    expect(host.dispatch('p1', { type: 'note.update', noteId: id, patch: { reveal: null } }).ok).toBe(false);
+  });
+});

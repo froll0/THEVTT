@@ -143,7 +143,7 @@ export type GameAction =
   | { type: 'template.clear' }
   | { type: 'notes.update'; text: string }
   | { type: 'note.create'; note?: Partial<Pick<Note, 'title' | 'body' | 'shared'>> }
-  | { type: 'note.update'; noteId: string; patch: Partial<Pick<Note, 'title' | 'body' | 'shared' | 'image'>> }
+  | { type: 'note.update'; noteId: string; patch: Partial<Pick<Note, 'title' | 'body' | 'shared' | 'image' | 'reveal'>> }
   | { type: 'note.delete'; noteId: string }
   | { type: 'wall.create'; sceneId?: string; walls: (Pick<Wall, 'x1' | 'y1' | 'x2' | 'y2' | 'kind'> & Partial<Pick<Wall, 'open' | 'locked'>>)[] }
   | { type: 'wall.update'; wallId: string; patch: Partial<Pick<Wall, 'kind' | 'open' | 'locked'>> }
@@ -182,7 +182,7 @@ export type GameAction =
    * register an image (or, for music, an audio file) and get back its id through the state.
    * Players may only attach images to their own notes.
    */
-  | { type: 'asset.add'; dataUrl: string; attachTo?: { sceneId: string } | { tokenId: string } | { noteId: string } | { track: string } | { sound: string } | { propId: string } };
+  | { type: 'asset.add'; dataUrl: string; attachTo?: { sceneId: string } | { tokenId: string } | { noteId: string } | { track: string } | { sound: string } | { propId: string } | { noteShown: string } };
 
 /** Messages flowing inside relay payloads. */
 export type PlayerToHost = { k: 'hello' } | { k: 'action'; action: GameAction; seq?: number };

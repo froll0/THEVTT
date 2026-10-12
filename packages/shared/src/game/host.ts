@@ -33,6 +33,8 @@ import {
   viewFor,
   worldTime,
   WEATHERS,
+  REVEAL_COLS,
+  REVEAL_ROWS,
   damageAfter,
   type Defenses,
   type GameState,
@@ -1403,6 +1405,15 @@ export class GameHost {
         if (p.image !== undefined) {
           if (p.image !== null && !this.assets[p.image]) return { ok: false, reason: 'Immagine sconosciuta' };
           note.image = p.image;
+          // a new picture starts over
+          note.reveal = null;
+          note.shownImage = null;
+        }
+        if (p.reveal !== undefined) {
+          if (!isGm) return { ok: false, reason: 'Solo il master rivela le dispense a pezzi' };
+          const cells = REVEAL_COLS * REVEAL_ROWS;
+          note.reveal = typeof p.reveal === 'string' ? p.reveal.replace(/[^01]/g, '0').padEnd(cells, '0').slice(0, cells) : null;
+          if (!note.reveal) note.shownImage = null;
         }
         note.updatedAt = this.now();
         if (isGm && p.shared !== undefined && note.shared === 'all' && wasShared !== 'all') this.system(`Il master ha condiviso «${note.title}»`);
@@ -1623,6 +1634,12 @@ export class GameHost {
         if (target && 'propId' in target && s.props![target.propId]) {
           s.props![target.propId]!.image = id;
           s.props![target.propId]!.kind = 'image';
+        }
+        if (target && 'noteShown' in target) {
+          const note = s.notes![target.noteShown];
+          if (!isGm || !note) return { ok: false, reason: 'Solo il master rivela le dispense a pezzi' };
+          note.shownImage = id;
+          note.updatedAt = this.now();
         }
         if (target && 'sound' in target) {
           s.sounds = [...(s.sounds ?? []), { id: newId(), name: String(target.sound).slice(0, 60) || 'Effetto', asset: id }].slice(-40);

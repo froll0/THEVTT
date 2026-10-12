@@ -4,6 +4,7 @@ import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
 import { MapGenerator } from './MapGenerator';
 import { MapLibrary } from './MapLibrary';
+import { RevealEditor } from './Reveal';
 import { useSheetTable } from './sheetTable';
 import { tokenSpeed } from '../lib/combat';
 import { plainText, RichEditor, RichView } from '../components/RichText';
@@ -952,6 +953,7 @@ function NoteEditor({ note, canEdit, onBack, image }: { note: Note; canEdit: boo
               Rimuovi immagine
             </button>
           )}
+          {isGm && <RevealEditor note={note} image={image} />}
         </div>
       ) : (
         canEdit && (

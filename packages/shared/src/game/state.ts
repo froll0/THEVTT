@@ -216,7 +216,18 @@ export interface Note {
   shared: 'private' | 'all' | string[];
   authorId: string;
   updatedAt: number;
+  /**
+   * GM: the picture shown a piece at a time. One character per piece of a
+   * REVEAL_COLS × REVEAL_ROWS grid, row by row: '1' shown, '0' covered.
+   * Players never receive the full picture, only `shownImage`.
+   */
+  reveal?: string | null;
+  /** the picture with its covered pieces painted over (asset id) */
+  shownImage?: string | null;
 }
+
+export const REVEAL_COLS = 6;
+export const REVEAL_ROWS = 4;
 
 export interface MusicTrack {
   id: string;
@@ -494,7 +505,12 @@ export function viewFor(state: GameState, userId: string): GameState {
       .map((l) => (l.blind && l.roll ? { ...l, text: '?', roll: undefined } : l)),
     // your own characters only: the others' sheets are private
     characters: Object.fromEntries(Object.entries(state.characters).filter(([, c]) => c.ownerId === userId)),
-    notes: Object.fromEntries(Object.entries(state.notes ?? {}).filter(([, n]) => noteVisibleTo(n, userId, state.gmId))),
+    notes: Object.fromEntries(
+      Object.entries(state.notes ?? {})
+        .filter(([, n]) => noteVisibleTo(n, userId, state.gmId))
+        // a picture revealed in pieces: only what is shown so far
+        .map(([id, n]) => [id, n.reveal ? { ...n, image: n.shownImage ?? null, shownImage: null } : n]),
+    ),
     drawings: Object.fromEntries(Object.entries(state.drawings ?? {}).filter(([, d]) => d.sceneId === state.activeSceneId)),
     zones: Object.fromEntries(Object.entries(state.zones ?? {}).filter(([, z]) => z.sceneId === state.activeSceneId)),
     walls: Object.fromEntries(Object.entries(state.walls ?? {}).filter(([, w]) => w.sceneId === state.activeSceneId)),
