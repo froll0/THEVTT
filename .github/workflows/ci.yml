@@ -45,6 +45,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @thevtt/desktop build
+      # the Windows runner's screen is 1024×768: too small for the 1360×860 window
+      - name: Schermo più grande (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Set-DisplayResolution -Width 1920 -Height 1080 -Force
       - name: Playwright + Electron
         shell: bash
         # Linux has no screen on the runner: a virtual one

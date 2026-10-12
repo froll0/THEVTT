@@ -100,7 +100,8 @@ describe('tunnel', () => {
     );
     const path = await t.ensureBinary();
     expect(readFileSync(path).equals(bin)).toBe(true);
-    expect(statSync(path).mode & 0o111).toBeTruthy();
+    // Windows has no exec bit
+    if (process.platform !== 'win32') expect(statSync(path).mode & 0o111).toBeTruthy();
     await t.ensureBinary();
     expect(downloads).toBe(1);
     expect(states).toContain('downloading');

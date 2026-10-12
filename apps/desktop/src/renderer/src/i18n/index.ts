@@ -6,7 +6,7 @@ export type Language = 'it' | 'en';
 export function parseDictionary(text: string) {
   const exact = new Map<string, string>();
   const patterns: { re: RegExp; to: string }[] = [];
-  for (const line of text.split('\n')) {
+  for (const line of text.split(/\r?\n/)) {
     if (!line.trim() || line.startsWith('#')) continue;
     const [from, to] = line.split(' ⇒ ');
     if (!from || to === undefined) continue;

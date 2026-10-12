@@ -42,6 +42,24 @@ interface WindowStore {
 }
 
 let zTop = 10;
+
+/** the free part of the board (between the tool rail and the dock, above the dice and macro bars), in layer coordinates */
+function stageArea() {
+  const fallback = { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight - 90 };
+  const stage = document.querySelector('.stage');
+  const layer = document.querySelector('.windows-layer') ?? stage?.parentElement;
+  if (!stage || !layer) return fallback;
+  const s = stage.getBoundingClientRect();
+  const l = layer.getBoundingClientRect();
+  if (s.width < 200) return fallback;
+  // the bars sit at the bottom of the stage
+  const bars = [...stage.querySelectorAll('.dicebar, .macrobar')].map((b) => b.getBoundingClientRect().top).filter((t) => t > s.top);
+  const bottom = bars.length ? Math.min(...bars) : s.bottom;
+  // and the tool rail on the left
+  const rail = stage.querySelector('.rail')?.getBoundingClientRect();
+  const left = rail && rail.right < s.left + s.width / 3 ? rail.right : s.left;
+  return { x: left - l.left, y: s.top - l.top, w: s.right - left, h: Math.max(200, bottom - s.top) };
+}
 const idOf = (kind: WindowKind, ref: string) => `${kind}:${ref}`;
 
 export const useWindows = create<WindowStore>((set, get) => ({
@@ -55,11 +73,13 @@ export const useWindows = create<WindowStore>((set, get) => ({
     }
     const saved = loadGeo()[id];
     const size = kind === 'sheet' ? { w: 760, h: 640 } : kind === 'journal' ? { w: 640, h: 520 } : { w: 520, h: 560 };
-    // new windows cascade from the top left of the board
+    // new windows cascade from the top left of the board, inside the stage: the dock and the
+    // bars at the bottom stay reachable even on small screens
     const n = get().windows.length;
-    const geo = saved ?? { x: 80 + n * 28, y: 16 + n * 28, ...size };
-    const maxW = window.innerWidth - 40;
-    const maxH = window.innerHeight - 90;
+    const area = stageArea();
+    const geo = saved ?? { x: area.x + 16 + n * 28, y: area.y + 16 + n * 28, ...size };
+    const maxW = saved ? window.innerWidth - 40 : Math.max(320, area.x + area.w - geo.x - 8);
+    const maxH = saved ? window.innerHeight - 90 : Math.max(240, area.y + area.h - geo.y - 8);
     const win: FloatWin = {
       id,
       kind,

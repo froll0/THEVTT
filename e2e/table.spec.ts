@@ -245,9 +245,13 @@ test('a group plays at a table hosted inside the GM app', async () => {
   await journal.getByRole('button', { name: 'Nuova pagina' }).click();
   await journal.getByLabel('Titolo della pagina').fill('La cripta');
   await journal.getByLabel('Testo della pagina').fill('Il mago Varos nasconde una chiave.');
+  // a narrow window (small screens) shows one page at a time: back to the list
+  const back = journal.locator('.journal-editor').getByRole('button', { name: 'Diario' });
+  if (await back.isVisible()) await back.click();
   await expect(journal.locator('.journal-row', { hasText: 'Varos nasconde' })).toBeVisible();
   await journal.getByRole('button', { name: 'Chiudi finestra' }).click();
   await P.getByRole('button', { name: 'Diario' }).click();
+  if (await back.isHidden()) await journal.locator('.journal-row', { hasText: 'Varos nasconde' }).click();
   await expect(journal.getByLabel('Testo della pagina')).toHaveText('Il mago Varos nasconde una chiave.');
   expect(await apiCall<unknown[]>(G, 'GET', '/journal')).toEqual([]);
 
