@@ -1,4 +1,4 @@
-import { POOL_CHECKS, rotatePiece, type PoolCheck } from '@thevtt/shared';
+import { POOL_CHECKS, rotatePiece, sessionDigest, type PoolCheck, type SessionDigest } from '@thevtt/shared';
 import { getSystem, warhammer } from '@thevtt/systems';
 import { Clapperboard, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -17,6 +17,7 @@ import { CallControls, CallTiles, type CallPerson } from './Call';
 import { GroupSaveForm } from './Saves';
 import { QuestsPanel, RestPrompt, WorldClock } from './World';
 import { EncountersPanel } from './Encounters';
+import { SessionEnd } from './SessionEnd';
 import { MacroBar } from './Macros';
 import { useCall } from '../store/call';
 import { EditorBanner, EditorPanel, EditorRail, type EditorTool } from './MapEditor';
@@ -63,6 +64,8 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const [tab, setTab] = useState<DockTab>('chat');
   const [dockOpen, setDockOpen] = useState(true);
   const [showKeys, setShowKeys] = useState(false);
+  const openedAt = useRef(Date.now());
+  const [ending, setEnding] = useState<SessionDigest | null>(null);
   const cameraRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
   const { windows, open: openWindow, closeAll } = useWindows();
   const undoRedo = (which: 'undo' | 'redo') => {
@@ -232,7 +235,15 @@ export function TableView({ campaignId }: { campaignId: string }) {
     <div className="shell table-shell">
       <TopBar>
         <div className="row no-drag table-title">
-          <button className="btn ghost sm icon" onClick={() => go({ name: 'campaign', id: campaign.id })} title={isGm ? 'Chiudi la sessione' : 'Lascia il tavolo'}>
+          <button className="btn ghost sm icon" onClick={() => {
+              const st = useTable.getState().state;
+              const d = isGm && st ? sessionDigest(st, openedAt.current) : null;
+              if (d && d.entries >= 3) setEnding(d);
+              else go({ name: 'campaign', id: campaign.id });
+            }}
+            title={isGm ? 'Chiudi la sessione' : 'Lascia il tavolo'}
+            aria-label={isGm ? 'Chiudi la sessione' : 'Lascia il tavolo'}
+          >
             <ArrowLeft size={15} />
           </button>
           <span className="ellipsis">{campaign.name}</span>
@@ -481,6 +492,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
           )}
 
           {showKeys && <ShortcutsHelp isGm={isGm} onClose={() => setShowKeys(false)} />}
+          {ending && campaign && <SessionEnd campaignId={campaign.id} digest={ending} onCancel={() => setEnding(null)} onDone={() => go({ name: 'campaign', id: campaign.id })} />}
           {state && table.group.tokens.length + table.group.props.length > 1 && <GroupBar isGm={isGm} />}
           {selected && !editing && <TokenInspector token={selected} />}
           {isGm && table.selectedPropId && state?.props?.[table.selectedPropId] && <PropInspector prop={state.props[table.selectedPropId]!} />}

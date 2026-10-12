@@ -10,6 +10,7 @@ export * from './game/terrain';
 export * from './game/library';
 export * from './game/piece';
 export * from './game/pool';
+export * from './game/digest';
 export * from './macros';
 export * from './game/actions';
 export * from './game/host';
