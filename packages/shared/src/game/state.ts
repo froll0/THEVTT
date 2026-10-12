@@ -11,6 +11,9 @@ import { sightFor, tokenPoints } from './sight';
  * referenced by id, so state updates stay small.
  */
 
+export const WEATHERS = ['rain', 'storm', 'snow', 'fog', 'embers', 'ash'] as const;
+export type Weather = (typeof WEATHERS)[number];
+
 export interface Scene {
   id: string;
   name: string;
@@ -43,6 +46,10 @@ export interface Scene {
   seed?: string;
   /** outdoors: its light follows the hour of the world's clock */
   daylight?: boolean;
+  /** weather drawn over the map, for everyone */
+  weather?: Weather | null;
+  /** 0.2 (a few drops) to 1 (a downpour) */
+  weatherIntensity?: number;
 }
 
 export type Ambient = 'bright' | 'dim' | 'dark';

@@ -82,3 +82,15 @@ describe('prepared encounters', () => {
     expect(host.dispatch('p1', { type: 'encounter.launch', encounterId: enc.id }).ok).toBe(false);
   });
 });
+
+describe('weather', () => {
+  it('is set by the GM per scene, within the known kinds and a sane intensity', () => {
+    const state = createInitialState({ campaignId: 'c', campaignName: 'T', systemId: 'dnd5e-2024', gmId: 'gm', sceneId: 's1' });
+    const host = new GameHost({ state, send: () => {}, now: () => 0 });
+    expect(host.dispatch('gm', { type: 'scene.update', sceneId: 's1', patch: { weather: 'storm', weatherIntensity: 5 } }).ok).toBe(true);
+    expect(host.state.scenes.s1).toMatchObject({ weather: 'storm', weatherIntensity: 1 });
+    host.dispatch('gm', { type: 'scene.update', sceneId: 's1', patch: { weather: 'lava' as never } });
+    expect(host.state.scenes.s1!.weather).toBeNull();
+    expect(viewFor(host.state, 'p1').scenes.s1?.weather).toBeNull();
+  });
+});

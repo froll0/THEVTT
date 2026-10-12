@@ -1,4 +1,4 @@
-import { describeRoll, sessionStats, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
+import { describeRoll, sessionStats, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Weather, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
@@ -685,6 +685,36 @@ export function ScenePanel() {
           </select>
         </Field>
       )}
+      <div className="fields two">
+        <Field label="Meteo">
+          <select
+            className="select"
+            value={active.weather ?? ''}
+            onChange={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { weather: (e.target.value || null) as Weather | null } })}
+          >
+            <option value="">Sereno</option>
+            <option value="rain">Pioggia</option>
+            <option value="storm">Temporale</option>
+            <option value="snow">Neve</option>
+            <option value="fog">Nebbia</option>
+            <option value="embers">Braci</option>
+            <option value="ash">Cenere</option>
+          </select>
+        </Field>
+        {active.weather && (
+          <Field label="Intensità">
+            <input
+              type="range"
+              min={0.2}
+              max={1}
+              step={0.1}
+              value={active.weatherIntensity ?? 0.6}
+              onChange={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { weatherIntensity: Number(e.target.value) } })}
+              aria-label="Intensità del meteo"
+            />
+          </Field>
+        )}
+      </div>
       <div className="row between">
         <span className="small">Nebbia di guerra</span>
         <Switch on={!!active.fog?.enabled} onChange={(enabled) => dispatch({ type: 'fog.enable', sceneId: active.id, enabled })} />

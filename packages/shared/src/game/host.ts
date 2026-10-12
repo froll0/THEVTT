@@ -32,6 +32,7 @@ import {
   referencedAssets,
   viewFor,
   worldTime,
+  WEATHERS,
   damageAfter,
   type Defenses,
   type GameState,
@@ -463,6 +464,8 @@ export class GameHost {
         if (p.cellDistance !== undefined) scene.cellDistance = Math.min(1000, Math.max(0.1, Math.round(Number(p.cellDistance) * 10) / 10 || 1));
         if (p.unit !== undefined) scene.unit = p.unit === 'ft' ? 'ft' : 'm';
         if (p.showGrid !== undefined) scene.showGrid = !!p.showGrid;
+        if (p.weather !== undefined) scene.weather = (WEATHERS as readonly string[]).includes(p.weather as string) ? p.weather : null;
+        if (p.weatherIntensity !== undefined) scene.weatherIntensity = Math.min(1, Math.max(0.2, Number(p.weatherIntensity) || 0.6));
         if (p.vision !== undefined) scene.vision = !!p.vision;
         // darkness only means something with dynamic vision on
         if (p.vision === undefined && (p.ambient === 'dim' || p.ambient === 'dark')) scene.vision = true;

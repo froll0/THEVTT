@@ -9,6 +9,7 @@ import { readImage } from '../components/ui';
 import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
+import { WeatherLayer } from './Weather';
 import { useCall } from '../store/call';
 import { tokenSpeed } from '../lib/combat';
 
@@ -1916,6 +1917,7 @@ export function Board({
         onWheel={onWheel}
         onContextMenu={(e) => e.preventDefault()}
       />
+      {scene?.weather && <WeatherLayer weather={scene.weather} intensity={scene.weatherIntensity ?? 0.6} />}
       {selectedTemplate && <div className="board-hint glass">Area selezionata · Canc per eliminarla</div>}
       {textDraft && (
         <input

@@ -2112,3 +2112,13 @@ Trappola ⇒ Trap
 Corno di guerra ⇒ War horn
 {0}: troppo grande per un effetto (max 2 MB) ⇒ {0}: too large for an effect (max 2 MB)
 un effetto sonoro per tutti (master): tuono, porta, spade, ruggito… ⇒ a sound effect for everyone (GM): tuono, porta, spade, ruggito…
+Meteo ⇒ Weather
+Sereno ⇒ Clear
+Pioggia ⇒ Rain
+Temporale ⇒ Storm
+Neve ⇒ Snow
+Nebbia ⇒ Fog
+Braci ⇒ Embers
+Cenere ⇒ Ash
+Intensità ⇒ Intensity
+Intensità del meteo ⇒ Weather intensity
