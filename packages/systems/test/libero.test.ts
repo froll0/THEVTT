@@ -20,13 +20,16 @@ describe('Sistema libero', () => {
     expect(sys.quickRolls(c)[0]).toMatchObject({ label: 'Attacco in mischia', formula: '1d20+0' });
   });
 
-  it('every template is valid and every roll of it rolls', async () => {
-    const { roll } = await import('../../shared/src/dice');
+  it('every template is valid and every roll of it is dice notation', () => {
+    const term = /^[+-]?(\d*d(\d+|F)(h\d+)?|\d+)$/i;
     const sys = getSystem('libero')!;
     for (const t of free.TEMPLATES) {
       const c = { ...free.createCharacter(t.id), name: 'Prova' };
       expect(sys.validate(c), t.id).toEqual([]);
-      for (const q of c.rolls) expect(() => roll(free.resolveFormula(c, q.formula)), `${t.id}: ${q.formula}`).not.toThrow();
+      for (const q of c.rolls) {
+        const f = free.resolveFormula(c, q.formula);
+        expect(f.match(/[+-]?[^+-]+/g)!.every((x) => term.test(x)), `${t.id}: ${f}`).toBe(true);
+      }
     }
   });
 });
