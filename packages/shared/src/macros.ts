@@ -25,6 +25,8 @@ export type MacroStep =
   | { kind: 'condition'; name: string; rounds?: number }
   /** the selected tokens join the initiative; no modifier: the character's own */
   | { kind: 'initiative'; modifier: number | null }
+  /** GM: a sound effect for everyone */
+  | { kind: 'sound'; name: string }
   | { kind: 'error'; line: number; text: string; message: string };
 
 /** The questions a macro asks before running, in order, each once. */
@@ -104,6 +106,10 @@ export function parseMacro(expanded: string): MacroStep[] {
       if (!Number.isFinite(n)) return err('Il modificatore dell’iniziativa è un numero, per esempio /iniziativa +2');
       return void steps.push({ kind: 'initiative', modifier: Math.round(n) });
     }
+    if (['suono', 'sfx', 'sound'].includes(cmd)) {
+      if (!rest) return err('Manca il suono, per esempio /suono tuono');
+      return void steps.push({ kind: 'sound', name: rest });
+    }
     err(`Comando sconosciuto: /${cmd}`);
   });
   return steps;
@@ -122,6 +128,8 @@ export function describeStep(s: MacroStep): string {
       return `Mette o toglie «${s.name}» ai token selezionati${s.rounds ? ` (per ${s.rounds} round)` : ''}`;
     case 'initiative':
       return s.modifier === null ? 'Aggiunge i token selezionati all’iniziativa (col loro bonus)' : `Aggiunge i token selezionati all’iniziativa con ${s.modifier >= 0 ? '+' : ''}${s.modifier}`;
+    case 'sound':
+      return `Fa sentire a tutti «${s.name}» (solo il master)`;
     case 'error':
       return `Riga ${s.line}: ${s.message}`;
   }

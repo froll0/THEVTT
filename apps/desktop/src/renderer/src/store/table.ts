@@ -14,6 +14,7 @@ import {
 import { create } from 'zustand';
 import { getSystem } from '@thevtt/systems';
 import { tokenSave } from '../lib/combat';
+import { playSfx } from '../lib/sfx';
 import type { GroupSave } from '../systems';
 import { FALLBACK_ICE, PeerLink } from '../lib/p2p';
 import { localStore } from '../lib/platform';
@@ -130,6 +131,9 @@ export const useTable = create<TableStore>((set, get) => {
         break;
       case 'rejected':
         useApp.getState().toast(msg.reason, 'error');
+        break;
+      case 'sfx':
+        playSfx(msg.sound, useSettings.getState().musicVolume, msg.asset ? get().assets[msg.asset] : undefined);
         break;
       case 'ping': {
         const ping: Ping = { id: newId(), x: msg.x, y: msg.y, color: msg.color, at: performance.now() };

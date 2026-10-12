@@ -2096,3 +2096,19 @@ Media del d20 ⇒ d20 average
 20 naturali ⇒ natural 20s
 1 naturali ⇒ natural 1s
 Successi delle riserve ⇒ Pool successes
+Effetti sonori ⇒ Sound effects
+Aggiungi effetti sonori ⇒ Add sound effects
+Fai sentire a tutti: {0} ⇒ Play for everyone: {0}
+Li sentono tutti, al volume della musica di ciascuno. Nelle macro: /suono tuono. ⇒ Everyone hears them, at their own music volume. In macros: /suono tuono.
+Tuono ⇒ Thunder
+Esplosione ⇒ Explosion
+Porta che cigola ⇒ Creaking door
+Spade ⇒ Swords
+Ruggito ⇒ Roar
+Campana ⇒ Bell
+Battito ⇒ Heartbeat
+Vento ⇒ Wind
+Trappola ⇒ Trap
+Corno di guerra ⇒ War horn
+{0}: troppo grande per un effetto (max 2 MB) ⇒ {0}: too large for an effect (max 2 MB)
+un effetto sonoro per tutti (master): tuono, porta, spade, ruggito… ⇒ a sound effect for everyone (GM): tuono, porta, spade, ruggito…

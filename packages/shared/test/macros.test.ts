@@ -63,3 +63,27 @@ describe('macros', () => {
     expect(host.state.tokens[orc!.id]!.hp!.current).toBe(15);
   });
 });
+
+describe('sound effects', () => {
+  it('/suono finds a built-in or the GM’s own sound by name', async () => {
+    const { parseMacro, findSound } = await import('../src');
+    expect(parseMacro('/suono tuono')).toEqual([{ kind: 'sound', name: 'tuono' }]);
+    expect(parseMacro('/suono')[0]).toMatchObject({ kind: 'error' });
+    expect(findSound([], 'Porta')?.id).toBe('porta');
+    expect(findSound([{ id: 'x1', name: 'Urlo del drago' }], 'urlo del drago')?.id).toBe('x1');
+    expect(findSound([], 'fanfara')).toBeUndefined();
+  });
+
+  it('the GM plays it for everyone; players cannot', async () => {
+    const { createInitialState, GameHost } = await import('../src');
+    const sent: { to: string; msg: unknown }[] = [];
+    const state = createInitialState({ campaignId: 'c', campaignName: 'T', systemId: 'dnd5e-2024', gmId: 'gm', sceneId: 's1' });
+    state.players.p1 = { id: 'p1', displayName: 'Ada', color: '#f00', online: true, characterId: null };
+    const host = new GameHost({ state, send: (to, msg) => void sent.push({ to, msg }), now: () => 0 });
+    host.connect('p1');
+    expect(host.dispatch('gm', { type: 'sfx.play', sound: 'tuono' }).ok).toBe(true);
+    expect(sent.some((x) => (x.msg as { k: string }).k === 'sfx')).toBe(true);
+    expect(host.dispatch('p1', { type: 'sfx.play', sound: 'tuono' }).ok).toBe(false);
+    expect(host.dispatch('gm', { type: 'sfx.play', sound: 'nulla' }).ok).toBe(false);
+  });
+});

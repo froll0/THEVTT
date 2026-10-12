@@ -1127,3 +1127,16 @@ kbd {
 .encounter-row .ghost-row:hover {
   background: var(--fill-hover);
 }
+
+.sfx-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sfx-grid .sfx {
+  gap: 4px;
+}
+.sfx-own {
+  display: inline-flex;
+  align-items: center;
+}

@@ -3,6 +3,7 @@ import { newId } from '../id';
 import type { Ability, GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
 import { emptyMask, paintRect, resizeMask } from './fog';
 import { isMapPackage } from './library';
+import { BUILTIN_SOUNDS } from './sounds';
 import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
 import { lineOfSight } from './vision';
 import {
@@ -163,6 +164,7 @@ function cleanLight(l: unknown): Light | null {
 const fine = (v: unknown, min: number, max: number) => Math.min(max, Math.max(min, Math.round((Number(v) || 0) * 100) / 100));
 const coord = (v: unknown, max: number) => Math.min(max, Math.max(0, Math.round((Number(v) || 0) * 2) / 2));
 const MAX_ASSET_BYTES = 12 * 1024 * 1024;
+const MAX_SOUND_BYTES = 3 * 1024 * 1024;
 /** audio travels to every player, through the relay too (16MB per message): ~11MB files */
 const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
 /** A player's note is never 'private': at most it is for the GM alone. */
@@ -1291,6 +1293,20 @@ export class GameHost {
         this.opts.onCharacterChange?.(ch);
         break;
       }
+      case 'sfx.play': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const own = (s.sounds ?? []).find((x) => x.id === action.sound);
+        if (!own && !BUILTIN_SOUNDS.some((b) => b.id === action.sound)) return { ok: false, reason: 'Effetto sonoro sconosciuto' };
+        for (const id of this.connected) this.opts.send(id, { k: 'sfx', sound: action.sound, asset: own?.asset });
+        return { ok: true };
+      }
+      case 'sfx.remove': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        s.sounds = (s.sounds ?? []).filter((x) => x.id !== action.soundId);
+        break;
+      }
       case 'ping': {
         const color = isGm ? '#ffffff' : player!.color;
         for (const id of this.connected) {
@@ -1586,12 +1602,13 @@ export class GameHost {
           if (!note || note.authorId !== from) return { ok: false, reason: 'Solo il master può farlo' };
         }
         if (audio) {
-          if (!target || !('track' in target)) return { ok: false, reason: 'Formato non supportato' };
+          if (!target || !('track' in target || 'sound' in target)) return { ok: false, reason: 'Formato non supportato' };
+          if ('sound' in target && action.dataUrl.length > MAX_SOUND_BYTES) return { ok: false, reason: 'Effetto troppo grande (max ~2MB)' };
           if (action.dataUrl.length > MAX_AUDIO_BYTES) return { ok: false, reason: 'Brano troppo grande (max ~11MB)' };
         } else {
           if (!IMAGE_DATA_URL.test(action.dataUrl)) return { ok: false, reason: 'Formato immagine non supportato' };
           if (action.dataUrl.length > MAX_ASSET_BYTES) return { ok: false, reason: 'Immagine troppo grande (max ~9MB)' };
-          if (target && 'track' in target) return { ok: false, reason: 'Formato audio non supportato' };
+          if (target && ('track' in target || 'sound' in target)) return { ok: false, reason: 'Formato audio non supportato' };
         }
         const id = this.addAsset(action.dataUrl);
         if (target && 'sceneId' in target && s.scenes[target.sceneId]) s.scenes[target.sceneId]!.background = id;
@@ -1603,6 +1620,9 @@ export class GameHost {
         if (target && 'propId' in target && s.props![target.propId]) {
           s.props![target.propId]!.image = id;
           s.props![target.propId]!.kind = 'image';
+        }
+        if (target && 'sound' in target) {
+          s.sounds = [...(s.sounds ?? []), { id: newId(), name: String(target.sound).slice(0, 60) || 'Effetto', asset: id }].slice(-40);
         }
         if (target && 'track' in target) {
           s.music!.tracks.push({ id: newId(), name: String(target.track).slice(0, 120) || 'Brano', asset: id });

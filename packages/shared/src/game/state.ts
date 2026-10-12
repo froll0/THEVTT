@@ -222,6 +222,14 @@ export interface MusicTrack {
  * Shared music. Players compute where to be from `position` (seconds) at
  * host time `startedAt`; the host sends its clock with every state.
  */
+/** A sound effect of the GM's own, uploaded for this table. */
+export interface SoundEffect {
+  id: string;
+  name: string;
+  /** audio asset id */
+  asset: string;
+}
+
 export interface MusicState {
   tracks: MusicTrack[];
   current: string | null;
@@ -310,6 +318,8 @@ export interface GameState {
   /** extended tests the table is working on */
   extended?: Record<string, ExtendedTest>;
   music?: MusicState;
+  /** the GM's own sound effects (the built-in ones are always there) */
+  sounds?: SoundEffect[];
   walls?: Record<string, Wall>;
   props?: Record<string, Prop>;
   /** set by the GM: players can talk and roll, but not touch the map */
@@ -498,5 +508,7 @@ export function referencedAssets(state: GameState): Set<string> {
   for (const p of Object.values(state.props ?? {})) if (p.image) ids.add(p.image);
   const track = state.music?.tracks.find((t) => t.id === state.music?.current);
   if (track) ids.add(track.asset);
+  // sound effects are short: everyone has them ready before the GM plays one
+  for (const x of state.sounds ?? []) ids.add(x.asset);
   return ids;
 }

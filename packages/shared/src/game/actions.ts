@@ -175,11 +175,14 @@ export type GameAction =
   | { type: 'music.loop'; loop: boolean }
   | { type: 'music.remove'; trackId: string }
   | { type: 'music.rename'; trackId: string; name: string }
+  /** GM: a sound effect heard by everyone at once (built-in id or one of the table's sounds) */
+  | { type: 'sfx.play'; sound: string }
+  | { type: 'sfx.remove'; soundId: string }
   /**
    * register an image (or, for music, an audio file) and get back its id through the state.
    * Players may only attach images to their own notes.
    */
-  | { type: 'asset.add'; dataUrl: string; attachTo?: { sceneId: string } | { tokenId: string } | { noteId: string } | { track: string } | { propId: string } };
+  | { type: 'asset.add'; dataUrl: string; attachTo?: { sceneId: string } | { tokenId: string } | { noteId: string } | { track: string } | { sound: string } | { propId: string } };
 
 /** Messages flowing inside relay payloads. */
 export type PlayerToHost = { k: 'hello' } | { k: 'action'; action: GameAction; seq?: number };
@@ -189,4 +192,6 @@ export type HostToPlayer =
   | { k: 'state'; state: GameState; rev: number; now?: number }
   | { k: 'asset'; id: string; dataUrl: string }
   | { k: 'rejected'; seq?: number; reason: string }
-  | { k: 'ping'; x: number; y: number; sceneId: string; color: string; from: string };
+  | { k: 'ping'; x: number; y: number; sceneId: string; color: string; from: string }
+  /** a sound effect: built-in id, or the audio asset of one of the table's sounds */
+  | { k: 'sfx'; sound: string; asset?: string };

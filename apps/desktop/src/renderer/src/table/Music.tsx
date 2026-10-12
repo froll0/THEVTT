@@ -1,5 +1,5 @@
-import type { MusicState } from '@thevtt/shared';
-import { Music, Pause, Play, Plus, Repeat, Trash2, Volume2, VolumeX } from 'lucide-react';
+import { BUILTIN_SOUNDS, type MusicState } from '@thevtt/shared';
+import { AudioLines, Music, Pause, Play, Plus, Repeat, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Popover } from '../components/ui';
 import { useApp } from '../store/app';
@@ -284,6 +284,62 @@ export function MusicPanel() {
           ))}
         </div>
       )}
+      <SoundBoard />
     </div>
+  );
+}
+
+/** GM: one-shot sound effects everyone hears at once (also from macros: /suono tuono). */
+function SoundBoard() {
+  const { state, dispatch } = useTable();
+  const toast = useApp((x) => x.toast);
+  const [loading, setLoading] = useState(false);
+  const own = state?.sounds ?? [];
+  const add = async (files: FileList | null) => {
+    for (const f of Array.from(files ?? [])) {
+      if (!f.type.startsWith('audio/')) {
+        toast(`${f.name}: non è un file audio`, 'error');
+        continue;
+      }
+      if (f.size > 2 * 1024 * 1024) {
+        toast(`${f.name}: troppo grande per un effetto (max 2 MB)`, 'error');
+        continue;
+      }
+      setLoading(true);
+      try {
+        dispatch({ type: 'asset.add', dataUrl: await readAudio(f), attachTo: { sound: f.name.replace(/\.[^.]+$/, '') } });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+  return (
+    <>
+      <div className="row between">
+        <span className="section-title">Effetti sonori</span>
+        <label className="btn sm">
+          <Plus size={14} /> {loading ? 'Carico…' : 'Aggiungi'}
+          <input type="file" accept="audio/*" multiple hidden aria-label="Aggiungi effetti sonori" onChange={(e) => void add(e.target.files).then(() => (e.target.value = ''))} />
+        </label>
+      </div>
+      <div className="sfx-grid" role="list" aria-label="Effetti sonori">
+        {BUILTIN_SOUNDS.map((x) => (
+          <button key={x.id} role="listitem" className="btn sm sfx" onClick={() => dispatch({ type: 'sfx.play', sound: x.id })} title={`Fai sentire a tutti: ${x.name}`}>
+            <AudioLines size={12} /> {x.name}
+          </button>
+        ))}
+        {own.map((x) => (
+          <span key={x.id} role="listitem" className="sfx-own">
+            <button className="btn sm sfx" onClick={() => dispatch({ type: 'sfx.play', sound: x.id })} title={`Fai sentire a tutti: ${x.name}`}>
+              <AudioLines size={12} /> {x.name}
+            </button>
+            <button className="btn ghost sm icon" aria-label={`Rimuovi ${x.name}`} onClick={() => dispatch({ type: 'sfx.remove', soundId: x.id })}>
+              <Trash2 size={12} />
+            </button>
+          </span>
+        ))}
+      </div>
+      <p className="faint tiny">Li sentono tutti, al volume della musica di ciascuno. Nelle macro: /suono tuono.</p>
+    </>
   );
 }

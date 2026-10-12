@@ -1,4 +1,4 @@
-import { expandMacro, parseMacro, type GameAction, type GameState, type MacroStep, type Token } from '@thevtt/shared';
+import { expandMacro, findSound, parseMacro, type GameAction, type GameState, type MacroStep, type Token } from '@thevtt/shared';
 import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 
 /**
@@ -72,6 +72,11 @@ export function runMacro(
   const mine = targets.filter((t) => isGm || t.ownerIds.includes(ctx.me));
   if (steps.some((s) => s.kind === 'hp' || s.kind === 'condition' || s.kind === 'initiative') && !mine.length) return 'Seleziona prima uno o più token sulla mappa';
   for (const s of steps) {
+    if (s.kind !== 'sound') continue;
+    if (!isGm) return 'Solo il master fa sentire i suoni';
+    if (!findSound(ctx.state.sounds ?? [], s.name)) return `Suono sconosciuto: «${s.name}»`;
+  }
+  for (const s of steps) {
     if (s.kind === 'roll') ctx.dispatch({ type: 'roll', formula: s.formula, label: s.label, private: s.private, blind: s.blind });
     else if (s.kind === 'chat') ctx.dispatch({ type: 'chat', text: s.text, private: s.private });
     else if (s.kind === 'hp') ctx.dispatch({ type: 'hp.roll', formula: s.formula, heal: s.heal, label: s.label, tokenIds: mine.map((t) => t.id) });
@@ -85,6 +90,8 @@ export function runMacro(
         else if (s.rounds) rounds[name] = s.rounds;
         ctx.dispatch({ type: 'token.update', tokenId: t.id, patch: { conditions: has ? t.conditions.filter((c) => c !== name) : [...t.conditions, name], conditionRounds: rounds } });
       }
+    } else if (s.kind === 'sound') {
+      ctx.dispatch({ type: 'sfx.play', sound: findSound(ctx.state.sounds ?? [], s.name)!.id });
     } else if (s.kind === 'initiative') {
       for (const t of mine) {
         let modifier = s.modifier;
