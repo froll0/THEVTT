@@ -5,6 +5,7 @@ import { resolveToken } from './auth';
 import { openDb, type Db } from './db';
 import { HttpError, unauthorized } from './errors';
 import { Hub } from './hub';
+import { webClient } from './web';
 import { Repo } from './repo';
 import { authRoutes } from './routes/auth';
 import { campaignRoutes } from './routes/campaigns';
@@ -30,6 +31,8 @@ export interface AppOptions {
   logger?: boolean;
   /** ICE servers handed to clients for direct GM ↔ player connections */
   iceServers?: RtcConfig['iceServers'];
+  /** the built web client, served at /play/ so players can join from a browser */
+  webRoot?: string;
 }
 
 export const DEFAULT_ICE_SERVERS: RtcConfig['iceServers'] = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
@@ -53,6 +56,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   app.decorateRequest('userId', '');
   app.addHook('onRequest', async (req) => {
     if (req.url.startsWith('/auth/register') || req.url.startsWith('/auth/login') || req.url === '/health') return;
+    if (req.url === '/' || req.url === '/play' || req.url.startsWith('/play/')) return;
     if (req.method === 'OPTIONS') return;
     const userId = resolveToken(db, bearer(req));
     if (!userId) throw unauthorized();
@@ -69,6 +73,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
 
   app.get('/health', async () => ({ ok: true, name: 'thevtt-lobby', version: '0.1.0' }));
   app.get('/rtc/config', async (): Promise<RtcConfig> => ({ iceServers: opts.iceServers ?? DEFAULT_ICE_SERVERS }));
+  if (opts.webRoot) webClient(app, opts.webRoot);
   authRoutes(app, ctx);
   socialRoutes(app, ctx);
   campaignRoutes(app, ctx);

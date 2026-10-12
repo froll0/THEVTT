@@ -14,6 +14,8 @@ export interface HostedServerOptions {
   rendezvous: string;
   fetch: Fetch;
   onStatus: (s: HostedServerStatus) => void;
+  /** the built renderer, served to players who join from a browser */
+  webRoot?: string;
 }
 
 /** the relay keeps messages 12 hours: republish well before */
@@ -94,7 +96,7 @@ export class HostedServer {
       this.update({ state: 'starting', port: cfg.port, error: undefined, upnp: { state: cfg.upnp ? 'working' : 'off' } });
       try {
         const iceServers = cfg.turn?.url ? [...DEFAULT_ICE_SERVERS, { urls: cfg.turn.url, username: cfg.turn.username, credential: cfg.turn.credential }] : undefined;
-        const { app } = await buildApp({ dbPath: join(this.o.dataDir, 'server', 'thevtt.sqlite'), iceServers });
+        const { app } = await buildApp({ dbPath: join(this.o.dataDir, 'server', 'thevtt.sqlite'), iceServers, webRoot: this.o.webRoot });
         await app.listen({ port: cfg.port, host: '0.0.0.0' });
         this.app = app;
         this.update({ state: 'running', lanAddresses: lanAddresses(), published: 'no' });

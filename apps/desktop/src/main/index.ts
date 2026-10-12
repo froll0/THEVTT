@@ -316,6 +316,7 @@ app.whenReady().then(async () => {
     rendezvous,
     fetch: (u, init) => net.fetch(u, init),
     onStatus: onServerStatus,
+    webRoot: join(__dirname, '../renderer'),
   });
   // a copy of yesterday's data, before anything changes today
   await autoBackup(app.getPath('userData'), app.getVersion()).catch(() => null);

@@ -317,6 +317,21 @@ function ServerSettings() {
                         <CopyAddress value={`${st.lanAddresses[0]}:${st.port}`} />
                       </div>
                     )}
+                    {(st.tunnel.state === 'ready' || st.lanAddresses[0]) && (
+                      <div className="col" style={{ gap: 4 }}>
+                        <span className="small muted">Giocatori dal browser, senza installare niente</span>
+                        <CopyAddress
+                          value={
+                            st.tunnel.state === 'ready'
+                              ? `${st.tunnel.url.replace(/\/$/, '')}/play/`
+                              : st.upnp.state === 'mapped' && st.upnp.externalIp
+                                ? `http://${st.upnp.externalIp}:${st.port}/play/`
+                                : `http://${st.lanAddresses[0]}:${st.port}/play/`
+                          }
+                        />
+                        {st.tunnel.state !== 'ready' && <span className="faint tiny">Dal browser, voce e video funzionano solo con il collegamento automatico (indirizzo https).</span>}
+                      </div>
+                    )}
                     {st.upnp.state === 'working' && <p className="muted small">Sto chiedendo al router di aprire la porta…</p>}
                     {st.upnp.state === 'mapped' && <p className="muted small">Il router ha aperto la porta {st.port}. Gli amici possono raggiungerti da internet.</p>}
                     {!cfg.tunnel && (st.upnp.state === 'unavailable' || st.upnp.state === 'failed' || st.upnp.state === 'off') && <PublicIp port={st.port} />}

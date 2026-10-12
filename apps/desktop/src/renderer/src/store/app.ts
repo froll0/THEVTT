@@ -29,7 +29,9 @@ const SERVER_KEY = 'thevtt:server';
 const TOKEN_KEY = 'thevtt:token';
 const GROUP_KEY = 'thevtt:group';
 // an empty build variable (e.g. unset in CI) must not produce an empty address
-export const DEFAULT_SERVER = import.meta.env.VITE_THEVTT_SERVER || 'http://localhost:4477';
+/** opened from the GM's server at /play/: a player in a browser, the server is that page's own */
+export const WEB_CLIENT = !window.thevtt && /^https?:$/.test(location.protocol) && location.pathname.startsWith('/play');
+export const DEFAULT_SERVER = WEB_CLIENT ? location.origin : import.meta.env.VITE_THEVTT_SERVER || 'http://localhost:4477';
 
 interface AppState {
   serverUrl: string;
@@ -198,7 +200,7 @@ export const useApp = create<AppState>((set, get) => {
     }
   };
 
-  const serverUrl = localStorage.getItem(SERVER_KEY) ?? DEFAULT_SERVER;
+  const serverUrl = WEB_CLIENT ? DEFAULT_SERVER : (localStorage.getItem(SERVER_KEY) ?? DEFAULT_SERVER);
 
   return {
     serverUrl,
