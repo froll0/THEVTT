@@ -1,22 +1,14 @@
 ## Novità
 
-- **Warhammer: the Old World, regole al tavolo**:
-  - **Pericoli**: il master segna sulle Zone il Pericolo, la prova (Tempra, Atletica…), la Condizione e se colpisce a ogni turno, anche partendo dagli esempi del manuale. In combattimento chi entra tira da solo: fallendo subisce la Ferita, con tanti dadi quanti i successi mancanti, e la Condizione.
-  - **Terreno Difficile**: Atletica una volta per turno; chi fallisce cade Prono.
-  - **Fine del turno**: In Fiamme fa tirare Tempra contro un Pericolo (2); Ferito Gravemente fa diventare Indifeso chi fallisce, e muore chi lo era già.
-  - **Ritirata**: dal pannello dell'iniziativa si sceglie la retroguardia, tutti tirano Atletica e chi fallisce tira su «Si Salvi Chi Può!».
-  - **Fine della giornata**: dall'orologio del mondo, Tempra contro le infezioni (Ferite Purulente) per chi è stato ferito e Volontà per chi il master ha segnato come esposto al Caos.
-  - **Mostruosità**: dopo un colpo si sceglie tra Ferita e Reazione; dal profilo si lanciano «Tutti gli attacchi».
-  - **Prove Prolungate condivise**: chiunque al tavolo ne aggiunge una e tira, e i successi si sommano.
-- **Combattimento sulla mappa**:
-  - Bonus e penalità d'attacco calcolati dal tavolo: Carica, superiorità numerica, posizione sopraelevata, bersaglio Prono, Portata Ottimale, copertura.
-  - Trascinando un token si vedono le Zone percorse nel turno e gli avvisi di Terreno Difficile e Pericolo.
-  - Le armi da fuoco restano scariche dopo lo sparo e si ricaricano con la Prova Prolungata di Destrezza.
-  - Cavalcature (il Cavallo dà +1 Resilienza e la Velocità Veloce) e veicoli: ogni colpo li prende senza opposizione e al posto delle Ferite subiscono Guasti.
-- **Scheda**:
-  - Scheda «Intermezzo» con le 17 Attività, i fallimenti segnati, straordinari, banca, Prove Prolungate personali e gli Eventi di Talagaad.
-  - Scheda «Corruzione» con gli stadi, i 5 Sentieri e i loro doni.
-  - I 34 oggetti magici del manuale: le armi si impugnano, le armature contano nella Resilienza.
-- **Creazione del personaggio**: Contatti e Risorse si tirano sulle tabelle del manuale.
-- **Bestiario**: si creano PNG propri con l'editor; ci sono anche carri e imbarcazioni.
-- **Compendio**: oggetti magici, Corruzione, Attività dell'Intermezzo, Talagaad e le sue fazioni, Contatti, Eventi e nuove tabelle. Il testo della tabella delle Ferite segue quello del manuale.
+- **Nuova icona**: un d20 su una base blu in stile vetro, la stessa nella barra in alto, nella schermata d'accesso e negli installer.
+- **Zone di Warhammer**: il pannello è un pannello vero, accanto alla barra degli strumenti, con i campi in ordine e con le etichette. Non è più ovale e i campi non escono dai bordi.
+- **Interfacce più coerenti**:
+  - Nel pannello del token di Warhammer, prova, Pericolo ed esposizione al Caos hanno le loro etichette.
+  - Il bestiario di Warhammer ha la stessa barra di ricerca e lo stesso selettore Tutti / Manuale / Miei di quello di D&D.
+  - Nel pannello «Scheda» al tavolo, i personaggi di Warhammer mostrano Resilienza e Ferite.
+  - I riquadri in cima alla scheda occupano tutta la larghezza.
+  - Ritocchi a scena, scorciatoie da tastiera, riposi nell'orologio del mondo e pulsanti dell'Intermezzo.
+- **Macro con Warhammer**: `@mischia`, `@tempra`, `@volontà` e le altre Abilità diventano la riserva della scheda (per esempio `4d10s4`). Esempi e guida cambiano in base al gioco.
+- **Correzioni**:
+  - `/condizione` usa le Condizioni del gioco della campagna.
+  - I giocatori non vedono più il pulsante «Prova» sui token degli altri.
