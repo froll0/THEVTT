@@ -1,5 +1,5 @@
 import { expandMacro, parseMacro, type GameAction, type GameState, type MacroStep, type Token } from '@thevtt/shared';
-import { dnd5e } from '@thevtt/systems';
+import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 
 /**
  * Where a macro's `@names` come from: the character of the selected token if
@@ -9,13 +9,28 @@ export function macroCharacter(state: GameState, me: string, selected: Token[]) 
   const own = selected.find((t) => t.characterId && (t.ownerIds.includes(me) || state.gmId === me));
   const id = own?.characterId ?? state.players[me]?.characterId ?? null;
   const ch = id ? state.characters[id] : undefined;
-  return ch && ch.systemId === 'dnd5e-2024' ? ch : undefined;
+  return ch && (ch.systemId === 'dnd5e-2024' || ch.systemId === 'wtow') ? ch : undefined;
+}
+
+/** Warhammer: every skill is its test's pool («@mischia» → 4d10s4), plus Resilienza. */
+function wtowVars(name: string, data: unknown): Record<string, number | string> {
+  const c = warhammer.normalize(data);
+  const v: Record<string, number | string> = { nome: name, name, resilienza: warhammer.resilience(c) };
+  for (const s of warhammer.SKILLS) {
+    const p = warhammer.pool(c, s);
+    const formula = warhammer.testFormula(p.dice, p.target);
+    v[s] = formula;
+    // the accented spelling too: @volontà, @furtività
+    v[warhammer.SKILL_INFO[s].name.toLowerCase()] = formula;
+  }
+  return v;
 }
 
 /** The numbers a macro can use, by their Italian and English names. */
 export function macroVars(state: GameState, me: string, selected: Token[]): Record<string, number | string> {
   const ch = macroCharacter(state, me, selected);
   if (!ch) return {};
+  if (ch.systemId === 'wtow') return wtowVars(ch.name, ch.data);
   const c = dnd5e.normalize(ch.data);
   const m = (a: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha') => dnd5e.abilityMod(c, a);
   const prof = dnd5e.proficiencyBonus(c.level);
@@ -61,7 +76,7 @@ export function runMacro(
     else if (s.kind === 'chat') ctx.dispatch({ type: 'chat', text: s.text, private: s.private });
     else if (s.kind === 'hp') ctx.dispatch({ type: 'hp.roll', formula: s.formula, heal: s.heal, label: s.label, tokenIds: mine.map((t) => t.id) });
     else if (s.kind === 'condition') {
-      const known = dnd5e.CONDITIONS.find((c) => c.toLowerCase() === s.name.toLowerCase());
+      const known = (getSystem(ctx.state.systemId)?.conditions ?? dnd5e.CONDITIONS).find((c) => c.toLowerCase() === s.name.toLowerCase());
       const name = known ?? s.name.charAt(0).toUpperCase() + s.name.slice(1);
       for (const t of mine) {
         const has = t.conditions.includes(name);

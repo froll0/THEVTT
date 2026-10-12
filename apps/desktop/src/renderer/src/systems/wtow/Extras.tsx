@@ -442,7 +442,7 @@ export function IntermezzoTab({ c, editable, set, table, onShare }: { c: C; edit
                 <option key={x.id} value={x.name} />
               ))}
             </datalist>
-            <button className="btn" disabled={busy || left < 1} onClick={() => void run()}>
+            <button className="btn" style={{ alignSelf: 'flex-start' }} disabled={busy || left < 1} onClick={() => void run()}>
               <Dices size={14} /> {left < 1 ? 'Attività finite per questo Intermezzo' : `Tira ${w.testFormula(p.dice, p.target, { mod: bonus })}`}
             </button>
             <span className="faint tiny">Ogni fallimento si segna sull’Abilità: superato il suo valore, sale di 1 (fino a 6).</span>
@@ -493,6 +493,7 @@ export function IntermezzoTab({ c, editable, set, table, onShare }: { c: C; edit
           </p>
           <button
             className="btn sm"
+            style={{ alignSelf: 'flex-start' }}
             onClick={() => {
               set(w.resetCoins(c, overtime));
               setDone([]);

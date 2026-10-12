@@ -158,7 +158,7 @@ test('Warhammer at the table: opposed attacks, wounds, zones and the d10 pool', 
   await expect(G.locator('.ini-row', { hasText: 'Gunter' })).toContainText('PG');
 
   // an extended test for the whole table
-  await G.getByPlaceholder('Nuova prova (es. Forzare il portone)').fill('Forzare il portone');
+  await G.getByPlaceholder('Nuova prova').fill('Forzare il portone');
   await G.getByRole('button', { name: 'Aggiungi la prova' }).click();
   await G.getByLabel('Formula per Forzare il portone').fill('4d10s3');
   await G.locator('.extended-row').getByRole('button', { name: /Tira/ }).click();

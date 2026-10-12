@@ -1,5 +1,5 @@
 import { describeStep, expandMacro, macroQuestions, parseMacro, type Macro } from '@thevtt/shared';
-import { dnd5e } from '@thevtt/systems';
+import { dnd5e, getSystem } from '@thevtt/systems';
 import { ArrowDown, ArrowUp, CircleAlert, Play, Plus, Settings2, Swords, Trash2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Field, Modal } from '../components/ui';
@@ -18,6 +18,16 @@ const EXAMPLES: Omit<Macro, 'id' | 'color'>[] = [
   { name: 'Colpo al bersaglio', body: '/danno ?{Danni|1d8+@for} ?{Arma|Spada lunga}' },
 ];
 
+/** Warhammer: the skills are pools of d10 */
+const POOL_EXAMPLES: Omit<Macro, 'id' | 'color'>[] = [
+  { name: 'Percezione', body: '/r @percezione Percezione' },
+  { name: 'Furtività', body: '/br @furtivita Furtività' },
+  { name: 'Tempra', body: '/r @tempra Tempra' },
+  { name: 'Volontà nascosta', body: '/gr @volonta Volontà' },
+  { name: 'Recuperare', body: '/condizione Barcollante\nRecupero il fiato.' },
+  { name: 'Prova a scelta', body: '/r ?{Riserva|3d10s3} ?{Abilità|Prova}' },
+];
+
 const HELP: [string, string][] = [
   ['/r 1d20+5 Etichetta', 'tira i dadi (/gr di nascosto, /br alla cieca)'],
   ['/danno 2d6+3 Ascia', 'tira e toglie i PF ai token selezionati'],
@@ -29,6 +39,17 @@ const HELP: [string, string][] = [
   ['?{Domanda|5}', 'chiede un valore quando la lanci (5 se non lo cambi)'],
   ['@for @des @cos @int @sag @car', 'modificatori di caratteristica della tua scheda'],
   ['@comp @livello @ca @iniz', 'competenza, livello, CA, bonus d’iniziativa'],
+];
+
+const POOL_HELP: [string, string][] = [
+  ['/r 4d10s3 Etichetta', 'tira la riserva: 4 dadi, successo con 3 o meno (/gr di nascosto, /br alla cieca)'],
+  ['/r 4d10s3g · 4d10s3t', 'prova Gloriosa (ritira i fallimenti) o Tetra (ritira i successi)'],
+  ['/condizione Barcollante', 'mette o toglie una condizione ai token selezionati'],
+  ['/gm testo', 'messaggio al solo master'],
+  ['testo', 'un messaggio in chat'],
+  ['?{Domanda|5}', 'chiede un valore quando la lanci (5 se non lo cambi)'],
+  ['@mischia @tiro @tempra @volonta…', 'la riserva di quell’Abilità dalla tua scheda (es. 4d10s4)'],
+  ['@resilienza @nome', 'Resilienza e nome del personaggio'],
 ];
 
 /** A macro ready to run: asks its questions first, if it has any. */
@@ -210,6 +231,9 @@ function MacroManager({ onClose, onRun }: { onClose: () => void; onRun: (m: Macr
   const { state, selectedTokenId, group, dispatch } = useTable();
   const me = useApp((s) => s.user?.id ?? '');
   const isGm = !!state && state.gmId === me;
+  const pool = getSystem(state?.systemId ?? '')?.table === 'pool';
+  const examples = pool ? POOL_EXAMPLES : EXAMPLES;
+  const help = pool ? POOL_HELP : HELP;
   // one's own macros, or the table's: the GM writes those, everyone uses them
   const [scope, setScope] = useState<'mine' | 'table'>('mine');
   const shared = state?.macros ?? [];
@@ -314,7 +338,7 @@ function MacroManager({ onClose, onRun }: { onClose: () => void; onRun: (m: Macr
             Esempi da cui partire
           </span>
           <div className="row" style={{ flexWrap: 'wrap', gap: 4 }}>
-            {EXAMPLES.map((x) => (
+            {examples.map((x) => (
               <button key={x.name} className="chip" onClick={() => add(x)}>
                 {x.name}
               </button>
@@ -341,7 +365,7 @@ function MacroManager({ onClose, onRun }: { onClose: () => void; onRun: (m: Macr
               readOnly={readOnly}
               value={editing.body}
               onChange={(e) => setEditing({ ...editing, body: e.target.value })}
-              placeholder={'/r 1d20+@for+@comp Attacco\n/danno ?{Danni|1d8+@for} Spada'}
+              placeholder={pool ? '/r @mischia Mischia\n/condizione Barcollante' : '/r 1d20+@for+@comp Attacco\n/danno ?{Danni|1d8+@for} Spada'}
               aria-label="Testo della macro"
               spellCheck={false}
               rows={6}
@@ -398,7 +422,7 @@ function MacroManager({ onClose, onRun }: { onClose: () => void; onRun: (m: Macr
             <details className="macro-help">
               <summary>Cosa si può scrivere</summary>
               <dl>
-                {HELP.map(([k, v]) => (
+                {help.map(([k, v]) => (
                   <div key={k}>
                     <dt>
                       <code>{k}</code>

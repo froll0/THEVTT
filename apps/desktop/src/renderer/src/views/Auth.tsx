@@ -5,6 +5,7 @@ import { asGroupCode, displayServerAddress, normalizeServerAddress } from '../li
 import { bridge } from '../lib/platform';
 import { useApp } from '../store/app';
 import { DEFAULT_HOSTING, inviteAddress, localServerUrl, useHosting } from '../store/hosting';
+import { BrandMark } from '../components/BrandMark';
 
 type Where = 'host' | 'join';
 
@@ -78,7 +79,7 @@ export function AuthView() {
       <form className="auth-box" onSubmit={submit}>
         <div className="col" style={{ gap: 6 }}>
           <div className="logo">
-            <i /> TheVTT
+            <BrandMark /> TheVTT
           </div>
           <p className="muted">Il vostro tavolo da gioco. Crea campagne, invita gli amici, gioca.</p>
         </div>

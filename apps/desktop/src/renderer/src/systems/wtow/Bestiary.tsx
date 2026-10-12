@@ -43,6 +43,7 @@ export function WtowBestiary({ onAdd, onRoll }: BestiaryProps) {
   const [open, setOpen] = useState<string | null>(null);
   const [count, setCount] = useState(1);
   const [editing, setEditing] = useState<w.Npc | null>(null);
+  const [source, setSource] = useState<'all' | 'book' | 'own'>('all');
   const homebrew = useHomebrew((s) => s.monsters);
   const { saveMonster, deleteMonster } = useHomebrew();
   const own = useMemo(
@@ -59,18 +60,37 @@ export function WtowBestiary({ onAdd, onRoll }: BestiaryProps) {
   const groups = useMemo(() => [...new Set([...own.map((n) => n.group), ...w.NPC_GROUPS, 'Veicoli'])], [own]);
   const list = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return [...own, ...w.NPCS].filter((n) => (!type || n.type === type) && (!group || n.group === group) && (!needle || n.name.toLowerCase().includes(needle) || n.group.toLowerCase().includes(needle)));
-  }, [q, type, group, own]);
+    const pool = source === 'own' ? own : source === 'book' ? w.NPCS : [...own, ...w.NPCS];
+    return pool.filter((n) => (!type || n.type === type) && (!group || n.group === group) && (!needle || n.name.toLowerCase().includes(needle) || n.group.toLowerCase().includes(needle)));
+  }, [q, type, group, own, source]);
   const vehicles = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (type || (group && group !== 'Veicoli')) return [];
+    if (type || source === 'own' || (group && group !== 'Veicoli')) return [];
     return w.VEHICLES.filter((v) => !needle || v.name.toLowerCase().includes(needle) || 'veicoli'.includes(needle));
-  }, [q, type, group]);
+  }, [q, type, group, source]);
   return (
     <div className="col" style={{ gap: 'var(--s3)' }}>
       <div className="row">
-        <Search size={14} className="muted" />
-        <input className="input grow" placeholder="Cerca un PNG…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="row grow" style={{ position: 'relative' }}>
+          <Search size={14} className="faint" style={{ position: 'absolute', left: 10 }} />
+          <input className="input" style={{ paddingLeft: 30 }} placeholder="Cerca un PNG…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <button className="btn sm" onClick={() => setEditing(w.blankNpc())}>
+          <Plus size={14} /> Nuovo
+        </button>
+      </div>
+      <div className="seg row" style={{ alignSelf: 'flex-start' }}>
+        {(
+          [
+            ['all', 'Tutti'],
+            ['book', 'Manuale'],
+            ['own', 'Miei'],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} className={source === id ? 'on' : ''} onClick={() => setSource(id)}>
+            {label}
+          </button>
+        ))}
       </div>
       <div className="row wrap" style={{ gap: 4 }}>
         {TYPES.map((t) => (
@@ -85,9 +105,6 @@ export function WtowBestiary({ onAdd, onRoll }: BestiaryProps) {
           <option key={g}>{g}</option>
         ))}
       </select>
-      <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => setEditing(w.blankNpc())}>
-        <Plus size={13} /> Nuovo PNG
-      </button>
       <div className="col" style={{ gap: 4 }}>
         {list.map((n) => (
           <div key={n.id} className="detail" style={{ padding: 8 }}>

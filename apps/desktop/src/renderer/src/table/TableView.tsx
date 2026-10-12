@@ -593,98 +593,111 @@ export function TableView({ campaignId }: { campaignId: string }) {
 function ZonesPanel({ sceneId, erase, setErase }: { sceneId: string; erase: boolean; setErase: (v: boolean) => void }) {
   const { state, dispatch } = useTable();
   const zones = Object.values(state?.zones ?? {}).filter((z) => z.sceneId === sceneId);
+  const upd = (zoneId: string, patch: Partial<NonNullable<typeof zones>[number]>) => dispatch({ type: 'zone.update', zoneId, patch });
   return (
-    <div className="float tool-options glass zones-panel" style={{ flexDirection: 'column', alignItems: 'stretch', maxHeight: '60vh', overflow: 'auto', width: 300 }}>
+    <div className="board-panel glass zones-panel" aria-label="Zone">
       <div className="row between">
-        <b className="small">Zone</b>
-        <span className="row" style={{ gap: 4 }}>
-          <button className={`tool ${!erase ? 'active' : ''}`} title="Disegna: trascina sulla mappa" onClick={() => setErase(false)}>
-            <Square size={14} />
+        <b>Zone</b>
+        <span className="seg row">
+          <button className={!erase ? 'on' : ''} title="Disegna: trascina sulla mappa" onClick={() => setErase(false)}>
+            <Square size={13} /> Disegna
           </button>
-          <button className={`tool ${erase ? 'active' : ''}`} title="Cancella: clic su una zona" onClick={() => setErase(true)}>
-            <Eraser size={14} />
+          <button className={erase ? 'on' : ''} title="Cancella: clic su una zona" onClick={() => setErase(true)}>
+            <Eraser size={13} /> Cancella
           </button>
         </span>
       </div>
       {zones.map((z) => (
-        <div key={z.id} className="col" style={{ gap: 4, borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-          <div className="row" style={{ gap: 4 }}>
-            <input className="input grow" defaultValue={z.name} key={z.name} aria-label="Nome della zona" onBlur={(e) => e.target.value !== z.name && dispatch({ type: 'zone.update', zoneId: z.id, patch: { name: e.target.value } })} />
+        <div key={z.id} className="zone-card">
+          <div className="row" style={{ gap: 6 }}>
+            <input className="input grow" defaultValue={z.name} key={z.name} aria-label="Nome della zona" onBlur={(e) => e.target.value !== z.name && upd(z.id, { name: e.target.value })} />
             <button className="btn ghost sm icon" aria-label="Elimina la zona" onClick={() => dispatch({ type: 'zone.delete', zoneId: z.id })}>
-              <Trash2 size={12} />
+              <Trash2 size={13} />
             </button>
           </div>
           <div className="row wrap" style={{ gap: 4 }}>
-            <button className={`chip sm ${z.difficult ? 'on' : ''}`} onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { difficult: !z.difficult } })}>
+            <button className={`chip sm ${z.difficult ? 'on' : ''}`} title="Atletica per attraversarla; fallendo si cade Proni" onClick={() => upd(z.id, { difficult: !z.difficult })}>
               Terreno Difficile
             </button>
-            <button className={`chip sm ${z.cover ? 'on' : ''}`} title="-1d ai tiri contro chi è dentro" onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { cover: !z.cover } })}>
+            <button className={`chip sm ${z.cover ? 'on' : ''}`} title="-1d ai tiri contro chi è dentro" onClick={() => upd(z.id, { cover: !z.cover })}>
               Copertura
             </button>
-            <button className={`chip sm ${z.high ? 'on' : ''}`} title="+1d agli attacchi in mischia da qui" onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { high: !z.high } })}>
+            <button className={`chip sm ${z.high ? 'on' : ''}`} title="+1d agli attacchi in mischia da qui" onClick={() => upd(z.id, { high: !z.high })}>
               Sopraelevata
             </button>
-            <select className="select tool-select" aria-label="Pericolo" value={z.hazard ?? 0} onChange={(e) => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazard: Number(e.target.value) } })}>
-              <option value={0}>Nessun Pericolo</option>
+          </div>
+          <label className="field">
+            <span>Pericolo</span>
+            <select className="select" aria-label="Pericolo" value={z.hazard ?? 0} onChange={(e) => upd(z.id, { hazard: Number(e.target.value) })}>
+              <option value={0}>Nessuno</option>
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
-                  Pericolo ({n})
+                  Grado {n}: {n} successi per evitarlo
                 </option>
               ))}
             </select>
-          </div>
+          </label>
           {!!z.hazard && (
-            <div className="col" style={{ gap: 4 }}>
-              <select
-                className="select tool-select"
-                aria-label="Esempio di Pericolo"
-                value=""
-                onChange={(e) => {
-                  const h = warhammer.HAZARDS[Number(e.target.value)];
-                  if (h)
-                    dispatch({
-                      type: 'zone.update',
-                      zoneId: z.id,
-                      patch: { hazard: h.grade, hazardSkill: h.skill, hazardCondition: h.condition, hazardEach: h.frequency === 'Ogni turno', hazardNoWound: !!h.noWound },
-                    });
-                }}
-              >
-                <option value="">Dal manuale…</option>
-                {warhammer.HAZARDS.map((h, i) => (
-                  <option key={h.name} value={i}>
-                    {h.name} ({h.skill} {h.grade})
-                  </option>
-                ))}
-              </select>
+            <>
+              <label className="field">
+                <span>Dal manuale</span>
+                <select
+                  className="select"
+                  aria-label="Esempio di Pericolo"
+                  value=""
+                  onChange={(e) => {
+                    const h = warhammer.HAZARDS[Number(e.target.value)];
+                    if (h) upd(z.id, { hazard: h.grade, hazardSkill: h.skill, hazardCondition: h.condition, hazardEach: h.frequency === 'Ogni turno', hazardNoWound: !!h.noWound });
+                  }}
+                >
+                  <option value="">Scegli un esempio…</option>
+                  {warhammer.HAZARDS.map((h, i) => (
+                    <option key={h.name} value={i}>
+                      {h.name} ({h.skill} {h.grade})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="fields two">
+                <label className="field">
+                  <span>Prova</span>
+                  <select className="select" aria-label="Prova contro il Pericolo" value={z.hazardSkill ?? 'Tempra'} onChange={(e) => upd(z.id, { hazardSkill: e.target.value as PoolCheck })}>
+                    {POOL_CHECKS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Condizione</span>
+                  <select className="select" aria-label="Condizione del Pericolo" value={z.hazardCondition ?? ''} onChange={(e) => upd(z.id, { hazardCondition: e.target.value || undefined })}>
+                    <option value="">Nessuna</option>
+                    {warhammer.CONDITIONS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               <div className="row wrap" style={{ gap: 4 }}>
-                <select className="select tool-select" aria-label="Prova contro il Pericolo" value={z.hazardSkill ?? 'Tempra'} onChange={(e) => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazardSkill: e.target.value as PoolCheck } })}>
-                  {POOL_CHECKS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                <select className="select tool-select" aria-label="Condizione del Pericolo" value={z.hazardCondition ?? ''} onChange={(e) => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazardCondition: e.target.value || undefined } })}>
-                  <option value="">Nessuna condizione</option>
-                  {warhammer.CONDITIONS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                <button className={`chip sm ${z.hazardEach ? 'on' : ''}`} title="Colpisce a fine turno chi resta dentro, non solo chi entra" onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazardEach: !z.hazardEach } })}>
+                <button className={`chip sm ${z.hazardEach ? 'on' : ''}`} title="Colpisce a fine turno chi resta dentro, non solo chi entra" onClick={() => upd(z.id, { hazardEach: !z.hazardEach })}>
                   Ogni turno
                 </button>
-                <button className={`chip sm ${z.hazardNoWound ? 'on' : ''}`} title="Fallendo si subisce solo la condizione" onClick={() => dispatch({ type: 'zone.update', zoneId: z.id, patch: { hazardNoWound: !z.hazardNoWound } })}>
+                <button className={`chip sm ${z.hazardNoWound ? 'on' : ''}`} title="Fallendo si subisce solo la condizione" onClick={() => upd(z.id, { hazardNoWound: !z.hazardNoWound })}>
                   Senza Ferita
                 </button>
               </div>
-            </div>
+            </>
           )}
         </div>
       ))}
-      {zones.length > 0 && <span className="faint tiny">In combattimento il tavolo conta le Zone percorse, tira Atletica sul Terreno Difficile e la prova contro i Pericoli per chi entra.</span>}
-      {!zones.length && <span className="faint small">Trascina sulla mappa per disegnare una Zona: stanze, cortili, tratti di strada. Le distanze si contano in Zone.</span>}
+      <span className="faint tiny">
+        {zones.length
+          ? 'In combattimento il tavolo conta le Zone percorse, tira Atletica sul Terreno Difficile e la prova contro i Pericoli per chi entra.'
+          : 'Trascina sulla mappa per disegnare una Zona: stanze, cortili, tratti di strada. Le distanze si contano in Zone.'}
+      </span>
     </div>
   );
 }

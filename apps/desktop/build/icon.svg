@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b8cff"/>
+      <stop offset="0.55" stop-color="#2f5ff2"/>
+      <stop offset="1" stop-color="#5b3fd6"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.38"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#10154a" flood-opacity="0.45"/>
+    </filter>
+    <clipPath id="squircle"><rect x="100" y="100" width="824" height="824" rx="186"/></clipPath>
+  </defs>
+  <!-- the tile -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+    <rect x="100" y="100" width="824" height="420" fill="url(#gloss)"/>
+  </g>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="185" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3"/>
+  <!-- a d20: the hexagon outline, the front face and the facets around it -->
+  <g filter="url(#shadow)" stroke="#ffffff" stroke-width="10" stroke-linejoin="round">
+    <polygon points="512,222 763,367 763,657 512,802 261,657 261,367" fill="#ffffff" fill-opacity="0.16"/>
+    <polygon points="261,367 512,222 512,352" fill="#ffffff" fill-opacity="0.30"/>
+    <polygon points="512,222 763,367 512,352" fill="#ffffff" fill-opacity="0.42"/>
+    <polygon points="763,367 763,657 660,612" fill="#ffffff" fill-opacity="0.22"/>
+    <polygon points="763,367 660,612 512,352" fill="#ffffff" fill-opacity="0.30"/>
+    <polygon points="261,367 512,352 364,612" fill="#ffffff" fill-opacity="0.24"/>
+    <polygon points="261,367 364,612 261,657" fill="#ffffff" fill-opacity="0.12"/>
+    <polygon points="261,657 364,612 512,802" fill="#ffffff" fill-opacity="0.10"/>
+    <polygon points="364,612 660,612 512,802" fill="#ffffff" fill-opacity="0.18"/>
+    <polygon points="660,612 763,657 512,802" fill="#ffffff" fill-opacity="0.14"/>
+    <polygon points="512,352 660,612 364,612" fill="#ffffff" fill-opacity="0.92"/>
+  </g>
+  <text x="512" y="560" text-anchor="middle" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="800" font-size="118" fill="#2f5ff2" letter-spacing="-4">20</text>
+</svg>

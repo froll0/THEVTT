@@ -423,7 +423,7 @@ export function SheetPanel() {
                 <b className="ellipsis">{c.name}</b>
                 <span className="faint tiny ellipsis">
                   {system.headline?.(c.data) ?? ''}
-                  {isGm ? ` · ${owner?.displayName ?? '—'}` : ''}
+                  {isGm && (owner || c.ownerId === state.gmId) ? ` · ${owner?.displayName ?? 'Master'}` : ''}
                 </span>
               </span>
               {d.hp && (
@@ -437,6 +437,18 @@ export function SheetPanel() {
                   <small>CA</small>
                   {d.ac}
                 </span>
+              )}
+              {d.pool && (
+                <>
+                  <span className="char-stat" title="Resilienza">
+                    <small>RES</small>
+                    {d.pool.resilience}
+                  </span>
+                  <span className="char-stat" title="Ferite">
+                    <small>FER</small>
+                    {d.pool.wounds}
+                  </span>
+                </>
               )}
             </button>
           );
@@ -591,7 +603,7 @@ export function ScenePanel() {
       <Field label="Nome">
         <input className="input" defaultValue={active.name} key={`n-${active.id}`} onBlur={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { name: e.target.value } })} />
       </Field>
-      <div className="row">
+      <div className="fields two">
         <Field label="Larghezza (celle)">
           <input className="input" type="number" min={1} max={200} defaultValue={active.widthCells} key={`w-${active.id}-${active.widthCells}`} onBlur={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { widthCells: Number(e.target.value) } })} />
         </Field>
@@ -599,7 +611,7 @@ export function ScenePanel() {
           <input className="input" type="number" min={1} max={200} defaultValue={active.heightCells} key={`h-${active.id}-${active.heightCells}`} onBlur={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { heightCells: Number(e.target.value) } })} />
         </Field>
       </div>
-      <div className="row">
+      <div className="fields two">
         <Field label="Distanza per casella">
           <input
             className="input"
@@ -1425,6 +1437,7 @@ export function TokenInspector({ token }: { token: Token }) {
 function PoolFields({ token, isGm, onChange, onWound }: { token: Token; isGm: boolean; onChange: (pool: Token['pool'] | null) => void; onWound: () => void }) {
   const p = token.pool;
   const dispatch = useTable((s) => s.dispatch);
+  const meId = useApp((s) => s.user?.id ?? '');
   const inCombat = useTable((s) => !!s.state && s.state.initiative.round > 0 && s.state.initiative.entries.some((e) => e.tokenId === token.id));
   if (!p) {
     return isGm ? (
@@ -1481,12 +1494,12 @@ function PoolFields({ token, isGm, onChange, onWound }: { token: Token; isGm: bo
           </div>
         </div>
       )}
-      {(isGm || token.ownerIds.length > 0) && <PoolCheckRow token={token} isGm={isGm} />}
+      {(isGm || token.ownerIds.includes(meId)) && <PoolCheckRow token={token} isGm={isGm} />}
       {isGm && (
-        <label className="row between small">
-          <span className="muted">Esposto al Caos oggi</span>
+        <label className="field">
+          <span>Esposizione al Caos oggi</span>
           <select className="select" value={p.exposure ?? 0} onChange={(e) => set({ exposure: Number(e.target.value) || undefined })} aria-label="Esposizione al Caos">
-            <option value={0}>No</option>
+            <option value={0}>Nessuna</option>
             {EXPOSURE_LEVELS.map((x) => (
               <option key={x.level} value={x.level}>
                 {x.name}
@@ -1614,7 +1627,7 @@ export function ExtendedTests() {
         </div>
       ))}
       <div className="row" style={{ gap: 4 }}>
-        <input className="input grow" placeholder="Nuova prova (es. Forzare il portone)" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className="input grow" placeholder="Nuova prova" value={name} onChange={(e) => setName(e.target.value)} />
         <input
           className="input num"
           type="number"
@@ -1650,48 +1663,53 @@ function PoolCheckRow({ token, isGm }: { token: Token; isGm: boolean }) {
   const [condition, setCondition] = useState('');
   const d = token.pool?.checks?.[check];
   return (
-    <div className="col" style={{ gap: 4 }}>
-      <div className="row" style={{ gap: 4 }}>
-        <select className="select grow" value={check} onChange={(e) => setCheck(e.target.value as PoolCheck)} aria-label="Prova">
-          {POOL_CHECKS.map((c) => (
-            <option key={c} value={c}>
-              {c} {token.pool?.checks?.[c] ? `${token.pool.checks[c]!.dice}d/${token.pool.checks[c]!.target}` : ''}
-            </option>
-          ))}
-        </select>
+    <div className="col" style={{ gap: 6 }}>
+      <div className={isGm ? 'fields two' : 'col'}>
+        <label className="field">
+          <span>Prova</span>
+          <select className="select" value={check} onChange={(e) => setCheck(e.target.value as PoolCheck)} aria-label="Prova">
+            {POOL_CHECKS.map((c) => (
+              <option key={c} value={c}>
+                {c} {token.pool?.checks?.[c] ? `${token.pool.checks[c]!.dice}d/${token.pool.checks[c]!.target}` : ''}
+              </option>
+            ))}
+          </select>
+        </label>
         {isGm && (
-          <input
-            className="input num"
-            type="number"
-            min={0}
-            max={9}
-            value={grade}
-            onChange={(e) => setGrade(Math.max(0, Math.min(9, Number(e.target.value) || 0)))}
-            title="Grado del Pericolo (0: una prova semplice)"
-            aria-label="Grado del Pericolo"
-            style={{ width: 52 }}
-          />
+          <label className="field">
+            <span>Pericolo</span>
+            <select className="select" value={grade} onChange={(e) => setGrade(Number(e.target.value))} aria-label="Grado del Pericolo">
+              <option value={0}>Nessuno</option>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  Grado {n}
+                </option>
+              ))}
+            </select>
+          </label>
         )}
-        <button
-          className="btn sm"
-          title={grade ? `Pericolo (${grade}): fallendo, una Ferita${condition ? ` e ${condition}` : ''}` : `Prova di ${check}${d ? '' : ' (profilo generico)'}`}
-          onClick={() =>
-            dispatch({ type: 'pool.check', tokenIds: [token.id], check, label: grade ? 'Pericolo' : `Prova di ${check}`, grade: grade || undefined, condition: condition || undefined })
-          }
-        >
-          <Dices size={13} /> {grade ? 'Pericolo' : 'Prova'}
-        </button>
       </div>
       {isGm && grade > 0 && (
-        <select className="select" value={condition} onChange={(e) => setCondition(e.target.value)} aria-label="Condizione del fallimento">
-          <option value="">Solo la Ferita</option>
-          {warhammer.CONDITIONS.map((c) => (
-            <option key={c} value={c}>
-              e {c}
-            </option>
-          ))}
-        </select>
+        <label className="field">
+          <span>Fallendo</span>
+          <select className="select" value={condition} onChange={(e) => setCondition(e.target.value)} aria-label="Condizione del fallimento">
+            <option value="">Solo la Ferita</option>
+            {warhammer.CONDITIONS.map((c) => (
+              <option key={c} value={c}>
+                Ferita e {c}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
+      <button
+        className="btn sm"
+        style={{ alignSelf: 'flex-start' }}
+        title={grade ? `Pericolo (${grade}): fallendo, una Ferita${condition ? ` e ${condition}` : ''}` : `Prova di ${check}${d ? '' : ' (profilo generico)'}`}
+        onClick={() => dispatch({ type: 'pool.check', tokenIds: [token.id], check, label: grade ? 'Pericolo' : `Prova di ${check}`, grade: grade || undefined, condition: condition || undefined })}
+      >
+        <Dices size={13} /> {grade ? `Tira contro il Pericolo (${grade})` : `Tira ${check}`}
+      </button>
     </div>
   );
 }

@@ -941,16 +941,21 @@ body.dragging-window * {
 }
 .shortcuts dl {
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.shortcuts dl > div {
   display: grid;
-  grid-template-columns: minmax(110px, auto) 1fr;
-  gap: var(--s3);
+  grid-template-columns: max-content 1fr;
+  gap: 6px var(--s3);
   align-items: baseline;
   font-size: 0.86rem;
+}
+.shortcuts dl > div {
+  display: contents;
+}
+.shortcuts dt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  max-width: 220px;
 }
 .shortcuts dd {
   margin: 0;
@@ -1012,4 +1017,55 @@ kbd {
 }
 .retreat {
   padding-top: 4px;
+}
+
+/* a panel on the board, beside the tool rail (the zones, a tool's details) */
+.board-panel {
+  position: absolute;
+  top: var(--s3);
+  left: calc(var(--s4) + 60px);
+  width: 320px;
+  max-width: calc(100% - 100px);
+  max-height: calc(100% - 110px);
+  overflow: auto;
+  padding: var(--s4);
+  border-radius: var(--r-xl);
+  box-shadow: var(--edge), var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  z-index: 6;
+  animation: pop var(--dur) var(--ease);
+}
+.board-panel .seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+.zone-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--border);
+}
+.fields.two {
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2);
+}
+.board-panel .select,
+.board-panel .input {
+  width: 100%;
+  min-width: 0;
+}
+.rest-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.rest-grid .chip {
+  justify-content: center;
+  gap: 5px;
 }

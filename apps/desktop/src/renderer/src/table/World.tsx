@@ -117,7 +117,7 @@ export function WorldClock() {
           )}
           <span className="faint tiny">Per le scene all’aperto: giorno dalle 7 alle 19, penombra all’alba e al tramonto, buio di notte.</span>
           {pool ? (
-          <div className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
+          <div className="rest-grid">
             <button className="chip" onClick={() => poolRest('breath')} title="Fine dello scontro: tutte le Ferite medicate, le più lievi guarite, la magia si disperde">
               <Coffee size={12} /> Riprendere Fiato
             </button>
@@ -136,7 +136,7 @@ export function WorldClock() {
             </button>
           </div>
           ) : (
-          <div className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
+          <div className="rest-grid">
             <button className="chip" onClick={() => dispatch({ type: 'rest', kind: 'short' })} title="Un’ora: ognuno può spendere i suoi dadi vita">
               <Coffee size={12} /> Riposo breve
             </button>

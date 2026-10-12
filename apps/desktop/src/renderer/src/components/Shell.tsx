@@ -6,6 +6,7 @@ import { useApp, type Route } from '../store/app';
 import { useHosting } from '../store/hosting';
 import { useUpdates } from '../store/updates';
 import { Avatar, Popover } from './ui';
+import { BrandMark } from './BrandMark';
 
 function WindowControls() {
   if (!bridge || bridge.platform === 'darwin') return null;
@@ -193,7 +194,7 @@ export function TopBar({ children, nav = true }: { children?: ReactNode; nav?: b
   return (
     <header className={`topbar ${mac ? 'mac' : ''}`}>
       <div className="brand">
-        <i /> TheVTT
+        <BrandMark /> TheVTT
       </div>
       {user && nav && !children && (
         <nav className="nav">

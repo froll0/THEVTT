@@ -153,8 +153,11 @@ h3 {
   font-size: 0.98rem;
 }
 .brand i {
-  width: 18px;
-  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  color: #fff;
+  width: 20px;
+  height: 20px;
   border-radius: 6px;
   transform: none;
   background:
@@ -1940,4 +1943,9 @@ img.ed-swatch.stamp {
 .macro-btn:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+.brand-mark svg {
+  width: 15px;
+  height: 15px;
 }

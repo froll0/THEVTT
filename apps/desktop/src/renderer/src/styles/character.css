@@ -132,7 +132,7 @@
 
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: var(--s2);
 }
 .stat {
@@ -631,9 +631,10 @@ button.stat:hover {
   cursor: pointer;
   font: inherit;
   font-size: 0.85rem;
+  text-align: left;
 }
 .wtow-skill:hover {
-  background: var(--hover, rgba(127, 127, 127, 0.12));
+  background: var(--fill-hover);
 }
 .pip.sm {
   width: 9px;
