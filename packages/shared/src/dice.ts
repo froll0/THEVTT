@@ -6,6 +6,7 @@
  * those showing 3 or less; the term is worth its successes. Flags after the
  * target: `g` Gloriosa (failures rerolled once), `t` Tetra (successes rerolled
  * once; both together cancel out), `m` a magic test (nines are never rerolled).
+ * `5d6h5` counts those showing 5 or more instead.
  */
 
 export type Rng = (sides: number) => number;
@@ -59,7 +60,7 @@ export class DiceError extends Error {}
 
 const MAX_DICE = 100;
 const MAX_SIDES = 1000;
-const TERM = /^(\d*)d(\d+|%)(?:(kh|kl|dh|dl|k)(\d+))?$|^(\d+)$|^(\d*)d(\d+)s(\d+)([gtm]*)$/i;
+const TERM = /^(\d*)d(\d+|%)(?:(kh|kl|dh|dl|k)(\d+))?$|^(\d+)$|^(\d*)d(\d+)([sh])(\d+)([gtm]*)$/i;
 
 export function roll(formula: string, rng: Rng = cryptoRng): RollResult {
   const clean = formula.replace(/\s+/g, '').toLowerCase();
@@ -82,20 +83,23 @@ export function roll(formula: string, rng: Rng = cryptoRng): RollResult {
       continue;
     }
 
-    if (m[8] !== undefined) {
+    if (m[9] !== undefined) {
       const count = m[6] ? Number(m[6]) : 1;
       const sides = Number(m[7]);
-      const target = Number(m[8]);
+      // s: a success at or under the target; h: at or over it
+      const high = m[8]!.toLowerCase() === 'h';
+      const target = Number(m[9]);
+      const hit = (v: number) => (high ? v >= target : v <= target);
       if (count < 1 || count > MAX_DICE) throw new DiceError(`Numero di dadi fuori limite (1-${MAX_DICE})`);
       if (sides < 2 || sides > MAX_SIDES) throw new DiceError(`Facce fuori limite (2-${MAX_SIDES})`);
-      const flags = (m[9] ?? '').toLowerCase();
+      const flags = (m[10] ?? '').toLowerCase();
       const g = flags.includes('g');
       const t = flags.includes('t');
       const magic = flags.includes('m');
       const pool = g && !t ? 'glorious' : t && !g ? 'grim' : undefined;
       const rolls: DieRoll[] = Array.from({ length: count }, () => {
         const value = rng(sides);
-        return { value, dropped: false, success: value <= target };
+        return { value, dropped: false, success: hit(value) };
       });
       if (pool) {
         for (const d of rolls) {
@@ -104,13 +108,13 @@ export function roll(formula: string, rng: Rng = cryptoRng): RollResult {
           if ((pool === 'glorious' && !d.success) || (pool === 'grim' && d.success)) {
             d.was = d.value;
             d.value = rng(sides);
-            d.success = d.value <= target;
+            d.success = hit(d.value);
           }
         }
       }
       const subtotal = rolls.filter((d) => d.success).length;
       const nines = sides === 10 ? rolls.filter((d) => d.value === 9).length : undefined;
-      parts.push({ type: 'dice', sign, count, sides, modifier: `s${target}${flags}`, rolls, subtotal, target, pool, nines });
+      parts.push({ type: 'dice', sign, count, sides, modifier: `${high ? 'h' : 's'}${target}${flags}`, rolls, subtotal, target, pool, nines });
       total += sign * subtotal;
       continue;
     }

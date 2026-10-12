@@ -8,6 +8,7 @@ import { WtowBestiary, WtowStatBlock } from './wtow/Bestiary';
 import { WtowBuilder } from './wtow/Builder';
 import { wtowCompendium } from './wtow/Compendium';
 import { WtowSheet } from './wtow/Sheet';
+import { FreeBuilder, FreeSheet } from './libero/Sheet';
 
 export interface BuilderProps<T = any> {
   value: T;
@@ -148,6 +149,10 @@ const uis: Record<string, SystemUi> = {
     // sides, not initiative rolls
     monsterInitiative: () => 0,
     compendium: wtowCompendium,
+  },
+  libero: {
+    Builder: FreeBuilder,
+    Sheet: FreeSheet,
   },
 };
 

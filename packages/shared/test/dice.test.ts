@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DiceError, describeRoll, roll, type Rng } from '../src/dice';
+import { DiceError, describeRoll, roll, successes, type Rng } from '../src/dice';
 
 const seq = (...values: number[]): Rng => {
   let i = 0;
@@ -73,3 +73,16 @@ describe('success pools', () => {
     expect(roll('2d10s5+1', seq(1, 9)).total).toBe(2);
   });
 });
+
+describe('high success pools', () => {
+  it('NdXhT counts the dice at or over the target', () => {
+    const r = roll('4d6h5', seq6(6, 5, 4, 1));
+    expect(r.total).toBe(2);
+    expect(successes(r)).toBe(2);
+  });
+});
+
+function seq6(...v: number[]) {
+  let i = 0;
+  return () => v[i++ % v.length]!;
+}

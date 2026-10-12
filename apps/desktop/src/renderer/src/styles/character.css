@@ -696,3 +696,38 @@ button.stat:hover {
   border-radius: var(--radius);
   background: var(--accent-soft);
 }
+
+/* sistema libero */
+.free-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--s2);
+}
+.free-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+.free-field.wide {
+  grid-column: 1 / -1;
+}
+.free-field > span {
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+}
+.free-edit-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1.4fr) 110px 70px minmax(80px, 1fr) 120px auto;
+  gap: 6px;
+  align-items: center;
+}
+.free-edit-row.rolls {
+  grid-template-columns: minmax(110px, 1fr) minmax(140px, 1.4fr) minmax(80px, 0.8fr) auto;
+}
+.danger-text {
+  color: var(--danger);
+}
