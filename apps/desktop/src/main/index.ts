@@ -27,6 +27,13 @@ if (process.env.THEVTT_FAKE_MEDIA) {
   app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
 }
 
+// automated tests run several windows on top of each other: the covered ones keep rendering
+if (process.env.THEVTT_E2E) {
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+}
+
 // Everything the GM hosts (table state, maps) is kept on this machine.
 const dataDir = () => join(app.getPath('userData'), 'data');
 const safeName = (key: string) => key.replace(/[^a-zA-Z0-9_.-]/g, '_');
@@ -62,6 +69,7 @@ function createWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,
       sandbox: true,
+      backgroundThrottling: !process.env.THEVTT_E2E,
       nodeIntegration: false,
       // the table music starts when the GM presses play, not on a local click
       autoplayPolicy: 'no-user-gesture-required',
