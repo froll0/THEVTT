@@ -138,7 +138,7 @@ export function WtowBestiary({ onAdd, onRoll }: BestiaryProps) {
                 </button>
               )}
             </div>
-            {open === n.id && <NpcBlock npc={n} onRoll={onRoll} />}
+            {open === n.id && <NpcBlock npc={n} onRoll={onRoll} gm={!!onAdd} />}
           </div>
         ))}
         {vehicles.map((v) => (
@@ -194,7 +194,8 @@ export function WtowBestiary({ onAdd, onRoll }: BestiaryProps) {
   );
 }
 
-export function NpcBlock({ npc: n, onRoll, onAttack }: { npc: w.Npc; onRoll: (formula: string, label: string) => void; onAttack?: (a: w.NpcAttack) => boolean }) {
+export function NpcBlock({ npc: n, onRoll, onAttack, gm }: { npc: w.Npc; onRoll: (formula: string, label: string) => void; onAttack?: (a: w.NpcAttack) => boolean; gm?: boolean }) {
+  const contact = n.group === 'Contatti di Talagaad' ? w.contactProfile(n.name) : undefined;
   const skills = Object.entries(n.skills)
     .map(([k, v]) => `${SKILL_NAMES[k as w.SkillId].name} ${v}`)
     .join(', ');
@@ -296,6 +297,32 @@ export function NpcBlock({ npc: n, onRoll, onAttack }: { npc: w.Npc; onRoll: (fo
         </div>
       )}
       {n.gear && <span className="faint tiny">Averi tipici: {n.gear}</span>}
+      {contact && (
+        <div className="col small contact-notes" style={{ gap: 4 }}>
+          <span>
+            <b>Dove trovarlo.</b> {contact.meeting}
+          </span>
+          <span>
+            <b>Favori.</b> {contact.favours}
+          </span>
+          {gm && (
+            <>
+              <span>
+                <b>Necessità.</b> {contact.needs}
+              </span>
+              <span>
+                <b>Alleati e nemici.</b> {contact.allies}
+              </span>
+              <span>
+                <b>Pettegolezzi.</b> {contact.gossip}
+              </span>
+              <span>
+                <b>Segreto (solo master).</b> {contact.secret}
+              </span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -307,6 +334,7 @@ export function WtowStatBlock({ monsterId, onRoll, onAttack }: StatBlockProps) {
   return (
     <NpcBlock
       npc={n}
+      gm
       onRoll={onRoll}
       onAttack={
         onAttack

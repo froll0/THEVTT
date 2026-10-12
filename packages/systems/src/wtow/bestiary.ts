@@ -1,6 +1,7 @@
 import type { CharId, SkillId, Speed } from './data';
 import { CHARACTERISTICS, SKILL_INFO } from './data';
 import type { Vehicle } from './extras';
+import { CONTACT_PROFILES } from './contacts';
 
 /**
  * Profili dei PNG dalla Guida del Gamemaster. Servitori: sconfitti alla prima
@@ -233,7 +234,29 @@ const DEFS: Def[] = [
   { name: 'Versipelle', group: 'Mostri', type: 'Bruto', chars: '5 0 4 4 4 4 2 1', speed: 'Veloce', res: 5, armoured: true, track: [['0 Ferite', '—'], ['1-2 Ferite', 'Forma Mutata'], ['3 Ferite', 'Sconfitto']], skills: 'Atletica 3, Furtività 3, Mischia 3, Muscoli 3, Percezione 3, Tempra 3, Volontà 3, Altro 1', attacks: ['Zanne e Artigli|Ravvicinata|5d/3|5||'], prot: 'Atletica 4/3', abilities: [['Rabbia Sanguinaria', 'Attaccando può diventare Barcollante; da Barcollante ha +1d in mischia.'], ['Forma Mutata', 'A fine turno, se non è Barcollante, può diventarlo per guarire una Ferita (non da fuoco) e rendere Barcollanti tutti i vicini.']] },
 ];
 
-export const NPCS: Npc[] = DEFS.map(npc);
+const BOOK_NPCS: Npc[] = DEFS.map(npc);
+
+/** The Contatti of Talagaad: Campioni with the profile suggested for their Archetype. */
+const CONTACT_NPCS: Npc[] = CONTACT_PROFILES.map((c) => {
+  const base = BOOK_NPCS.find((n) => n.id === c.npc) ?? BOOK_NPCS[0]!;
+  return {
+    ...base,
+    id: `contatto-${slug(c.name)}`,
+    name: c.name,
+    group: 'Contatti di Talagaad',
+    type: 'Campione' as const,
+    maxWounds: null,
+    track: undefined,
+    abilities: [
+      { name: `${c.archetype} (${c.group})`, text: c.description },
+      { name: 'Abilità Primaria', text: `${SKILL_INFO[c.skill].name}: chi lo ha come Contatto ha +1d alle Attività dell’Intermezzo con questa Abilità.` },
+      { name: 'Motivazione', text: c.motivation },
+      ...base.abilities,
+    ],
+  };
+});
+
+export const NPCS: Npc[] = [...BOOK_NPCS, ...CONTACT_NPCS];
 export const NPC_GROUPS = [...new Set(NPCS.map((n) => n.group))];
 export const getNpc = (id: string | null | undefined): Npc | undefined => NPCS.find((n) => n.id === id);
 

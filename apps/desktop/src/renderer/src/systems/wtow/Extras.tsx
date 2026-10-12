@@ -323,12 +323,15 @@ export function IntermezzoTab({ c, editable, set, table, onShare }: { c: C; edit
   const skills = act.skills.length ? [...act.skills, ...SKILLS.filter((s) => !act.skills.includes(s))] : SKILLS;
   const chosen = skills.includes(skill) ? skill : skills[0]!;
   const p = w.pool(c, chosen);
+  // a Contact whose Primary Skill this is lends a hand: +1d
+  const helper = c.contacts.map((ct) => w.contactProfile(ct.name)).find((x) => x?.skill === chosen);
+  const help = helper ? 1 : 0;
   const projectFor = (name: string) => c.projects.find((x) => x.name.toLowerCase() === name.toLowerCase());
   const need = act.id === 'creare-avere' ? (status === 'oro' ? 8 : status === 'argento' ? 4 : 2) : (act.extended ?? 4);
 
   const run = async () => {
     setBusy(true);
-    const formula = w.testFormula(p.dice, p.target, { mod: bonus });
+    const formula = w.testFormula(p.dice, p.target, { mod: bonus + help });
     const r = await rollTest(table, formula, `${act.name} (${SKILL_INFO[chosen].name})`);
     setBusy(false);
     if (!r) return;
@@ -453,8 +456,9 @@ export function IntermezzoTab({ c, editable, set, table, onShare }: { c: C; edit
               ))}
             </datalist>
             <button className="btn" style={{ alignSelf: 'flex-start' }} disabled={busy || left < 1} onClick={() => void run()}>
-              <Dices size={14} /> {left < 1 ? 'Attività finite per questo Intermezzo' : `Tira ${w.testFormula(p.dice, p.target, { mod: bonus })}`}
+              <Dices size={14} /> {left < 1 ? 'Attività finite per questo Intermezzo' : `Tira ${w.testFormula(p.dice, p.target, { mod: bonus + help })}`}
             </button>
+            {helper && <span className="small">+1d: è l’Abilità Primaria del tuo Contatto {helper.name}.</span>}
             <span className="faint tiny">Ogni fallimento si segna sull’Abilità: superato il suo valore, sale di 1 (fino a 6).</span>
           </div>
         </Section>
