@@ -2088,3 +2088,11 @@ Mosse (2d6) ⇒ Moves (2d6)
 Statistiche da −1 a +3 e 2d6: 10+ riesce, 7-9 riesce con un costo, 6- il master fa una mossa. ⇒ Stats from −1 to +3 and 2d6: 10+ succeeds, 7-9 succeeds at a cost, 6- the GM makes a move.
 Riserva di d6 (sei) ⇒ d6 pool (sixes)
 Attributo, abilità e attrezzatura in d6: conta solo il 6. Per i giochi di sopravvivenza. ⇒ Attribute, skill and gear in d6: only 6s count. For survival games.
+Statistiche dei tiri ⇒ Roll statistics
+dal registro del tavolo ⇒ from the table log
+Ancora nessun tiro. ⇒ No rolls yet.
+Media d20 ⇒ d20 avg
+Media del d20 ⇒ d20 average
+20 naturali ⇒ natural 20s
+1 naturali ⇒ natural 1s
+Successi delle riserve ⇒ Pool successes

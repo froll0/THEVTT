@@ -1,4 +1,4 @@
-import { describeRoll, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
+import { describeRoll, sessionStats, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
@@ -7,7 +7,7 @@ import { MapLibrary } from './MapLibrary';
 import { useSheetTable } from './sheetTable';
 import { tokenSpeed } from '../lib/combat';
 import { plainText, RichEditor, RichView } from '../components/RichText';
-import { Library, BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Minus, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
+import { BarChart3, Library, BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Minus, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, Field, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
@@ -170,6 +170,7 @@ export function ChatPanel() {
   const meId = useApp((s) => s.user?.id ?? '');
   const members = useApp((s) => s.campaigns.find((c) => c.id === campaignId)?.members);
   const [text, setText] = useState('');
+  const [stats, setStats] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const log = state?.log ?? [];
   const sel = selectedTokenId ? state?.tokens[selectedTokenId] : undefined;
@@ -210,7 +211,48 @@ export function ChatPanel() {
         ))}
         <div ref={endRef} />
       </div>
+      {stats && (
+        <div className="chat-stats">
+          <div className="row between small">
+            <b>Statistiche dei tiri</b>
+            <span className="faint tiny">dal registro del tavolo</span>
+          </div>
+          {sessionStats(log).length === 0 ? (
+            <span className="faint small">Ancora nessun tiro.</span>
+          ) : (
+            <table className="stats-table">
+              <thead>
+                <tr>
+                  <th />
+                  <th>Tiri</th>
+                  <th title="20 naturali">20</th>
+                  <th title="1 naturali">1</th>
+                  <th title="Media del d20">Media d20</th>
+                  <th title="Successi delle riserve">Successi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sessionStats(log).map((p) => (
+                  <tr key={p.name}>
+                    <td className="ellipsis" translate="no">
+                      {p.name}
+                    </td>
+                    <td>{p.rolls}</td>
+                    <td>{p.crits || '—'}</td>
+                    <td>{p.fumbles || '—'}</td>
+                    <td>{p.d20Average ?? '—'}</td>
+                    <td>{p.successes || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
       <div className="chat-input">
+        <button className={`btn ghost sm icon ${stats ? 'active' : ''}`} title="Statistiche dei tiri" aria-label="Statistiche dei tiri" onClick={() => setStats(!stats)}>
+          <BarChart3 size={14} />
+        </button>
         <input
           className="input"
           value={text}

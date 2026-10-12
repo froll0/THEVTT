@@ -2,6 +2,44 @@ import type { GameState, LogEntry } from './state';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+export interface PlayerStats {
+  name: string;
+  rolls: number;
+  /** natural 20s and 1s on a d20 */
+  crits: number;
+  fumbles: number;
+  /** the average of their d20s, null without any */
+  d20Average: number | null;
+  /** dice pools: successes in total */
+  successes: number;
+}
+
+/** Who rolled what in the log entries given. */
+export function sessionStats(log: LogEntry[]): PlayerStats[] {
+  const by = new Map<string, PlayerStats & { d20: number[] }>();
+  for (const l of log) {
+    if (l.kind !== 'roll' || !l.roll) continue;
+    const p = by.get(l.authorName) ?? { name: l.authorName, rolls: 0, crits: 0, fumbles: 0, d20Average: null, successes: 0, d20: [] };
+    p.rolls++;
+    for (const part of l.roll.parts) {
+      if (part.type !== 'dice') continue;
+      if (part.target !== undefined) p.successes += part.subtotal;
+      else if (part.sides === 20) {
+        for (const d of part.rolls) {
+          if (d.dropped) continue;
+          p.d20.push(d.value);
+          if (d.value === 20) p.crits++;
+          if (d.value === 1) p.fumbles++;
+        }
+      }
+    }
+    by.set(l.authorName, p);
+  }
+  return [...by.values()]
+    .map(({ d20, ...p }) => ({ ...p, d20Average: d20.length ? Math.round((d20.reduce((a, b) => a + b, 0) / d20.length) * 10) / 10 : null }))
+    .sort((a, b) => b.rolls - a.rolls);
+}
+
 export interface SessionDigest {
   title: string;
   /** rich text (HTML) ready for the recap editor */
@@ -35,9 +73,7 @@ export function sessionDigest(state: GameState, since: number, now = Date.now())
   }
 
   const rolls = log.filter((l): l is LogEntry & { roll: NonNullable<LogEntry['roll']> } => l.kind === 'roll' && !!l.roll);
-  const perAuthor = new Map<string, number>();
-  for (const r of rolls) perAuthor.set(r.authorName, (perAuthor.get(r.authorName) ?? 0) + 1);
-  const best = [...rolls].sort((a, b) => b.roll.total - a.roll.total).slice(0, 3);
+  const best = [...rolls].sort((a, b) => b.roll.total - a.roll.total).slice(0, 1);
 
   const chat = log.filter((l) => l.kind === 'chat' && l.text.trim()).slice(-20);
 
@@ -46,13 +82,18 @@ export function sessionDigest(state: GameState, since: number, now = Date.now())
   parts.push('<h3>Cosa è successo</h3>', '<p><i>Scrivi qui il racconto della sessione.</i></p>');
   if (events.length) parts.push('<h3>Momenti dal tavolo</h3>', list(events.slice(-30)));
   if (rolls.length) {
-    parts.push(
-      '<h3>Tiri</h3>',
-      list([
-        `${rolls.length} tiri: ${[...perAuthor].map(([n, c]) => `${n} ${c}`).join(', ')}`,
-        ...best.map((r) => `${r.authorName}${r.label ? `, ${r.label}` : ''}: ${r.roll.total} (${r.roll.formula})`),
-      ]),
-    );
+    const stats = sessionStats(log);
+    const line = (p: PlayerStats) =>
+      [
+        `${p.name}: ${p.rolls} ${p.rolls === 1 ? 'tiro' : 'tiri'}`,
+        p.crits ? `${p.crits} × 20 naturale` : '',
+        p.fumbles ? `${p.fumbles} × 1 naturale` : '',
+        p.d20Average !== null ? `media del d20 ${p.d20Average}` : '',
+        p.successes ? `${p.successes} successi` : '',
+      ]
+        .filter(Boolean)
+        .join(', ');
+    parts.push('<h3>Tiri</h3>', list([...stats.map(line), ...best.map((r) => `Il più alto: ${r.authorName}${r.label ? `, ${r.label}` : ''}: ${r.roll.total} (${r.roll.formula})`)]));
   }
   if (chat.length) parts.push('<h3>Dalla chat</h3>', list(chat.map((c) => `${c.authorName}: ${c.text}`)));
   return { title, body: parts.join(''), entries: log.length };
