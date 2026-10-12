@@ -8,6 +8,7 @@ import { WtowBestiary, WtowStatBlock } from './wtow/Bestiary';
 import { WtowBuilder } from './wtow/Builder';
 import { wtowCompendium } from './wtow/Compendium';
 import { WtowSheet } from './wtow/Sheet';
+import { WTOW_MAPS } from './wtow/maps';
 import { FreeBuilder, FreeSheet } from './libero/Sheet';
 
 export interface BuilderProps<T = any> {
@@ -122,6 +123,17 @@ export interface CompendiumEntry {
 }
 
 /** UI half of a game system plugin (rules live in @thevtt/systems). */
+/** a map from the game's books, offered in the map library */
+export interface BookMap {
+  id: string;
+  name: string;
+  description: string;
+  /** bundled image */
+  url: string;
+  widthCells: number;
+  heightCells: number;
+}
+
 export interface SystemUi {
   Builder: FC<BuilderProps>;
   Sheet: FC<SheetProps>;
@@ -130,6 +142,7 @@ export interface SystemUi {
   monsterInitiative?: (monsterId: string) => number;
   /** the rules compendium: categories in display order, and a builder for the entries */
   compendium?: { categories: string[]; entries: (homebrew: { id: string; data: unknown }[]) => CompendiumEntry[] };
+  maps?: BookMap[];
 }
 
 const uis: Record<string, SystemUi> = {
@@ -149,6 +162,7 @@ const uis: Record<string, SystemUi> = {
     // sides, not initiative rolls
     monsterInitiative: () => 0,
     compendium: wtowCompendium,
+    maps: WTOW_MAPS,
   },
   libero: {
     Builder: FreeBuilder,

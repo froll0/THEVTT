@@ -2076,3 +2076,7 @@ Lingua ⇒ Language
 Lingua dell'interfaccia. I testi di gioco (regole, incantesimi, mostri) restano in italiano. ⇒ Interface language. Game texts (rules, spells, monsters) stay in Italian.
 VAN ⇒ ADV
 SVA ⇒ DIS
+Mappe del manuale ⇒ Book maps
+Non riesco a caricare la mappa ⇒ Can't load the map
+Il Talabecland attorno al cratere: la Grande Foresta, le Colline Ululanti e il Talabec. ⇒ The Talabecland around the crater: the Great Forest, the Howling Hills and the Talabec.
+Le province dell’Impero e i regni vicini, dalla Bretonnia alla Sylvania. ⇒ The Empire's provinces and the neighbouring realms, from Bretonnia to Sylvania.

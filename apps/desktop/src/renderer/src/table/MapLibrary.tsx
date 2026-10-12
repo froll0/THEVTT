@@ -1,7 +1,8 @@
-import { MAP_FILE_EXT, newId, packScene } from '@thevtt/shared';
+import { MAP_FILE_EXT, newId, packScene, type MapPackage } from '@thevtt/shared';
 import { BookmarkPlus, Download, Pencil, Search, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Switch } from '../components/ui';
+import { Modal, readImage, Switch } from '../components/ui';
+import { getSystemUi, type BookMap } from '../systems';
 import { deleteMap, listMaps, loadMap, mapFile, readMapFile, renameMap, saveMap, type LibraryEntry } from '../lib/mapLibrary';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
@@ -61,6 +62,36 @@ export function MapLibrary({ sceneId, onClose, onUsed }: { sceneId: string; onCl
     onClose();
   };
 
+  const bookMaps = state ? (getSystemUi(state.systemId)?.maps ?? []) : [];
+  const useBook = async (m: BookMap) => {
+    setBusy(m.id);
+    try {
+      const blob = await (await fetch(m.url)).blob();
+      const image = await readImage(new File([blob], `${m.id}.jpg`, { type: blob.type }), 2560, { opaque: true, quality: 0.85 });
+      const pkg: MapPackage = {
+        format: 'thevtt-map',
+        version: 1,
+        name: m.name,
+        // a region: no grid, no ruler in metres; the Zones and travel are the GM's
+        scene: { name: m.name, background: 'map', widthCells: m.widthCells, heightCells: m.heightCells, cellDistance: 1, unit: 'm', showGrid: false },
+        walls: [],
+        props: [],
+        drawings: [],
+        tokens: [],
+        assets: { map: image },
+      };
+      const id = `lib-${newId()}`;
+      dispatch({ type: 'scene.import', pkg, id });
+      toast(`«${m.name}» è una nuova scena di questa campagna`, 'success');
+      onUsed?.(id);
+      onClose();
+    } catch {
+      toast('Non riesco a caricare la mappa', 'error');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const exportEntry = async (entry: LibraryEntry) => {
     const pkg = await loadMap(entry.id);
     if (!pkg) return toast('Questa mappa non si trova più sul disco', 'error');
@@ -100,6 +131,22 @@ export function MapLibrary({ sceneId, onClose, onUsed }: { sceneId: string; onCl
             <button className="btn primary" disabled={busy === 'save'} onClick={() => void saveCurrent()}>
               <BookmarkPlus size={15} /> {busy === 'save' ? 'Salvo…' : 'Salva nella libreria'}
             </button>
+          </div>
+        )}
+        {bookMaps.length > 0 && (
+          <div className="col" style={{ gap: 6 }}>
+            <b className="small">Mappe del manuale</b>
+            <div className="library-grid" role="list" aria-label="Mappe del manuale">
+              {bookMaps.map((m) => (
+                <div key={m.id} className="library-card" role="listitem" aria-label={m.name}>
+                  <button className="library-thumb" onClick={() => void useBook(m)} disabled={!!busy} title="Usala in questa campagna">
+                    <img src={m.url} alt="" />
+                  </button>
+                  <b className="ellipsis">{m.name}</b>
+                  <span className="faint tiny">{busy === m.id ? 'Apro…' : m.description}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         <div className="row" style={{ gap: 8 }}>
