@@ -1,4 +1,4 @@
-import { freeZones, rangeBetween, zoneAt, zoneHops, blockingSegments, brushCells, copyPiece, ellipseCells, moveCost, pasteActions, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type MapPiece, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { hexAt, hexCenter, hexCorners, hexDistance, hexesIn, freeZones, rangeBetween, zoneAt, zoneHops, blockingSegments, brushCells, copyPiece, ellipseCells, moveCost, pasteActions, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type MapPiece, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
 import { exploredTexture, updateExplored } from './explored';
 import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
@@ -399,6 +399,11 @@ export function Board({
   const snapNow = (L: { options: ToolOptions }) => (L.options.snap !== false) !== altDown.current;
   const tokenDropAt = (g: { wx: number; wy: number; ox: number; oy: number }, t: { size: number }) => {
     const L = live.current;
+    if (L.scene?.grid === 'hex' && snapNow(L)) {
+      // a token stands in the middle of a hex
+      const c = hexCenter(hexAt((g.wx - g.ox) / CELL + t.size / 2, (g.wy - g.oy) / CELL + t.size / 2));
+      return { x: Math.round((c.x - t.size / 2) * 1000) / 1000, y: Math.round((c.y - t.size / 2) * 1000) / 1000 };
+    }
     return {
       x: placeAxis((g.wx - g.ox) / CELL + t.size / 2, t.size, snapNow(L)),
       y: placeAxis((g.wy - g.oy) / CELL + t.size / 2, t.size, snapNow(L)),
@@ -545,7 +550,23 @@ export function Board({
       const terrain = pg0.kind === 'paint' ? pg0.terrain : L.scene.terrain;
       terrainLayer.current.update(terrain, L.scene.widthCells, L.scene.heightCells, terrainSeed(L.scene.seed ?? L.scene.id), L.scene.autoWalls !== false && L.scene.buildingWalls !== false);
       terrainLayer.current.draw(ctx, CELL);
-      if (L.scene.showGrid && L.board.gridOpacity > 0) {
+      if (L.scene.showGrid && L.board.gridOpacity > 0 && L.scene.grid === 'hex') {
+        ctx.strokeStyle = hexToRgba(L.board.gridColor, L.board.gridOpacity);
+        ctx.lineWidth = 1 / cam.zoom;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, W, H);
+        ctx.clip();
+        ctx.beginPath();
+        for (const h of hexesIn(L.scene.widthCells, L.scene.heightCells)) {
+          const pts = hexCorners(h);
+          ctx.moveTo(pts[0]!.x * CELL, pts[0]!.y * CELL);
+          for (const p of pts.slice(1)) ctx.lineTo(p.x * CELL, p.y * CELL);
+          ctx.closePath();
+        }
+        ctx.stroke();
+        ctx.restore();
+      } else if (L.scene.showGrid && L.board.gridOpacity > 0) {
         ctx.strokeStyle = hexToRgba(L.board.gridColor, L.board.gridOpacity);
         ctx.lineWidth = 1 / cam.zoom;
         ctx.beginPath();
@@ -1244,9 +1265,14 @@ export function Board({
         const fy = Math.floor(g.fy / CELL);
         const tx = Math.floor(g.tx / CELL);
         const ty = Math.floor(g.ty / CELL);
-        const cells = Math.max(Math.abs(tx - fx), Math.abs(ty - fy));
-        const a = { x: (fx + 0.5) * CELL, y: (fy + 0.5) * CELL };
-        const b = { x: (tx + 0.5) * CELL, y: (ty + 0.5) * CELL };
+        const hex = L.scene.grid === 'hex';
+        const ha = hexAt(g.fx / CELL, g.fy / CELL);
+        const hb = hexAt(g.tx / CELL, g.ty / CELL);
+        const cells = hex ? hexDistance(ha, hb) : Math.max(Math.abs(tx - fx), Math.abs(ty - fy));
+        const ca = hexCenter(ha);
+        const cb = hexCenter(hb);
+        const a = hex ? { x: ca.x * CELL, y: ca.y * CELL } : { x: (fx + 0.5) * CELL, y: (fy + 0.5) * CELL };
+        const b = hex ? { x: cb.x * CELL, y: cb.y * CELL } : { x: (tx + 0.5) * CELL, y: (ty + 0.5) * CELL };
         ctx.setLineDash([10 / cam.zoom, 6 / cam.zoom]);
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
@@ -1266,7 +1292,7 @@ export function Board({
         const unit = L.scene.unit ?? 'ft';
         const dist = Math.round(cells * L.scene.cellDistance * 10) / 10;
         const label = L.options.zones
-          ? `${rangeBetween(sceneZones, { x: fx + 0.5, y: fy + 0.5 }, { x: tx + 0.5, y: ty + 0.5 })}${sceneZones.length ? '' : ` · ${cells} quadretti`}`
+          ? `${rangeBetween(sceneZones, { x: fx + 0.5, y: fy + 0.5 }, { x: tx + 0.5, y: ty + 0.5 })}${sceneZones.length ? '' : ` · ${cells} ${hex ? 'esagoni' : 'quadretti'}`}`
           : `${String(dist).replace('.', ',')} ${unit}`;
         ctx.font = `700 ${14 / cam.zoom}px system-ui, sans-serif`;
         const w = ctx.measureText(label).width + 14 / cam.zoom;

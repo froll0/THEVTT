@@ -46,6 +46,8 @@ export interface Scene {
   seed?: string;
   /** outdoors: its light follows the hour of the world's clock */
   daylight?: boolean;
+  /** the grid tokens stand on and distances count in (square by default) */
+  grid?: 'square' | 'hex';
   /** weather drawn over the map, for everyone */
   weather?: Weather | null;
   /** 0.2 (a few drops) to 1 (a downpour) */

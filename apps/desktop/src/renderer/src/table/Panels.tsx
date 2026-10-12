@@ -724,6 +724,19 @@ export function ScenePanel() {
         <span className="small">Griglia visibile</span>
         <Switch on={active.showGrid} onChange={(showGrid) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { showGrid } })} />
       </div>
+      <div className="row between">
+        <span className="small" title="Con gli esagoni i token si fermano al centro di un esagono e il righello conta gli esagoni">
+          Forma della griglia
+        </span>
+        <div className="seg">
+          <button className={active.grid !== 'hex' ? 'on' : ''} onClick={() => dispatch({ type: 'scene.update', sceneId: active.id, patch: { grid: 'square' } })}>
+            Quadretti
+          </button>
+          <button className={active.grid === 'hex' ? 'on' : ''} onClick={() => dispatch({ type: 'scene.update', sceneId: active.id, patch: { grid: 'hex' } })}>
+            Esagoni
+          </button>
+        </div>
+      </div>
       <label className="btn">
         <ImagePlus size={15} /> {active.background ? 'Cambia mappa' : 'Carica mappa'}
         <input

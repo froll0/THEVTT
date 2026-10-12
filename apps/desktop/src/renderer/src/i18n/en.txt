@@ -2129,3 +2129,7 @@ Pezzo {0}: visibile ⇒ Piece {0}: visible
 Pezzo {0}: coperto ⇒ Piece {0}: covered
 Scopri tutto ⇒ Uncover all
 Clic su un pezzo per scoprirlo o coprirlo. I giocatori ricevono solo i pezzi scoperti, mai l’immagine intera. ⇒ Click a piece to uncover or cover it. Players only receive the uncovered pieces, never the whole picture.
+Forma della griglia ⇒ Grid shape
+Con gli esagoni i token si fermano al centro di un esagono e il righello conta gli esagoni ⇒ With hexes tokens stop in the middle of a hex and the ruler counts hexes
+Quadretti ⇒ Squares
+Esagoni ⇒ Hexes
