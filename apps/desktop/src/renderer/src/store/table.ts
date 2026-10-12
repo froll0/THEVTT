@@ -363,13 +363,19 @@ export const useTable = create<TableStore>((set, get) => {
         });
       };
 
-      const hello = () => {
+      let helloTimer: ReturnType<typeof setTimeout> | null = null;
+      const hello = (attempt = 0) => {
         lastRev = 0;
         rt.send({ t: 'session.join', campaignId: campaign.id });
         const payload: PlayerToHost = { k: 'hello' };
         rt.send({ t: 'relay.host', campaignId: campaign.id, payload });
         retries = 0;
-        void connectDirect();
+        if (attempt === 0) void connectDirect();
+        // the first hello can be lost (the host was still opening the session): ask again until the table arrives
+        if (helloTimer) clearTimeout(helloTimer);
+        helloTimer = setTimeout(() => {
+          if (get().campaignId === campaign.id && get().phase === 'connecting' && attempt < 10) hello(attempt + 1);
+        }, 3000);
       };
       cleanup.push(
         rt.on((msg) => {
@@ -390,6 +396,7 @@ export const useTable = create<TableStore>((set, get) => {
         }),
         () => {
           if (retryTimer) clearTimeout(retryTimer);
+          if (helloTimer) clearTimeout(helloTimer);
         },
         rt.onStatus((s) => {
           // the socket dropped (often because the GM's computer, which hosts the server, went away):
