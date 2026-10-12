@@ -63,6 +63,13 @@ export function useSheetTable(characterId: string): SheetTable | undefined {
       table.dispatch({ type: 'pool.attack', attackerId: attacker?.id ?? null, targetIds: targets.map((t) => t.id), ...a });
       return true;
     },
+    poolSpell: (a) => {
+      const caster = own();
+      const targets = targetsFor(caster?.id);
+      if (!targets.length) return false;
+      table.dispatch({ type: 'pool.spell', casterId: caster?.id ?? null, targetIds: targets.map((t) => t.id), ...a });
+      return true;
+    },
     rollFor: (formula, label) => {
       const full = `${state.characters[characterId]?.name ?? ''} · ${label}`.slice(0, 120);
       const since = Date.now() - 2000;

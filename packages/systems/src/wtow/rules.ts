@@ -120,7 +120,8 @@ export interface WtowCharacter {
   contacts: { name: string; bond: string }[];
   wounds: WtowWound[];
   conditions: string[];
-  magic: { lores: MagicLore[]; spells: { id: string; memorized: boolean }[]; pool: number; progress: number; effects: string };
+  /** potency: the successes of the last Prova di Magia (the Potenza of the spell cast with it) */
+  magic: { lores: MagicLore[]; spells: { id: string; memorized: boolean }[]; pool: number; progress: number; effects: string; potency?: number };
   faith: { god: string | null };
   omen: string;
   notes: string;
@@ -243,6 +244,7 @@ export function normalize(raw: unknown): WtowCharacter {
       pool: num(r.magic?.pool),
       progress: num(r.magic?.progress),
       effects: str(r.magic?.effects),
+      potency: num(r.magic?.potency),
     },
     faith: { god: GODS.some((g) => g.id === r.faith?.god) ? r.faith.god : null },
     omen: str(r.omen),

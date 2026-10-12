@@ -66,6 +66,30 @@ export type GameAction =
     }
   /** GM (or the token's owner): roll on the wounds table for a token, as if it had taken a wound */
   | { type: 'pool.wound'; tokenId: string; extraDice?: number }
+  /**
+   * A spell that lands without an opposed roll: damage (base + Potenza, unless
+   * flat) against Resilienza and a condition, on the targets, those beside the
+   * first one (near) or everyone in its zone.
+   */
+  | {
+      type: 'pool.spell';
+      casterId?: string | null;
+      targetIds: string[];
+      name: string;
+      potency?: number;
+      damage?: number | null;
+      flat?: boolean;
+      ignoresArmour?: boolean;
+      armouredMod?: number;
+      unarmouredMod?: number;
+      condition?: string;
+      /** the condition spares the Mostruosità */
+      conditionNonMonster?: boolean;
+      area?: 'near' | 'zone';
+      enemiesOnly?: boolean;
+      maxTargets?: number;
+      note?: string;
+    }
   /** a Mostruosità's choice after a blow: take the wound, or its Reaction */
   | { type: 'pool.react'; tokenId: string; choice: 'wound' | 'reaction' }
   /**

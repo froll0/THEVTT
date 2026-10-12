@@ -232,3 +232,25 @@ describe('success-pool table rules', () => {
     expect(host.dispatch('p1', { type: 'extended.delete', testId: id }).ok).toBe(false);
   });
 });
+
+describe('success-pool spells', () => {
+  it('a Palla di Fuoco hits the target and those beside it, knocking down the non-monsters', () => {
+    const { host, gunter, gor } = table(seq(5));
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Gor 2', x: 3, y: 1, pool: minion } });
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Lontano', x: 12, y: 12, pool: minion } });
+    host.dispatch('p1', { type: 'pool.spell', casterId: gunter.id, targetIds: [gor.id], name: 'Palla di Fuoco', potency: 2, damage: 5, condition: 'Prono', conditionNonMonster: true, area: 'near' });
+    const byName = (n: string) => Object.values(host.state.tokens).find((t) => t.name === n)!;
+    expect(byName('Gor').conditions).toEqual(expect.arrayContaining(['Prono', 'Sconfitto']));
+    expect(byName('Gor 2').conditions).toContain('Sconfitto');
+    expect(byName('Lontano').conditions).toEqual([]);
+    expect(host.state.log.some((e) => e.card?.body?.includes('Danni 7 contro Resilienza 3'))).toBe(true);
+  });
+
+  it('a zone spell can spare the caster’s side', () => {
+    const { host, gunter, gor } = table(seq(5));
+    host.dispatch('gm', { type: 'zone.create', zone: { name: 'Piazza', x: 0, y: 0, w: 6, h: 6 } });
+    host.dispatch('p1', { type: 'pool.spell', casterId: gunter.id, targetIds: [gor.id], name: 'Respiro Infuocato', potency: 3, damage: 3, flat: true, unarmouredMod: 1, area: 'zone', enemiesOnly: true });
+    expect(host.state.tokens[gor.id]!.conditions).toContain('Sconfitto');
+    expect(host.state.tokens[gunter.id]!.conditions).toEqual([]);
+  });
+});

@@ -16,11 +16,51 @@ export interface Spell {
   /** danni base (+Potenza) per gli incantesimi offensivi */
   damage?: number;
   ignoresArmour?: boolean;
+  /** come lo risolve il tavolo quando lo si lancia sui bersagli segnati */
+  cast?: SpellCast;
 }
+
+export interface SpellCast {
+  damage?: number;
+  /** il Danno non aggiunge la Potenza */
+  flat?: boolean;
+  ignoresArmour?: boolean;
+  armouredMod?: number;
+  unarmouredMod?: number;
+  condition?: string;
+  conditionNonMonster?: boolean;
+  area?: 'near' | 'zone';
+  enemiesOnly?: boolean;
+  /** al massimo tanti bersagli quanta la Potenza */
+  potencyTargets?: boolean;
+  note?: string;
+}
+
+const CASTS: Record<string, SpellCast> = {
+  'Abisso di Disperazione': { area: 'zone', condition: 'Prono', note: 'Atletica con successi pari alla Potenza, o resta sepolto fino alle spalle (va dissotterrato con Muscoli).' },
+  'Maledizione della Vigliaccheria': { area: 'zone', enemiesOnly: true, note: 'Arretrano; chi non eguaglia la Potenza con Volontà diventa Atterrito.' },
+  'Palla di Fuoco': { damage: 5, area: 'near', condition: 'Prono', conditionNonMonster: true },
+  'Combustione Spontanea': { condition: 'In Fiamme', note: 'Il fuoco è un Pericolo pari alla Potenza.' },
+  Fulmine: { damage: 4, armouredMod: 1 },
+  'Raffica di Vento': { area: 'zone', condition: 'Prono', note: 'Fino a Potenza Zone adiacenti; chi è al riparo resta in piedi.' },
+  'Respiro Infuocato': { damage: 3, flat: true, unarmouredMod: 1, area: 'zone', enemiesOnly: true, potencyTargets: true },
+  'Rasoio Mentale': { damage: 3, ignoresArmour: true, note: 'Volontà, o il bersaglio diventa Atterrito.' },
+  'Distruggere Nonmorti': { damage: 8, note: 'I nonmorti senza mente tornano cadaveri.' },
+  'Maledizione degli Anni': { condition: 'Esausto', note: 'Invecchia di Potenza d10 anni.' },
+  'Abitanti del Sottosuolo': { area: 'zone', note: 'La Zona è Terreno Difficile e chi cade Prono non si rialza finché dura.' },
+};
+
+/** Gli incantesimi improvvisati offensivi: Danno base a un bersaglio o a un’area. */
+export const IMPROVISED_CASTS: { level: string; vm: number; single: number; area: number; areaKind: 'near' | 'zone' | null }[] = [
+  { level: 'Minore', vm: 2, single: 4, area: 0, areaKind: null },
+  { level: 'Base', vm: 4, single: 5, area: 3, areaKind: 'near' },
+  { level: 'Avanzato', vm: 8, single: 6, area: 4, areaKind: 'zone' },
+  { level: 'Magistrale', vm: 12, single: 8, area: 6, areaKind: 'zone' },
+];
 
 const s = (lore: MagicLore, name: string, vm: number, target: string, range: string, duration: string, text: string, extra: Partial<Spell> = {}): Spell => ({
   id: name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
-  name, lore, vm, target, range, duration, text, ...extra,
+  name, lore, vm, target, range, duration, text, ...(CASTS[name] ? { cast: CASTS[name] } : {}), ...extra,
 });
 
 export const SPELLS: Spell[] = [

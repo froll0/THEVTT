@@ -730,9 +730,36 @@ function MagicTab({
     const nines = r.parts.reduce((n, p) => n + (p.type === 'dice' ? (p.nines ?? 0) : 0), 0);
     // dice bought by mixing the winds go into the pool as well
     const pool = mg.pool + nines + extra;
-    setMagic({ progress: mg.progress + (successes(r) ?? 0), pool });
+    // the Potenza of a spell is the successes of the last test
+    setMagic({ progress: mg.progress + (successes(r) ?? 0), pool, potency: successes(r) ?? 0 });
     setExtra(0);
   };
+  const potency = mg.potency ?? 0;
+  /** casting on the marked tokens: the table applies damage and conditions; otherwise a card in the chat */
+  const release = (s: w.Spell) => {
+    const cast = s.cast;
+    const sent =
+      !!cast &&
+      !!table?.poolSpell?.({
+        name: s.name,
+        potency,
+        damage: cast.damage ?? null,
+        flat: cast.flat,
+        ignoresArmour: cast.ignoresArmour,
+        armouredMod: cast.armouredMod,
+        unarmouredMod: cast.unarmouredMod,
+        condition: cast.condition,
+        conditionNonMonster: cast.conditionNonMonster,
+        area: cast.area,
+        enemiesOnly: cast.enemiesOnly,
+        maxTargets: cast.potencyTargets ? Math.max(1, potency) : undefined,
+        note: cast.note,
+      });
+    if (!sent) onShare?.({ title: s.name, subtitle: `${s.lore} · VM ${s.vm} · lanciato (Potenza ${potency})`, tags: [s.target, s.range, s.duration], body: s.text });
+    setMagic({ progress: 0 });
+  };
+  const [improv, setImprov] = useState({ level: 0, area: false });
+  const imp = w.IMPROVISED_CASTS[improv.level]!;
   const miscast = pool(mg.pool, level);
   return (
     <div className="col" style={{ gap: 'var(--s4)' }}>
@@ -744,6 +771,10 @@ function MagicTab({
         <div className="stat" title="Successi accumulati nella Prova Prolungata di Volontà">
           <small>Successi</small>
           <b>{mg.progress}</b>
+        </div>
+        <div className="stat" title="I successi dell’ultima Prova: la Potenza dell’incantesimo che lanci">
+          <small>Potenza</small>
+          <b>{potency}</b>
         </div>
         <div className={`stat ${miscast === 'danger' ? 'danger' : ''}`} title="Dadi Incidente Magico: se superano il Livello da Mago, Incidente">
           <small>Incidenti</small>
@@ -813,13 +844,14 @@ function MagicTab({
                     {editable && ready && (
                       <button
                         className="btn sm"
-                        title="Lancia: la Potenza è il numero di successi dell’ultima Prova"
-                        onClick={() => {
-                          onShare?.({ title: s.name, subtitle: `${s.lore} · VM ${s.vm} · lanciato`, tags: [s.target, s.range, s.duration], body: s.text });
-                          setMagic({ progress: 0 });
-                        }}
+                        title={
+                          s.cast
+                            ? `Lancia sui bersagli segnati (Potenza ${potency}): il tavolo applica Danni e Condizioni`
+                            : `Lancia (Potenza ${potency}): l’effetto va in chat`
+                        }
+                        onClick={() => release(s)}
                       >
-                        Lancia
+                        <Sparkles size={12} /> Lancia
                       </button>
                     )}
                     {shareButton(onShare, () => ({ title: s.name, subtitle: `${s.lore} · VM ${s.vm}`, tags: [s.target, s.range, s.duration], body: s.text }))}
@@ -895,6 +927,42 @@ function MagicTab({
             </div>
           ))}
         </div>
+        {editable && (
+          <div className="row wrap" style={{ gap: 6, marginTop: 8 }}>
+            <select className="select" value={improv.level} onChange={(e) => setImprov({ level: Number(e.target.value), area: false })} aria-label="Livello dell’incantesimo improvvisato">
+              {w.IMPROVISED_CASTS.map((x, i) => (
+                <option key={x.level} value={i}>
+                  {x.level} (VM {x.vm})
+                </option>
+              ))}
+            </select>
+            {imp.areaKind && (
+              <label className="row small">
+                <Switch on={improv.area} onChange={(area) => setImprov({ ...improv, area })} label="Ad area" /> {imp.areaKind === 'zone' ? 'a una Zona' : 'anche ai vicini'}
+              </label>
+            )}
+            <button
+              className="btn sm"
+              disabled={mg.progress < imp.vm}
+              title={`Danno ${improv.area ? imp.area : imp.single}+Potenza (${potency}) sui bersagli segnati`}
+              onClick={() =>
+                release({
+                  id: 'improvvisato',
+                  name: `Incantesimo improvvisato ${imp.level}`,
+                  lore: w.MAGIC_LORES[0]!,
+                  vm: imp.vm,
+                  target: improv.area ? (imp.areaKind === 'zone' ? 'Zona' : 'Creatura e vicini') : 'Creatura',
+                  range: 'Lunga',
+                  duration: 'Istantanea',
+                  text: `Danno ${improv.area ? imp.area : imp.single}+Potenza.`,
+                  cast: { damage: improv.area ? imp.area : imp.single, area: improv.area && imp.areaKind ? imp.areaKind : undefined },
+                })
+              }
+            >
+              <Sparkles size={12} /> Lancia ({improv.area ? imp.area : imp.single}+{potency})
+            </button>
+          </div>
+        )}
       </Section>
       {editable && (
         <Section title="Effetti degli Incidenti Magici">

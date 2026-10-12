@@ -16,6 +16,7 @@ import {
   POOL_CHECKS,
   retreatFor,
   trackRow,
+  poolSide,
   zoneAt,
   zoneHops,
   type PoolCheck,
@@ -79,6 +80,7 @@ const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: s
   'pool.wound': { cols: ['tokens'], label: 'ferita' },
   'pool.check': { cols: ['tokens'], label: 'prova' },
   'pool.react': { cols: ['tokens'], label: 'reazione' },
+  'pool.spell': { cols: ['tokens'], label: 'incantesimo' },
   'scene.import': { cols: ['scenes', 'walls', 'props', 'drawings', 'tokens'], label: 'mappa dalla libreria' },
 };
 const HISTORY_LIMIT = 50;
@@ -918,6 +920,14 @@ export class GameHost {
         this.poolWound(from, t, clampInt(action.extraDice ?? 0, -5, 10), 'Ferita');
         break;
       }
+      case 'pool.spell': {
+        const caster = action.casterId ? s.tokens[action.casterId] : undefined;
+        if (!isGm && caster && !caster.ownerIds.includes(from)) return { ok: false, reason: 'Non controlli questo token' };
+        const picked = (Array.isArray(action.targetIds) ? action.targetIds : []).slice(0, 30).map((id) => s.tokens[id]).filter((t): t is Token => !!t);
+        if (!picked.length) return { ok: false, reason: 'Seleziona un bersaglio sulla mappa' };
+        this.poolSpell(from, caster, picked, action);
+        break;
+      }
       case 'pool.react': {
         const t = s.tokens[action.tokenId];
         if (!t?.pool?.pending) return { ok: false, reason: 'Nessuna scelta in sospeso' };
@@ -1636,6 +1646,14 @@ export class GameHost {
       return;
     }
     const dmg = Math.max(0, Math.round(Number(a.damage) || 0)) + over + (st?.armoured ? clampInt(a.vsArmoured ?? 0, 0, 5) : 0);
+    this.poolDamage(from, t, name, dmg, { ignoresArmour: a.ignoresArmour, woundDice: a.woundDice }, lines);
+  }
+
+  /** Damage that landed: against Resilienza it wounds or staggers (vehicles break down, monsters choose). */
+  private poolDamage(from: string, t: Token, name: string, dmg: number, o: { ignoresArmour?: boolean; woundDice?: number }, lines: string[]): void {
+    const st = t.pool;
+    const hidden = t.hidden;
+    const helpless = t.conditions.includes('Indifeso');
     if (!st) {
       lines.push(`Colpito: ${dmg} Danni (il bersaglio non ha Resilienza sulla scheda).`);
       this.poolCard(from, name, t, lines, hidden);
@@ -1643,7 +1661,7 @@ export class GameHost {
     }
     if (st.vehicle) {
       // armour-piercing shots do +1 to armoured vehicles instead
-      const vdmg = dmg + (a.ignoresArmour && st.armoured ? 1 : 0);
+      const vdmg = dmg + (o.ignoresArmour && st.armoured ? 1 : 0);
       lines.push(`Danni ${vdmg} contro Resilienza ${st.resilience}.`);
       if (vdmg > st.resilience) {
         this.poolCard(from, name, t, lines, hidden);
@@ -1654,8 +1672,8 @@ export class GameHost {
       this.poolCard(from, name, t, lines, hidden);
       return;
     }
-    const res = a.ignoresArmour ? st.toughness : st.resilience;
-    lines.push(`Danni ${dmg} contro Resilienza ${res}${a.ignoresArmour ? ' (ignora l’armatura)' : ''}.`);
+    const res = o.ignoresArmour ? st.toughness : st.resilience;
+    lines.push(`Danni ${dmg} contro Resilienza ${res}${o.ignoresArmour ? ' (ignora l’armatura)' : ''}.`);
     if (st.monster && !helpless) {
       // a Mostruosità: a wound or its Reaction, chosen by the attacker (over Resilienza) or by itself (staggered again)
       if (dmg > res) {
@@ -1671,11 +1689,54 @@ export class GameHost {
     }
     if (dmg > res || helpless) {
       this.poolCard(from, name, t, lines, hidden);
-      this.poolWound(from, t, clampInt(a.woundDice ?? 0, 0, 5), name);
+      this.poolWound(from, t, clampInt(o.woundDice ?? 0, 0, 5), name);
       return;
     }
     this.stagger(from, t, lines);
     this.poolCard(from, name, t, lines, hidden);
+  }
+
+  /** A spell that lands without a roll: damage (with Potenza) and conditions on the targets, or the area around them. */
+  private poolSpell(from: string, caster: Token | undefined, picked: Token[], a: Extract<GameAction, { type: 'pool.spell' }>): void {
+    const name = String(a.name ?? 'Incantesimo').slice(0, 60);
+    const potency = clampInt(a.potency ?? 0, 0, 20);
+    const s = this._state;
+    let targets = picked;
+    const first = picked[0]!;
+    const centre = (t: Token) => ({ x: t.x + t.size / 2, y: t.y + t.size / 2 });
+    if (a.area === 'near') {
+      const c = centre(first);
+      const near = Object.values(s.tokens).filter((t) => t.sceneId === first.sceneId && t.id !== first.id && t.id !== caster?.id && Math.max(Math.abs(centre(t).x - c.x), Math.abs(centre(t).y - c.y)) <= 1.5 + t.size / 2);
+      targets = [...picked, ...near.filter((t) => !picked.includes(t))];
+    } else if (a.area === 'zone') {
+      const zones = this.sceneZones(first.sceneId);
+      const z = zoneAt(zones, centre(first).x, centre(first).y);
+      const inZone = (t: Token) => (z ? zoneAt(zones, centre(t).x, centre(t).y)?.id === z.id : Math.max(Math.abs(centre(t).x - centre(first).x), Math.abs(centre(t).y - centre(first).y)) <= 2.5);
+      targets = Object.values(s.tokens).filter((t) => t.sceneId === first.sceneId && t.id !== caster?.id && inZone(t));
+    }
+    if (a.enemiesOnly && caster) targets = targets.filter((t) => poolSide(t) !== poolSide(caster));
+    if (a.maxTargets) targets = targets.slice(0, clampInt(a.maxTargets, 1, 30));
+    this.system(`${caster?.name ?? 'Un incantatore'} lancia ${name}${potency ? ` (Potenza ${potency})` : ''}`);
+    for (const t of targets) {
+      const st = t.pool;
+      const lines: string[] = [];
+      if (a.note) lines.push(String(a.note).slice(0, 300));
+      const cond = a.condition ? String(a.condition).slice(0, 30) : undefined;
+      if (cond && (!a.conditionNonMonster || !st?.monster) && !st?.vehicle) {
+        if (cond === 'Barcollante') this.stagger(from, t, lines);
+        else if (!t.conditions.includes(cond)) {
+          t.conditions = [...t.conditions, cond];
+          lines.push(`${t.name}: ${cond}.`);
+        }
+      }
+      if (a.damage === null || a.damage === undefined) {
+        this.poolCard(from, name, t, lines.length ? lines : ['Colpito.'], t.hidden);
+        continue;
+      }
+      const mod = st?.armoured ? clampInt(a.armouredMod ?? 0, 0, 5) : clampInt(a.unarmouredMod ?? 0, 0, 5);
+      const dmg = Math.max(0, Math.round(Number(a.damage) || 0)) + (a.flat ? 0 : potency) + mod;
+      this.poolDamage(from, t, name, dmg, { ignoresArmour: a.ignoresArmour }, lines);
+    }
   }
 
   /** Barcollante, or, for one who already is, the choice the rules give. */

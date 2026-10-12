@@ -49,10 +49,28 @@ export interface SheetTable {
   concentrate(): void;
   /** success-pool attack against the marked (or selected) tokens; false when nobody is targeted */
   poolAttack?(a: PoolAttack): boolean;
+  /** a spell on the marked (or selected) tokens; false when nobody is targeted */
+  poolSpell?(a: PoolSpell): boolean;
   /** roll in the chat and read the result back (null if it doesn't come back in time) */
   rollFor?(formula: string, label: string): Promise<RollResult | null>;
   /** the character's token on the current map: its conditions live there during play */
   token?: { conditions: string[]; setConditions(conditions: string[]): void; woundRoll(): void } | null;
+}
+
+export interface PoolSpell {
+  name: string;
+  potency: number;
+  damage?: number | null;
+  flat?: boolean;
+  ignoresArmour?: boolean;
+  armouredMod?: number;
+  unarmouredMod?: number;
+  condition?: string;
+  conditionNonMonster?: boolean;
+  area?: 'near' | 'zone';
+  enemiesOnly?: boolean;
+  maxTargets?: number;
+  note?: string;
 }
 
 export interface PoolAttack {
