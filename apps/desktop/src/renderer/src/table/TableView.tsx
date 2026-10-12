@@ -63,7 +63,8 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const editorToolRef = useRef(editorTool);
   editorToolRef.current = editorTool;
   const [tab, setTab] = useState<DockTab>('chat');
-  const [dockOpen, setDockOpen] = useState(true);
+  // on a phone the map comes first: panels open from the tab bar
+  const [dockOpen, setDockOpen] = useState(() => window.innerWidth > 720);
   const [showKeys, setShowKeys] = useState(false);
   const openedAt = useRef(Date.now());
   const [ending, setEnding] = useState<SessionDigest | null>(null);

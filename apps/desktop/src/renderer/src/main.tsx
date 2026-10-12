@@ -6,6 +6,7 @@ import './styles/components.css';
 import './styles/table.css';
 import './styles/character.css';
 import './styles/glass.css';
+import './styles/phone.css';
 import '@fontsource-variable/inter/opsz.css';
 
 createRoot(document.getElementById('root')!).render(
