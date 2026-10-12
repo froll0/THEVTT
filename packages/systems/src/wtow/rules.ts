@@ -284,7 +284,17 @@ export const getCareer = (c: WtowCharacter): Career | undefined => CAREERS.find(
 export function characteristic(c: WtowCharacter, id: CharId): number {
   const l = getLineage(c);
   const base = l ? BASE_CHARS[l.species][id] : 2;
-  return base + c.boosts.filter((b) => b === id).length + (c.advances[id] ?? 0);
+  return base + c.boosts.filter((b) => b === id).length + (c.advances[id] ?? 0) + giftCharacteristic(c, id);
+}
+
+/** what the gifts of Chaos add to a characteristic (Muscoli Possenti: +2 Forza) */
+function giftCharacteristic(c: WtowCharacter, id: CharId): number {
+  const gifts = c.corruption?.gifts ?? [];
+  let n = 0;
+  if (id === 'f' && gifts.includes('Muscoli Possenti')) n += 2;
+  // the last session of a Figlio della Foresta
+  if ((id === 'f' || id === 'r') && c.corruption?.stage === 'dannato' && c.corruption.path === 'figlio-della-foresta') n += 2;
+  return n;
 }
 
 export function maxCharacteristic(c: WtowCharacter, id: CharId): number {
@@ -461,7 +471,8 @@ export function attackProfile(c: WtowCharacter, w: WtowWeapon): AttackProfile {
   return {
     name: w.name || def?.name || 'Arma',
     skill: sk,
-    pool: { ...p, dice: p.dice + (def?.diceMod ?? 0) },
+    // Forza Poderosa: no penalty for a two-handed weapon
+    pool: { ...p, dice: p.dice + (def && def.hands === 2 && (def.diceMod ?? 0) < 0 && talentRank(c, 'forza-poderosa') ? 0 : (def?.diceMod ?? 0)) },
     damage: damageValue(def?.damage ?? null, characteristic(c, 'f')),
     range: def?.range ?? 'Ravvicinata',
     ignoresArmour: !!def?.ignoresArmour,
@@ -619,3 +630,82 @@ export function tableChecks(c: WtowCharacter): Record<'Atletica' | 'Percezione' 
   };
   return { Atletica: p('atletica'), Percezione: p('percezione'), Tempra: p('tempra'), Sopravvivenza: p('sopravvivenza'), Volontà: p('volonta'), Destrezza: p('destrezza') };
 }
+
+/* ------------------------------------------------- Effetti sulle Prove */
+
+/** What a test is about, to know which talents and items count. */
+export interface TestContext {
+  skill?: SkillId;
+  /** an attack: melee or a shot/throw */
+  attack?: 'melee' | 'ranged';
+  /** a Charge (Elmo della Caccia) */
+  charge?: boolean;
+  /** a test against Chaos */
+  chaos?: boolean;
+  /** a Prova di Magia */
+  magic?: boolean;
+  /** the character's current conditions */
+  conditions?: string[];
+}
+
+export interface TestEffect {
+  id: string;
+  /** who gives it: «Odio», «Pietra della Fortuna»… */
+  source: string;
+  /** what it does here */
+  text: string;
+  /** extra dice */
+  dice?: number;
+  glorious?: boolean;
+  /** applies by itself (otherwise the player switches it on when it fits) */
+  auto: boolean;
+  /** a condition the character takes for it */
+  cost?: string;
+}
+
+/**
+ * The talents, gifts and magic items that change this test. Those always true
+ * apply by themselves, the ones that depend on the moment (the hated enemy,
+ * an oath at stake) are offered as switches.
+ */
+export function testEffects(c: WtowCharacter, ctx: TestContext): TestEffect[] {
+  const out: TestEffect[] = [];
+  const has = (id: string) => talentRank(c, id) > 0;
+  const item = (ref: string) => c.items.some((i) => i.ref === ref);
+  const gift = (name: string) => c.corruption.gifts.includes(name);
+  const staggered = ctx.conditions?.includes('Barcollante');
+  const melee = ctx.attack === 'melee';
+  if (melee && has('odio')) {
+    const note = c.talents.find((t) => t.id === 'odio')?.note;
+    out.push({ id: 'odio', source: 'Odio', text: `+1d contro ${note || 'il gruppo odiato'}`, dice: 1, auto: false });
+  }
+  if (melee && has('attacco-irruento') && !staggered)
+    out.push({ id: 'attacco-irruento', source: 'Attacco Irruento', text: 'Prova Gloriosa, ma diventi Barcollante prima di tirare', glorious: true, auto: false, cost: 'Barcollante' });
+  if (has('codice-donore')) out.push({ id: 'codice-donore', source: 'Codice d’Onore', text: 'una volta per sessione, Gloriosa per onorare il giuramento', glorious: true, auto: false });
+  if (ctx.chaos && has('resistente-alla-corruzione')) out.push({ id: 'resistente-alla-corruzione', source: 'Resistente alla Corruzione', text: 'le Prove di Volontà contro il Caos sono Gloriose', glorious: true, auto: true });
+  if (ctx.skill === 'tempra' && has('stomaco-di-ferro')) out.push({ id: 'stomaco-di-ferro', source: 'Stomaco di Ferro', text: 'Gloriosa contro veleni ingeriti e alcol', glorious: true, auto: false });
+  if (has('vista-notturna') && ctx.attack) out.push({ id: 'vista-notturna', source: 'Vista Notturna', text: '+1d al buio contro chi non ti vede', dice: 1, auto: false });
+  if (has('barbalunga')) out.push({ id: 'barbalunga', source: 'Barbalunga', text: '+1d per togliere una Condizione a te o a un alleato', dice: 1, auto: false });
+  if (has('poliedrico')) out.push({ id: 'poliedrico', source: 'Poliedrico', text: 'rinunci ai dadi dei Saperi per una Prova Gloriosa', glorious: true, auto: false });
+  if (has('incantatore-di-serpenti')) out.push({ id: 'incantatore-di-serpenti', source: 'Incantatore di Serpenti', text: 'Gloriosa contro bestie e mostri che hai Distratto', glorious: true, auto: false });
+  if (has('fortunato')) out.push({ id: 'fortunato', source: 'Fortunato', text: 'i giochi di fortuna sono Gloriosi', glorious: true, auto: false });
+  // magic items
+  if (melee && ctx.charge && item('elmo-della-caccia')) out.push({ id: 'elmo-della-caccia', source: 'Elmo della Caccia', text: 'le Cariche sono Gloriose', glorious: true, auto: true });
+  if (melee && item('martello-di-grotargg')) out.push({ id: 'martello-di-grotargg', source: 'Martello di Grotargg', text: 'Glorioso da posizione sopraelevata', glorious: true, auto: false });
+  if (melee && item('spada-della-giustizia')) out.push({ id: 'spada-della-giustizia', source: 'Spada della Giustizia', text: 'Gloriosa in duello contro un Campione', glorious: true, auto: false });
+  if (melee && item('guanto-del-duello')) out.push({ id: 'guanto-del-duello', source: 'Guanto del Duello', text: 'Gloriosa contro lo sfidato', glorious: true, auto: false });
+  if (ctx.skill === 'furtivita' && item('tessimalie')) out.push({ id: 'tessimalie', source: 'Tessimalie', text: 'la Furtività è Tetra', auto: true, dice: 0 });
+  if (ctx.magic && item('bastone-del-potere')) out.push({ id: 'bastone-del-potere', source: 'Bastone del Potere', text: '+1 alla Potenza dell’incantesimo', auto: true, dice: 0 });
+  if ((ctx.skill === 'tempra' || ctx.skill === 'atletica') && item('mantello-di-ithilmar')) out.push({ id: 'mantello-di-ithilmar', source: 'Mantello di Ithilmar', text: '+1d contro Pericoli ambientali e Condizioni', dice: 1, auto: false });
+  if (item('pietra-della-fortuna')) out.push({ id: 'pietra-della-fortuna', source: 'Pietra della Fortuna', text: '+1d fortunato (se fa 10, gli altri dadi falliscono)', dice: 1, auto: false });
+  // gifts of Chaos
+  if (melee && c.corruption.stage === 'macchiato' && c.corruption.path === 'il-sangue-deve-scorrere')
+    out.push({ id: 'sangue-macchiato', source: 'Il Sangue deve Scorrere', text: 'gli attacchi in Mischia sono Gloriosi', glorious: true, auto: true });
+  if (ctx.magic && (c.corruption.stage === 'macchiato' || c.corruption.stage === 'dannato') && c.corruption.path === 'segreti-della-stregoneria')
+    out.push({ id: 'stregoneria-macchiato', source: 'I Segreti della Stregoneria', text: 'le Prove di Magia sono Gloriose (ogni 9 vale due dadi Incidente)', glorious: true, auto: true });
+  if (gift('Eccellenza')) out.push({ id: 'eccellenza', source: 'Eccellenza', text: 'Gloriosa nell’Abilità della tua ossessione', glorious: true, auto: false });
+  return out;
+}
+
+/** Tetra by itself (Tessimalie on Furtività) */
+export const grimByItems = (c: WtowCharacter, ctx: TestContext): boolean => ctx.skill === 'furtivita' && c.items.some((i) => i.ref === 'tessimalie');

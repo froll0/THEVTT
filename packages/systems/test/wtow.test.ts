@@ -179,3 +179,23 @@ describe('Warhammer: beyond creation', () => {
     expect(c.corruption.stage).toBe('vulnerabile');
   });
 });
+
+describe('Warhammer: talents and items at the roll', () => {
+  it('offers what fits the test, and applies what is always true', () => {
+    const c = { ...soldier(), talents: [{ id: 'odio', note: 'Orchi' }, { id: 'resistente-alla-corruzione' }, { id: 'attacco-irruento' }], items: [{ id: 'e', ref: 'elmo-della-caccia', name: 'Elmo' }] };
+    const melee = w.testEffects(c, { skill: 'mischia', attack: 'melee', charge: true });
+    expect(melee.find((e) => e.id === 'odio')).toMatchObject({ dice: 1, auto: false, text: '+1d contro Orchi' });
+    expect(melee.find((e) => e.id === 'elmo-della-caccia')).toMatchObject({ glorious: true, auto: true });
+    expect(melee.find((e) => e.id === 'attacco-irruento')?.cost).toBe('Barcollante');
+    expect(w.testEffects(c, { skill: 'mischia', attack: 'melee', conditions: ['Barcollante'] }).some((e) => e.id === 'attacco-irruento')).toBe(false);
+    expect(w.testEffects(c, { skill: 'volonta', chaos: true }).find((e) => e.id === 'resistente-alla-corruzione')?.auto).toBe(true);
+    expect(w.testEffects(c, { skill: 'percezione' }).some((e) => e.id === 'odio')).toBe(false);
+  });
+
+  it('Forza Poderosa lifts the two-handed penalty; Muscoli Possenti adds Forza', () => {
+    const c = { ...soldier(), weapons: [{ ref: 'spadone', name: 'Spadone' }] };
+    const base = w.attackProfile(c, c.weapons[0]!).pool.dice;
+    expect(w.attackProfile({ ...c, talents: [...c.talents, { id: 'forza-poderosa' }] }, c.weapons[0]!).pool.dice).toBe(base + 1);
+    expect(w.characteristic({ ...c, corruption: { ...c.corruption, gifts: ['Muscoli Possenti'] } }, 'f')).toBe(w.characteristic(c, 'f') + 2);
+  });
+});

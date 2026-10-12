@@ -691,3 +691,8 @@ button.stat:hover {
 .npc-editor .wtow-npc-chars input {
   width: 100%;
 }
+.test-effects {
+  padding: var(--s2) var(--s3);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}

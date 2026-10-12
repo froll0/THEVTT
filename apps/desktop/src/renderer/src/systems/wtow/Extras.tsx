@@ -178,7 +178,17 @@ export function MountSection({ c, editable, set }: { c: C; editable: boolean; se
 
 /* ------------------------------------------------------------- Corruzione */
 
-export function CorruptionTab({ c, editable, set, onTest }: { c: C; editable: boolean; set: Set; onTest: (label: string, dice: number, target: number) => void }) {
+export function CorruptionTab({
+  c,
+  editable,
+  set,
+  onTest,
+}: {
+  c: C;
+  editable: boolean;
+  set: Set;
+  onTest: (label: string, dice: number, target: number, x?: { skill?: w.SkillId; chaos?: boolean }) => void;
+}) {
   const cor = c.corruption;
   const setCor = (patch: Partial<C['corruption']>) => set({ corruption: { ...cor, ...patch } });
   const path = w.CORRUPTION_PATHS.find((p) => p.id === cor.path);
@@ -205,7 +215,7 @@ export function CorruptionTab({ c, editable, set, onTest }: { c: C; editable: bo
               <b style={{ width: 92 }}>{e.name}</b>
               <span className="muted grow">{e.examples}</span>
               {i < 3 ? (
-                <button className="btn ghost sm" onClick={() => onTest(`Volontà contro il Caos (${e.name})`, will.dice - i, will.target)}>
+                <button className="btn ghost sm" onClick={() => onTest(`Volontà contro il Caos (${e.name})`, will.dice - i, will.target, { skill: 'volonta', chaos: true })}>
                   <Dices size={12} /> {e.penalty}
                 </button>
               ) : (

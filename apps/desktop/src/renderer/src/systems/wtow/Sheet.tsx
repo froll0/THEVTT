@@ -22,6 +22,10 @@ interface PendingTest {
   attack?: w.AttackProfile;
   /** the weapon on the sheet (to mark it as fired) */
   weapon?: number;
+  /** the skill tested (talents that count for it) */
+  skill?: w.SkillId;
+  /** a test against Chaos */
+  chaos?: boolean;
 }
 
 const rid = () => Math.random().toString(36).slice(2, 10);
@@ -151,6 +155,16 @@ export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, 
       {pending && (
         <TestModal
           test={pending}
+          effects={(charge) =>
+            w.testEffects(c, {
+              skill: pending.skill,
+              attack: pending.attack ? (pending.attack.skill === 'tiro' || pending.attack.skill === 'lancio' ? 'ranged' : 'melee') : undefined,
+              charge,
+              chaos: pending.chaos,
+              magic: pending.magic,
+              conditions,
+            })
+          }
           state={{ exhausted, distracted, blinded, fate: editable ? w.fateLeft(c) : 0 }}
           onClose={() => setPending(null)}
           onRoll={(formula, label, o) => {
@@ -158,6 +172,9 @@ export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, 
             const fired = pending.weapon !== undefined && c.weapons[pending.weapon] && w.reloadNeed(c.weapons[pending.weapon]!) > 0;
             const patch: Partial<C> = {};
             if (o.fate) patch.fate = { ...c.fate, spent: c.fate.spent + 1 };
+            // what a talent costs (Attacco Irruento: Barcollante before rolling)
+            const costs = o.costs.filter((k) => !conditions.includes(k));
+            if (costs.length) setConditions([...conditions, ...costs]);
             if (fired) patch.weapons = c.weapons.map((x, i) => (i === pending.weapon ? { ...x, loaded: false, reloading: undefined } : x));
             if (Object.keys(patch).length) set(patch);
             if (pending.attack && table?.poolAttack) {
@@ -228,26 +245,34 @@ function ConditionBar({ conditions, editable, onChange }: { conditions: string[]
 
 function TestModal({
   test,
+  effects,
   state,
   onClose,
   onRoll,
 }: {
   test: PendingTest;
+  effects: (charge: boolean) => w.TestEffect[];
   state: { exhausted: boolean; distracted: boolean; blinded: boolean; fate: number };
   onClose: () => void;
-  onRoll: (formula: string, label: string, o: { mod: number; glorious: boolean; grim: boolean; fate: boolean; unopposed: boolean; charge: boolean }) => void;
+  onRoll: (formula: string, label: string, o: { mod: number; glorious: boolean; grim: boolean; fate: boolean; unopposed: boolean; charge: boolean; costs: string[] }) => void;
 }) {
   const [bonus, setBonus] = useState(0);
   const [penalty, setPenalty] = useState(state.distracted ? 1 : 0);
   const [glorious, setGlorious] = useState(false);
   const [fate, setFate] = useState(false);
-  const [grim, setGrim] = useState(state.blinded);
+  const [grim, setGrim] = useState(state.blinded || effects(false).some((e) => e.id === 'tessimalie'));
   const [unopposed, setUnopposed] = useState(false);
   const [charge, setCharge] = useState(false);
   const melee = !!test.attack && test.attack.skill !== 'tiro' && test.attack.skill !== 'lancio';
+  // talents, gifts and items: the sure ones on by themselves, the others switched on by the player
+  const list = effects(charge);
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const active = list.filter((e) => picked[e.id] ?? e.auto);
+  const effectDice = active.reduce((n, e) => n + (e.dice ?? 0), 0);
+  const effectGlory = active.some((e) => e.glorious);
   // Esausto: no bonus dice, no Gloriosa unless Fato pays for it
-  const mod = (state.exhausted ? 0 : bonus) - penalty;
-  const isGlorious = (glorious && !state.exhausted) || fate;
+  const mod = (state.exhausted ? 0 : bonus + effectDice) - penalty;
+  const isGlorious = ((glorious || effectGlory) && !state.exhausted) || fate;
   const formula = w.testFormula(test.dice, test.target, { mod, glorious: isGlorious, grim, magic: test.magic });
   const label = `${test.label}${isGlorious && !grim ? ' (Gloriosa)' : ''}${grim && !isGlorious ? ' (Tetra)' : ''}`;
   const stepper = (v: number, setV: (n: number) => void, max: number) => (
@@ -270,7 +295,7 @@ function TestModal({
           <button className="btn ghost" onClick={onClose}>
             Annulla
           </button>
-          <button className="btn" onClick={() => onRoll(formula, label, { mod, glorious: isGlorious, grim, fate, unopposed, charge })}>
+          <button className="btn" onClick={() => onRoll(formula, label, { mod, glorious: isGlorious, grim, fate, unopposed, charge, costs: active.flatMap((e) => (e.cost ? [e.cost] : [])) })}>
             <Dices size={14} /> {test.attack ? 'Attacca' : 'Tira'} {formula}
           </button>
         </>
@@ -281,6 +306,18 @@ function TestModal({
           {test.dice} dadi, successo con {test.target} o meno. 1 successo è Marginale, 2 un Successo, 3+ un Successo Totale.
           {test.magic ? ' I 9 vanno nella Riserva degli Incidenti Magici e non si ritirano.' : ''}
         </p>
+        {list.length > 0 && (
+          <div className="col test-effects" style={{ gap: 4 }}>
+            {list.map((e) => (
+              <label key={e.id} className="row between small" title={e.text}>
+                <span>
+                  <b>{e.source}</b> <span className="muted">{e.text}</span>
+                </span>
+                <Switch on={picked[e.id] ?? e.auto} onChange={(v) => setPicked({ ...picked, [e.id]: v })} label={e.source} />
+              </label>
+            ))}
+          </div>
+        )}
         <div className="row between small">
           <span>Dadi bonus (Saperi, Aiuto, Talenti…)</span>
           {stepper(bonus, setBonus, Math.max(0, test.dice))}
@@ -327,7 +364,7 @@ function TestModal({
   );
 }
 
-function TestsTab({ c, editable, set, onTest }: { c: C; editable: boolean; set: Set; onTest: (label: string, dice: number, target: number) => void }) {
+function TestsTab({ c, editable, set, onTest }: { c: C; editable: boolean; set: Set; onTest: (label: string, dice: number, target: number, x?: Partial<PendingTest>) => void }) {
   return (
     <div className="wtow-chars">
       {CHARACTERISTICS.map((k) => {
@@ -350,7 +387,7 @@ function TestsTab({ c, editable, set, onTest }: { c: C; editable: boolean; set: 
               const marks = c.marks[s] ?? 0;
               return (
                 <div key={s} className="row" style={{ gap: 6 }}>
-                  <button className="r grow wtow-skill" title={SKILL_INFO[s].text} onClick={() => onTest(SKILL_INFO[s].name, p.dice, p.target)}>
+                  <button className="r grow wtow-skill" title={SKILL_INFO[s].text} onClick={() => onTest(SKILL_INFO[s].name, p.dice, p.target, { skill: s })}>
                     <span className="grow ellipsis">{SKILL_INFO[s].name}</span>
                     <span className="faint tiny">
                       {p.dice}d/{p.target}
@@ -397,7 +434,7 @@ function CombatTab({ c, editable, set, onTest, onRoll, table }: { c: C; editable
                   className="btn ghost sm grow"
                   style={{ justifyContent: 'flex-start' }}
                   disabled={empty}
-                  onClick={() => onTest(a.name, a.pool.dice, a.pool.target, { attack: a, weapon: i })}
+                  onClick={() => onTest(a.name, a.pool.dice, a.pool.target, { attack: a, weapon: i, skill: a.skill })}
                   title={empty ? 'Scarica: va ricaricata' : a.traits}
                 >
                   <Sword size={13} />
@@ -471,10 +508,10 @@ function CombatTab({ c, editable, set, onTest, onRoll, table }: { c: C; editable
 
       <Section title="Difesa">
         <div className="row wrap" style={{ gap: 6 }}>
-          <button className="btn ghost sm" onClick={() => onTest('Atletica (schivare)', athletics.dice, athletics.target)}>
+          <button className="btn ghost sm" onClick={() => onTest('Atletica (schivare)', athletics.dice, athletics.target, { skill: 'atletica' })}>
             Atletica {athletics.dice}d/{athletics.target}
           </button>
-          <button className="btn ghost sm" onClick={() => onTest('Difesa (parare)', defence.dice, defence.target)}>
+          <button className="btn ghost sm" onClick={() => onTest('Difesa (parare)', defence.dice, defence.target, { skill: 'difesa' })}>
             Difesa {defence.dice}d/{defence.target}
           </button>
           <span className="faint tiny">Resilienza {w.resilience(c)} · senza armatura {w.characteristic(c, 'r')}</span>
@@ -683,7 +720,7 @@ function MagicTab({
   const cast = async () => {
     const formula = w.testFormula(will.dice, will.target, { mod: extra, grim: armoured, magic: true });
     if (!table?.rollFor) {
-      onTest('Prova di Magia', will.dice, will.target, { magic: true });
+      onTest('Prova di Magia', will.dice, will.target, { magic: true, skill: 'volonta' });
       return;
     }
     setBusy(true);
