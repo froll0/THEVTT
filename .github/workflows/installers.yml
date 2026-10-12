@@ -117,17 +117,25 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - run: pnpm --filter @thevtt/server bundle
+      # the web client the server hands to players in a browser (/play/)
+      - run: pnpm --filter @thevtt/desktop exec vite build
+      - name: Client web
+        run: |
+          cp -r apps/desktop/out/renderer apps/server/dist/web
+          cd apps/server/dist && zip -qr thevtt-web.zip web
       - name: Smoke test
         run: |
           cd apps/server/dist
           PORT=4477 THEVTT_DB=/tmp/smoke.sqlite node thevtt-server.mjs &
-          for i in $(seq 1 20); do curl -sf localhost:4477/health && exit 0; sleep 0.5; done
+          for i in $(seq 1 20); do curl -sf localhost:4477/health && curl -sf localhost:4477/play/ | grep -q '<div id="root">' && exit 0; sleep 0.5; done
           exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: TheVTT-Server
           if-no-files-found: error
-          path: apps/server/dist/thevtt-server.mjs
+          path: |
+            apps/server/dist/thevtt-server.mjs
+            apps/server/dist/thevtt-web.zip
 
   release:
     name: Release

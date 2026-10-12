@@ -107,8 +107,10 @@ Ogni gruppo usa **un solo server** (account, amici, campagne). Ci sono tre modi:
    docker run -d -p 4477:4477 -v thevtt-data:/data --restart unless-stopped thevtt-server
    ```
 
-   Oppure senza Docker: scarica `thevtt-server.mjs` dalla Release, installa Node.js 22.13+ e
-   `node thevtt-server.mjs`. Serve un indirizzo raggiungibile (porta 4477 aperta o un proxy https).
+   Oppure senza Docker: scarica `thevtt-server.mjs` e `thevtt-web.zip` dalla Release, estrai lo zip
+   accanto al server, installa Node.js 22.13+ e `node thevtt-server.mjs`. Serve un indirizzo
+   raggiungibile (porta 4477 aperta o un proxy https). I giocatori possono entrare anche dal browser,
+   su `/play/`. Tutti i passi sono in [docs/SERVER.md](docs/SERVER.md).
 
 Note sul collegamento automatico: i tunnel Cloudflare senza account sono gratuiti ma senza garanzia
 di disponibilità; se non funziona, l'app riprova da sola e restano UPnP e la rete di casa. Il
