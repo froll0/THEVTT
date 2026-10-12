@@ -19,4 +19,14 @@ describe('Sistema libero', () => {
     expect(sys.validate({ ...c, rolls: [{ id: 'x', label: 'Magia', formula: '1d20+@mana' }] })).toEqual(['«Magia» usa un campo che non esiste']);
     expect(sys.quickRolls(c)[0]).toMatchObject({ label: 'Attacco in mischia', formula: '1d20+0' });
   });
+
+  it('every template is valid and every roll of it rolls', async () => {
+    const { roll } = await import('../../shared/src/dice');
+    const sys = getSystem('libero')!;
+    for (const t of free.TEMPLATES) {
+      const c = { ...free.createCharacter(t.id), name: 'Prova' };
+      expect(sys.validate(c), t.id).toEqual([]);
+      for (const q of c.rolls) expect(() => roll(free.resolveFormula(c, q.formula)), `${t.id}: ${q.formula}`).not.toThrow();
+    }
+  });
 });

@@ -7,6 +7,8 @@
  * target: `g` Gloriosa (failures rerolled once), `t` Tetra (successes rerolled
  * once; both together cancel out), `m` a magic test (nines are never rerolled).
  * `5d6h5` counts those showing 5 or more instead.
+ *
+ * Fudge dice (Fate): `4dF` rolls four dice showing −1, 0 or +1.
  */
 
 export type Rng = (sides: number) => number;
@@ -47,6 +49,8 @@ export type RollPart =
       pool?: 'glorious' | 'grim';
       /** nines rolled (the rule of nine in magic tests) */
       nines?: number;
+      /** Fudge dice: values are −1, 0, +1 */
+      fudge?: boolean;
     }
   | { type: 'const'; sign: 1 | -1; value: number };
 
@@ -73,6 +77,16 @@ export function roll(formula: string, rng: Rng = cryptoRng): RollResult {
   for (const raw of tokens) {
     const sign: 1 | -1 = raw.startsWith('-') ? -1 : 1;
     const body = raw.replace(/^[+-]/, '');
+    const f = /^(\d*)df$/i.exec(body);
+    if (f) {
+      const count = f[1] ? Number(f[1]) : 1;
+      if (count < 1 || count > MAX_DICE) throw new DiceError(`Numero di dadi fuori limite (1-${MAX_DICE})`);
+      const rolls: DieRoll[] = Array.from({ length: count }, () => ({ value: rng(3) - 2, dropped: false }));
+      const subtotal = rolls.reduce((s, r) => s + r.value, 0);
+      parts.push({ type: 'dice', sign, count, sides: 3, modifier: 'F', rolls, subtotal, fudge: true });
+      total += sign * subtotal;
+      continue;
+    }
     const m = TERM.exec(body);
     if (!m) throw new DiceError(`Termine non valido: ${body}`);
 
@@ -150,6 +164,7 @@ export function describeRoll(r: RollResult): string {
     .map((p, idx) => {
       const sign = p.sign < 0 ? '- ' : idx > 0 ? '+ ' : '';
       if (p.type === 'const') return `${sign}${p.value}`;
+      if (p.fudge) return `${sign}[${p.rolls.map((d) => (d.value > 0 ? '+' : d.value < 0 ? '−' : '0')).join(' ')}]`;
       if (p.target !== undefined) return `${sign}[${p.rolls.map((d) => `${d.was !== undefined ? `${d.was}→` : ''}${d.value}${d.success ? '✓' : ''}`).join(', ')}]`;
       return `${sign}[${p.rolls.map((d) => (d.dropped ? `~${d.value}~` : String(d.value))).join(', ')}]`;
     })

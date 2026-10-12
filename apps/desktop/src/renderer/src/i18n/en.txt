@@ -2080,3 +2080,11 @@ Mappe del manuale ⇒ Book maps
 Non riesco a caricare la mappa ⇒ Can't load the map
 Il Talabecland attorno al cratere: la Grande Foresta, le Colline Ululanti e il Talabec. ⇒ The Talabecland around the crater: the Great Forest, the Howling Hills and the Talabec.
 Le province dell’Impero e i regni vicini, dalla Bretonnia alla Sylvania. ⇒ The Empire's provinces and the neighbouring realms, from Bretonnia to Sylvania.
+Fate (4dF) ⇒ Fate (4dF)
+Aspetti, abilità da +0 a +4, quattro dadi Fudge: ogni + e − si somma all’abilità. ⇒ Aspects, skills from +0 to +4, four Fudge dice: each + and − adds to the skill.
+Riserva di d10 ⇒ d10 pool
+Attributo più abilità in d10: ogni 6 o più è un successo. Per i giochi di stampo gotico-moderno. ⇒ Attribute plus skill in d10: each 6 or more is a success. For gothic-modern games.
+Mosse (2d6) ⇒ Moves (2d6)
+Statistiche da −1 a +3 e 2d6: 10+ riesce, 7-9 riesce con un costo, 6- il master fa una mossa. ⇒ Stats from −1 to +3 and 2d6: 10+ succeeds, 7-9 succeeds at a cost, 6- the GM makes a move.
+Riserva di d6 (sei) ⇒ d6 pool (sixes)
+Attributo, abilità e attrezzatura in d6: conta solo il 6. Per i giochi di sopravvivenza. ⇒ Attribute, skill and gear in d6: only 6s count. For survival games.

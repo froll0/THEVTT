@@ -86,3 +86,13 @@ function seq6(...v: number[]) {
   let i = 0;
   return () => v[i++ % v.length]!;
 }
+
+describe('fudge dice', () => {
+  it('rolls −1, 0 or +1 each', () => {
+    const seq = [1, 2, 3, 3];
+    let i = 0;
+    const r = roll('4dF+2', () => seq[i++]!);
+    expect(r.total).toBe(3);
+    expect(describeRoll(r)).toBe('[− 0 + +] + 2');
+  });
+});
