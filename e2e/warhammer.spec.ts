@@ -154,8 +154,10 @@ test('Warhammer at the table: opposed attacks, wounds, zones and the d10 pool', 
   await G.keyboard.press('Escape');
   await G.getByTitle('Iniziativa').click();
   await G.getByRole('button', { name: /Battaglia/ }).click();
-  await expect(G.locator('.ini-row')).toHaveCount(2);
   await expect(G.locator('.ini-row', { hasText: 'Gunter' })).toContainText('PG');
+  // the Gor is a Servitore: if the sword struck it down it no longer fights
+  await expect.poll(() => G.locator('.ini-row').count()).toBeGreaterThanOrEqual(1);
+  expect(await G.locator('.ini-row').count()).toBeLessThanOrEqual(2);
 
   // an extended test for the whole table
   await G.getByPlaceholder('Nuova prova').fill('Forzare il portone');
