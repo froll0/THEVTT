@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { setLanguage, type Language } from '../i18n';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
 export type FontChoice = 'sans' | 'rounded' | 'serif' | 'mono';
@@ -7,6 +8,8 @@ export type Density = 'compact' | 'comfortable' | 'spacious';
 export type NameMode = 'always' | 'hover' | 'never';
 
 export interface Settings {
+  /** interface language; game texts stay in Italian */
+  language: Language;
   theme: ThemeMode;
   accent: string;
   font: FontChoice;
@@ -41,6 +44,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  language: 'it',
   theme: 'system',
   accent: '#0a84ff',
   font: 'sans',
@@ -162,4 +166,5 @@ export function applySettings(s: Settings, prefersDark: boolean): void {
     document.head.appendChild(style);
   }
   style.textContent = s.customCss;
+  setLanguage(s.language ?? 'it');
 }

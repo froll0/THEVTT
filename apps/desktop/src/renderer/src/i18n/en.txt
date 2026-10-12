@@ -1,0 +1,2078 @@
+# Interfaccia in inglese: «testo italiano ⇒ English». {0}, {1}… sono le parti variabili.
+# Le righe che iniziano con # sono commenti. I testi di gioco (regole, incantesimi, mostri) restano in italiano.
+Il tavolo ⇒ The table
+Questa pagina ⇒ This page
+in gioco ⇒ in play
+Master ⇒ GM
+Giocatore ⇒ Player
+bozza ⇒ draft
+Libero ⇒ Free
+Messaggio non inviato ⇒ Message not sent
+Ancora nessun messaggio. ⇒ No messages yet.
+Qualcuno ⇒ Someone
+Scrivi un messaggio ⇒ Write a message
+Messaggio ⇒ Message
+Invia ⇒ Send
+Mostra in chat ⇒ Show in chat
+Apri in finestra ⇒ Open in a window
+Voce non trovata. ⇒ Entry not found.
+Nessun compendio per questo sistema di gioco. ⇒ No compendium for this game system.
+Cerca regole, incantesimi, mostri… ⇒ Search rules, spells, monsters…
+Cerca nel compendio ⇒ Search the compendium
+Nessun risultato. ⇒ No results.
+Risultati ⇒ Results
+Categoria ⇒ Category
+Tutte le categorie ⇒ All categories
+Tutto ⇒ All
+Scegli una voce a sinistra. La ricerca guarda anche dentro i testi. ⇒ Pick an entry on the left. Search also looks inside the texts.
+Questa sezione ⇒ This section
+ha avuto un problema ⇒ ran into a problem
+Riprova ⇒ Retry
+Espandi ⇒ Expand
+Chiudi finestra ⇒ Close window
+Chiudi ⇒ Close
+Riduci ⇒ Minimize
+oggi, {0} ⇒ today, {0}
+Sessione del {0} ⇒ Session of {0}
+Pagina eliminata ⇒ Page deleted
+Campagna ⇒ Campaign
+Cerca nel diario ⇒ Search the journal
+Nuova pagina ⇒ New page
+Campagna del diario ⇒ Journal campaign
+Tutte le pagine ⇒ All pages
+Senza campagna ⇒ No campaign
+Carico il diario… ⇒ Loading the journal…
+Nessuna pagina trovata. ⇒ No pages found.
+Il tuo diario è vuoto. Annota qui quello che succede in sessione: lo ritrovi la volta dopo, e lo leggi solo tu. ⇒ Your journal is empty. Note here what happens in a session: you'll find it next time, and only you can read it.
+Senza titolo ⇒ Untitled
+Scegli una pagina o scrivine una nuova. ⇒ Pick a page or write a new one.
+Diario ⇒ Journal
+Salvataggio… ⇒ Saving…
+Modifiche non salvate ⇒ Unsaved changes
+Non salvato: riprovo alla prossima modifica ⇒ Not saved: I'll retry on the next change
+Salvato ⇒ Saved
+Aggiunge l’ora attuale, per tenere il filo della sessione ⇒ Adds the current time, to keep track of the session
+Segna l’ora ⇒ Mark the time
+Elimina ⇒ Delete
+Annulla ⇒ Cancel
+Elimina pagina ⇒ Delete page
+Titolo ⇒ Title
+Titolo della pagina ⇒ Page title
+Campagna della pagina ⇒ Page campaign
+Nessuna campagna ⇒ No campaign
+Cosa è successo? PNG incontrati, indizi, promesse, tesori… ⇒ What happened? NPCs met, clues, promises, treasure…
+Testo della pagina ⇒ Page text
+Formattazione ⇒ Formatting
+Stile del paragrafo ⇒ Paragraph style
+Paragrafo ⇒ Paragraph
+Sottotitolo ⇒ Subtitle
+Titoletto ⇒ Heading
+Grassetto (Ctrl+B) ⇒ Bold (Ctrl+B)
+Corsivo (Ctrl+I) ⇒ Italic (Ctrl+I)
+Sottolineato (Ctrl+U) ⇒ Underline (Ctrl+U)
+Barrato ⇒ Strikethrough
+Elenco puntato ⇒ Bulleted list
+Elenco numerato ⇒ Numbered list
+Citazione ⇒ Quote
+Linea di separazione ⇒ Divider
+Inserisci tabella ⇒ Insert table
+Aggiungi riga ⇒ Add row
+Aggiungi colonna ⇒ Add column
+− riga ⇒ − row
+− colonna ⇒ − column
+Elimina tabella ⇒ Delete table
+Annulla (Ctrl+Z) ⇒ Undo (Ctrl+Z)
+Ripeti (Ctrl+Y) ⇒ Redo (Ctrl+Y)
+Testo ⇒ Text
+Ingrandisci ⇒ Enlarge
+Campagne ⇒ Campaigns
+Personaggi ⇒ Characters
+Compendio ⇒ Compendium
+Partecipanti ⇒ People
+Notifiche ⇒ Notifications
+Nessuna notifica ⇒ No notifications
+ti invita in « ⇒ invites you to «
+Unisciti ⇒ Join
+Rifiuta ⇒ Decline
+Impostazioni ⇒ Settings
+Esci ⇒ Sign out
+È disponibile una nuova versione ⇒ A new version is available
+Aggiorna a ⇒ Update to
+Hai la ⇒ You have
+· pubblicata il {0} ⇒ · released on {0}
+Scarico l’aggiornamento… l’app si riavvierà da sola. ⇒ Downloading the update… the app will restart by itself.
+Scarica la nuova versione ⇒ Download the new version
+Installa e riavvia ⇒ Install and restart
+Dettagli ⇒ Details
+Se sei al tavolo come master, chiudi prima la sessione: i giocatori verranno disconnessi. ⇒ If you are running a table as GM, close the session first: players will be disconnected.
+Server ospitato su questo PC ⇒ Server hosted on this PC
+Un tavolo è aperto ⇒ A table is open
+Il server del gruppo non è raggiungibile (il PC del master è spento?). Stai vedendo l’ultima copia salvata su questo computer. Nel Diario puoi continuare a scrivere: le pagine partono da sole appena il server torna. ⇒ The group's server can't be reached (is the GM's PC off?). You are seeing the last copy saved on this computer. You can keep writing in the Journal: pages are sent as soon as the server is back.
+Copia locale · ⇒ Local copy ·
+Connessione al server ⇒ Server connection
+Connessione… ⇒ Connecting…
+Server non raggiungibile ({0}) ⇒ Server unreachable ({0})
+Il server del gruppo non è raggiungibile: la modifica non è stata salvata ⇒ The group's server can't be reached: the change was not saved
+Errore {0} ⇒ Error {0}
+Il file non è una mappa di TheVTT ⇒ The file is not a TheVTT map
+Pagina non trovata ⇒ Page not found
+Riga {0}: {1} ⇒ Line {0}: {1}
+La macro è vuota ⇒ The macro is empty
+Seleziona prima uno o più token sulla mappa ⇒ Select one or more tokens on the map first
+Diario sincronizzato ⇒ Journal synced
+Diario sincronizzato: {0} modifiche inviate ⇒ Journal synced: {0} changes sent
+{0} ti ha chiesto l'amicizia ⇒ {0} sent you a friend request
+{0} ha accettato l'amicizia ⇒ {0} accepted your friend request
+Nuovo messaggio ⇒ New message
+«{0}»: prossima sessione {1} ⇒ «{0}»: next session {1}
+«{0}»: sessione annullata ⇒ «{0}»: session cancelled
+{0} ti ha invitato in «{1}» ⇒ {0} invited you to «{1}»
+Non fai più parte di questa campagna ⇒ You are no longer part of this campaign
+Errore ⇒ Error
+Accesso al {0} negato: consentilo nelle impostazioni del sistema ⇒ Access to the {0} denied: allow it in the system settings
+Nessun {0} trovato ⇒ No {0} found
+Il {0} è usato da un altro programma ⇒ The {0} is used by another program
+Non riesco a usare il {0} ⇒ Can't use the {0}
+Nuova macro ⇒ New macro
+Vetro ⇒ Glass
+Ossidiana ⇒ Obsidian
+Indaco ⇒ Indigo
+Grafite ⇒ Graphite
+Arcano ⇒ Arcane
+Foresta ⇒ Forest
+Brace ⇒ Ember
+Carta ⇒ Paper
+Pergamena ⇒ Parchment
+Nuova dispensa: {0} ⇒ New handout: {0}
+Ferita ({0}) ⇒ Wound ({0})
+Controllo non riuscito ⇒ Check failed
+Aggiornamento non riuscito ⇒ Update failed
+Incontro sul tavolo: {0} {1} ⇒ Encounter on the table: {0} {1}
+«{0}» salvata ⇒ «{0}» saved
+{0} creature importate ⇒ {0} creatures imported
+Nessuna creatura nel file ⇒ No creatures in the file
+File non valido ⇒ Invalid file
+Cerca per nome, tipo o «gs 3» ⇒ Search by name, type or «cr 3»
+Filtri ⇒ Filters
+Nuova ⇒ New
+Tipo di creatura ⇒ Creature type
+Tutti i tipi ⇒ All types
+Taglia ⇒ Size
+Tutte le taglie ⇒ All sizes
+Grado di sfida minimo ⇒ Minimum challenge rating
+Grado di sfida massimo ⇒ Maximum challenge rating
+Azzera filtri ⇒ Reset filters
+Tutte ⇒ All
+Mie ⇒ Mine
+Tira i PF ⇒ Roll HP
+Esporta ⇒ Export
+Importa ⇒ Import
+Importa creature ⇒ Import creatures
+Un file JSON di 5e.tools: una creatura, una lista o un intero bestiario (i testi restano in inglese) ⇒ A 5e.tools JSON file: one creature, a list or a whole bestiary
+Da 5e.tools ⇒ From 5e.tools
+Importa da 5e.tools ⇒ Import from 5e.tools
+Nessuna creatura personalizzata. Creane una o duplica un mostro dell’SRD. ⇒ No custom creatures. Create one or duplicate an SRD monster.
+· GS ⇒ · CR
+mia ⇒ mine
+Aggiungi all’incontro ⇒ Add to encounter
+Aggiungi al tavolo ⇒ Add to the table
+L’immagine diventa quella del token quando metti la creatura sulla mappa ⇒ The image becomes the token's when you put the creature on the map
+Cambia immagine ⇒ Change image
+Immagine ⇒ Image
+Immagine di {0} ⇒ Image of {0}
+Togli immagine ⇒ Remove image
+{0} (variante) ⇒ {0} (variant)
+Modifica ⇒ Edit
+Duplica e modifica ⇒ Duplicate and edit
+Incontro · ⇒ Encounter ·
+Svuota incontro ⇒ Clear encounter
+Svuota ⇒ Clear
+Una in meno: {0} ⇒ One less: {0}
+Una in più: {0} ⇒ One more: {0}
+Difficoltà ⇒ Difficulty
+PG di livello ⇒ PCs of level
+· bassa ⇒ · low
+· moderata ⇒ · moderate
+· alta ⇒ · high
+Nessun personaggio al tavolo: assegna i personaggi per calcolare la difficoltà. ⇒ No characters at the table: assign characters to compute the difficulty.
+Metti tutti sul tavolo ⇒ Put them all on the table
+(ricarica ⇒ (recharge
+{0} · {1} · danni {2} ⇒ {0} · {1} · damage {2}
+TS {0} CD {1} ⇒ Save {0} DC {1}
+PE) ⇒ XP)
+Velocità ⇒ Speed
+Tiri salvezza ⇒ Saving throws
+Resistenze ⇒ Resistances
+Immunità ⇒ Immunities
+Vulnerabilità ⇒ Vulnerabilities
+Azioni leggendarie · ⇒ Legendary actions ·
+per round ⇒ per round
+Azioni di tana · iniziativa 20 ⇒ Lair actions · initiative 20
+Classe ⇒ Class
+Specie ⇒ Species
+Caratteristiche ⇒ Abilities
+Abilità ⇒ Skills
+Livello e scelte ⇒ Level and choices
+Incantesimi ⇒ Spells
+Equipaggiamento ⇒ Equipment
+Riepilogo ⇒ Summary
+Da sistemare ⇒ To fix
+Ancora da scegliere ⇒ Still to choose
+Personaggio pronto ⇒ Character ready
+Indietro ⇒ Back
+Avanti: ⇒ Next:
+Trucchetto ⇒ Cantrip
+{0}° livello ⇒ Level {0}
+Regole ⇒ Rules
+Condizioni ⇒ Conditions
+Condizione ⇒ Condition
+Livello ⇒ Level
+Tempo di lancio ⇒ Casting time
+o rituale ⇒ or ritual
+Gittata ⇒ Range
+Componenti ⇒ Components
+Durata ⇒ Duration
+Concentrazione, ⇒ Concentration,
+Tiro salvezza ⇒ Saving throw
+Danni ⇒ Damage
+Classi ⇒ Classes
+Ai livelli superiori: + ⇒ At higher levels: +
+per ogni livello dello slot sopra il ⇒ for each slot level above
+{0} · danni ⇒ {0} · damage
+Tira danni ⇒ Roll damage
+{0} · cura ⇒ {0} · healing
+Tira cura ⇒ Roll healing
+· concentrazione ⇒ · concentration
+Cura ⇒ Healing
+Mostri ⇒ Monsters
+GS {0} · {1} ⇒ CR {0} · {1}
+Dado vita ⇒ Hit die
+Caratteristica primaria ⇒ Primary ability
+{0} a scelta tra {1} ⇒ {0} of your choice from {1}
+Armature ⇒ Armor
+Armi ⇒ Weapons
+semplici e da guerra ⇒ simple and martial
+semplici e alcune da guerra ⇒ simple and some martial
+Incantatore ⇒ Spellcaster
+a metà ⇒ half
+magia del patto ⇒ pact magic
+Privilegi ⇒ Features
+Velocità {0} ⇒ Speed {0}
+Piccola ⇒ Small
+Media ⇒ Medium
+Scurovisione ⇒ Darkvision
+Talento ⇒ Feat
+Strumento ⇒ Tool
+{0} e {1} mo, oppure {2} mo ⇒ {0} and {1} gp, or {2} gp
+Origine ⇒ Origin
+Generale ⇒ General
+Stile di combattimento ⇒ Fighting style
+Dono epico ⇒ Epic boon
+Talenti ⇒ Feats
+· dal {0}° livello ⇒ · from level {0}
+Prerequisito ⇒ Prerequisite
+livello {0} ⇒ level {0}
+Aumento ⇒ Increase
+Ripetibile ⇒ Repeatable
+Talento · {0} ⇒ Feat · {0}
+da guerra ⇒ martial
+Semplice ⇒ Simple
+Da guerra ⇒ Martial
+({0} a due mani) ⇒ ({0} two-handed)
+Proprietà ⇒ Properties
+Maestria ⇒ Mastery
+Peso ⇒ Weight
+Costo ⇒ Cost
+{0} mo ⇒ {0} gp
++2 CA ⇒ +2 AC
+CA {0}{1} ⇒ AC {0}{1}
++ Des ⇒ + Dex
++ Des (max 2) ⇒ + Dex (max 2)
+{0} armatura ⇒ {0} armor
+Tipo ⇒ Type
+Leggera ⇒ Light
+Pesante ⇒ Heavy
+Scudo ⇒ Shield
+Classe armatura ⇒ Armor class
++ mod. Des ⇒ + Dex mod.
++ mod. Des (max 2) ⇒ + Dex mod. (max 2)
+Forza richiesta ⇒ Strength required
+Furtività ⇒ Stealth
+Svantaggio ⇒ Disadvantage
+Maestria: {0} ⇒ Mastery: {0}
+Proprietà di maestria ⇒ Mastery property
+Nome (es. Morso) ⇒ Name (e.g. Bite)
+costa ⇒ costs
+Rimuovi azione ⇒ Remove action
+Bonus attacco ⇒ Attack bonus
+Tipo di danno ⇒ Damage type
+Portata / gittata ⇒ Reach / range
+Nessuno ⇒ None
+Ricarica ⇒ Recharge
+Metà se supera ⇒ Half on a success
+Effetti aggiuntivi ⇒ Extra effects
+Modifica «{0}» ⇒ Edit «{0}»
+Nuova creatura ⇒ New creature
+Salva creatura ⇒ Save creature
+Nome ⇒ Name
+es. Non morto ⇒ e.g. Undead
+Dadi vita ⇒ Hit dice
+PF medi{0} ⇒ Average HP{0}
+(media {0}) ⇒ (average {0})
+Grado di sfida ⇒ Challenge rating
+9 m, volare 18 m ⇒ 9 m, fly 18 m
+Sensi ⇒ Senses
+Scurovisione 18 m ⇒ Darkvision 18 m
+Tratti ⇒ Traits
+Tratto ⇒ Trait
+Nome (es. Resistenza leggendaria) ⇒ Name (e.g. Legendary Resistance)
+Rimuovi tratto ⇒ Remove trait
+Descrizione ⇒ Description
+Azioni ⇒ Actions
+Azione ⇒ Action
+Difese ⇒ Defenses
+Resistenze (metà danni) ⇒ Resistances (half damage)
+Immunità (nessun danno) ⇒ Immunities (no damage)
+Vulnerabilità (doppi) ⇒ Vulnerabilities (double)
+fuoco, veleno ⇒ fire, poison
+Azioni leggendarie ⇒ Legendary actions
+Azioni leggendarie per round ⇒ Legendary actions per round
+Azione leggendaria ⇒ Legendary action
+Azioni di tana (iniziativa 20) ⇒ Lair actions (initiative 20)
+Azione di tana ⇒ Lair action
+Bonus di competenza per GS ⇒ Proficiency bonus by CR
+Attacco ⇒ Attack
+· rituale ⇒ · ritual
+· TS {0} CD {1} ⇒ · save {0} DC {1}
+Ai livelli superiori: +{0} per ogni livello dello slot sopra il {1}°. ⇒ At higher levels: +{0} for each slot level above {1}.
+Principale ⇒ Main
+Combattimento ⇒ Combat
+Inventario ⇒ Inventory
+Personaggio ⇒ Character
+Senza nome ⇒ Unnamed
+Sali di livello ⇒ Level up
+Da completare ⇒ To complete
+Danno ⇒ Damage
+Punti ferita temporanei ⇒ Temporary hit points
+Tiri salvezza contro morte ⇒ Death saving throws
+Tiro salvezza contro morte ⇒ Death saving throw
+Tira ⇒ Roll
+Successi ⇒ Successes
+Fallimenti ⇒ Failures
+Iniziativa ⇒ Initiative
+Competenza ⇒ Proficiency
+Perc. passiva ⇒ Passive Perc.
+Ispirazione eroica ⇒ Heroic inspiration
+Ispirazione ⇒ Inspiration
+Indebolimento ⇒ Exhaustion
+Prova di {0} ⇒ {0} check
+Prova di caratteristica ⇒ Ability check
+TS su {0} ⇒ {0} save
+Competente ⇒ Proficient
+Competenze ⇒ Proficiencies
+semplici ⇒ simple
+e da guerra ⇒ and martial
+, da guerra accurate o leggere ⇒ , martial finesse or light
+, da guerra leggere ⇒ , martial light
+Strumenti ⇒ Tools
+Lingue ⇒ Languages
+Attacchi ⇒ Attacks
+· a due mani {0} ⇒ · two-handed {0}
+Maestria {0}: {1} ⇒ Mastery {0}: {1}
+Attacca i bersagli segnati (Ctrl+clic sulla mappa) o il token selezionato (Maiusc: vantaggio · Alt: svantaggio) ⇒ Attack the marked targets (Ctrl+click on the map) or the selected token (Shift: advantage · Alt: disadvantage)
+{0} · attacco{1} ⇒ {0} · attack{1}
+con vantaggio ⇒ with advantage
+con svantaggio ⇒ with disadvantage
+{0} · danni {1} ⇒ {0} · damage {1}
+A due mani: {0} ⇒ Two-handed: {0}
+· maestria: ⇒ · mastery:
+non competente ⇒ not proficient
+· non competente ⇒ · not proficient
+Risorse ⇒ Resources
+Usato ⇒ Used
+Disponibile ⇒ Available
+r. breve ⇒ short r.
+r. lungo ⇒ long r.
+Riposo breve ⇒ Short rest
+Riposo lungo ⇒ Long rest
+{0} · attacco con incantesimo ⇒ {0} · spell attack
+{0} · danni{1} ⇒ {0} · damage{1}
+(TS {0} CD {1}) ⇒ (save {0} DC {1})
+· lanciato ⇒ · cast
+preparati · ⇒ prepared ·
+trucchetti ⇒ cantrips
+Prepara incantesimi ⇒ Prepare spells
+Attacco con incantesimo ⇒ Spell attack
+Caratteristica ⇒ Ability
+Slot del patto (riposo breve) ⇒ Pact slots (short rest)
+Slot incantesimo ⇒ Spell slots
+° livello ⇒ level
+Trucchetti ⇒ Cantrips
+· sempre preparato ⇒ · always prepared
+Concentrazione ⇒ Concentration
+Rituale ⇒ Ritual
+Nessuno slot disponibile ⇒ No slot available
+Lancia ⇒ Cast
+Nessun incantesimo preparato. Sceglili dalla pagina del personaggio. ⇒ No spells prepared. Pick them on the character page.
+Preparati ⇒ Prepared
+· trucchetti ⇒ · cantrips
+Fatto ⇒ Done
+Cerca un incantesimo ⇒ Search a spell
+sempre ⇒ always
+Età ⇒ Age
+Altezza ⇒ Height
+Occhi ⇒ Eyes
+Capelli ⇒ Hair
+Carnagione ⇒ Skin
+Aspetto ⇒ Appearance
+Ideali ⇒ Ideals
+Legami ⇒ Bonds
+Difetti ⇒ Flaws
+Storia ⇒ Backstory
+Alleati ⇒ Allies
+Note ⇒ Notes
+Nessun dettaglio ancora. ⇒ No details yet.
+Scegli {0} ⇒ Choose {0}
+Aumento dei punteggi di caratteristica o talento ⇒ Ability score improvement or feat
++{0} incantesimi preparati ⇒ +{0} prepared spells
++{0} trucchetti ⇒ +{0} cantrips
+Incantesimi di {0}° livello ⇒ Level {0} spells
+Una maestria nelle armi in più ⇒ One more weapon mastery
+Bonus di competenza {0} ⇒ Proficiency bonus {0}
+{0} di {1}° livello ⇒ Level {1} {0}
+Punti ferita ⇒ Hit points
+Valore medio: ⇒ Average value:
+Tirato: {0} + {1} = {2} ⇒ Rolled: {0} + {1} = {2}
+Tira 1d{0} ⇒ Roll 1d{0}
+Nuovi privilegi ⇒ New features
+Da scegliere o aggiornare ⇒ To choose or update
+Riposa ⇒ Rest
+Spendi dadi vita per recuperare punti ferita. Le risorse che si ricaricano con il riposo breve tornano disponibili. ⇒ Spend hit dice to recover hit points. Resources that recharge on a short rest become available again.
+Dadi vita (d ⇒ Hit dice (d
+) da spendere ⇒ ) to spend
+disponibili ⇒ available
+Recuperi ⇒ You recover
+· incantatore ⇒ · spellcaster
+Dado vita. ⇒ Hit die.
+Tiri salvezza. ⇒ Saving throws.
+Armature. ⇒ Armor.
+Armi. ⇒ Weapons.
+Strumenti. ⇒ Tools.
+Incantesimi. ⇒ Spells.
+incantatore completo ⇒ full caster
+mezzo incantatore ⇒ half caster
+· scurovisione {0} ⇒ · darkvision {0}
+Personalizzato ⇒ Custom
+Costruisci il background insieme al master. ⇒ Build the background together with the GM.
+3 caratteristiche · 2 abilità · 1 talento ⇒ 3 abilities · 2 skills · 1 feat
+Caratteristiche. ⇒ Abilities.
+Abilità. ⇒ Skills.
+Talento: ⇒ Feat:
+Caratteristiche (3) ⇒ Abilities (3)
+Abilità (2) ⇒ Skills (2)
+Talento di origine ⇒ Origin feat
+Serie standard ⇒ Standard array
+Acquisto a punti ⇒ Point buy
+Tiro / manuale ⇒ Roll / manual
+punti ⇒ points
+Tira 4d6 e scarta il più basso ⇒ Roll 4d6 and drop the lowest
+★ caratteristiche principali della classe. ⇒ ★ the class's primary abilities.
+Aumenti del background{0} ⇒ Background increases{0}
+Scegli un background per distribuire +2/+1 oppure +1/+1/+1. ⇒ Choose a background to assign +2/+1 or +1/+1/+1.
+Scegli prima una classe. ⇒ Choose a class first.
+Abilità di classe ⇒ Class skills
+Già data dal background ⇒ Already granted by the background
+Abilità della specie ⇒ Species skills
+Maestria (competenza raddoppiata) ⇒ Expertise (double proficiency)
+Altre competenze nelle abilità ⇒ Other skill proficiencies
+da talenti (Abile), sottoclassi o dal master ⇒ from feats (Skilled), subclasses or the GM
+Comune + due a scelta ⇒ Common + two of your choice
+Rimuovi ⇒ Remove
+Aggiungi lingua… ⇒ Add language…
+Per i livelli oltre il primo i punti ferita usano il valore medio; puoi cambiarlo salendo di livello dalla scheda. ⇒ Beyond first level hit points use the average value; you can change it when levelling up from the sheet.
+Talento di origine (Versatile) ⇒ Origin feat (Versatile)
+{0}° livello · aumento o talento ⇒ Level {0} · increase or feat
+Scegli… ⇒ Choose…
+Maestria nelle armi ⇒ Weapon mastery
+Questa classe non lancia incantesimi. ⇒ This class doesn't cast spells.
+Slot del patto ⇒ Pact slots
+Sempre preparati ⇒ Always prepared
+Cerca incantesimo ⇒ Search spell
+Tutti i livelli ⇒ All levels
+Incantesimi preparati ⇒ Prepared spells
+Dalla classe · {0} ⇒ From the class · {0}
+Opzione ⇒ Option
+Dal background · {0} ⇒ From the background · {0}
+Opzione A ⇒ Option A
+mo ⇒ gp
+Opzione B ⇒ Option B
+Arma semplice ⇒ Simple weapon
+Arma da guerra ⇒ Martial weapon
+Scudo · +2 CA ⇒ Shield · +2 AC
+Armatura {0} · CA {1} ⇒ Armor {0} · AC {1}
+CA {0}{1}{2}{3} ⇒ AC {0}{1}{2}{3}
+· For {0} ⇒ · Str {0}
+· Svantaggio Furtività ⇒ · Stealth disadvantage
+Equipaggiamento iniziale ⇒ Starting equipment
+Inventario · {0} / {1} lb ⇒ Inventory · {0} / {1} lb
+Aggiungi ⇒ Add
+Cerca armi, armature, oggetti… ⇒ Search weapons, armor, items…
+Oggetto personalizzato « ⇒ Custom item «
+Inventario vuoto. ⇒ Empty inventory.
+Equipaggiato ⇒ Equipped
+Quantità ⇒ Quantity
+Monete ⇒ Coins
+Platino ⇒ Platinum
+Oro ⇒ Gold
+Argento ⇒ Silver
+Rame ⇒ Copper
+Ritratto ⇒ Portrait
+Come ti chiamano? ⇒ What do they call you?
+Allineamento ⇒ Alignment
+Fede ⇒ Faith
+Genere ⇒ Gender
+Come appare a chi lo incontra per la prima volta? ⇒ How do they look to someone meeting them for the first time?
+Personalità ⇒ Personality
+Da dove viene, cosa cerca, cosa teme… ⇒ Where they come from, what they seek, what they fear…
+Alleati e organizzazioni ⇒ Allies and organizations
+Usa un campo che non esiste ⇒ Uses a field that doesn't exist
+Formula non valida ⇒ Invalid formula
+Sistema libero ⇒ Free system
+Aggiungi, togli o rinomina campi e tiri ⇒ Add, remove or rename fields and rolls
+Fine ⇒ Done
+Struttura ⇒ Structure
+Segue i punti ferita del token ⇒ Follows the token's hit points
+{0} meno uno ⇒ {0} minus one
+{0} più uno ⇒ {0} plus one
+Scheda ⇒ Sheet
+Tiri ⇒ Rolls
+Campi ⇒ Fields
+Nome del campo ⇒ Field name
+Numero ⇒ Number
+Tracciato ⇒ Track
+Massimo ⇒ Maximum
+Gruppo ⇒ Group
+Uso al tavolo ⇒ Use at the table
+Cosa ne fa il tavolo ⇒ What the table does with it
+Difesa (CA) ⇒ Defense (AC)
+Togli {0} ⇒ Remove {0}
+Nuovo campo ⇒ New field
+Campo ⇒ Field
+I campi numerici si usano nelle formule col loro nome: «Forza» diventa @forza. ⇒ Numeric fields are used in formulas by name: «Forza» becomes @forza.
+Nome del tiro ⇒ Roll name
+Gruppo del tiro ⇒ Roll group
+Nuovo tiro ⇒ New roll
+Tiro ⇒ Roll
+Formule: 1d20+@forza · 2d6 · (@corpo+@lotta)d6h5 conta i dadi da 5 in su · 3d10s4 quelli fino a 4 · 1d100. ⇒ Formulas: 1d20+@forza · 2d6 · (@corpo+@lotta)d6h5 counts dice of 5 or more · 3d10s4 those up to 4 · 1d100.
+Da dove partire ⇒ Where to start
+Chi è, in una riga ⇒ Who they are, in one line
+Cacciatrice di taglie in pensione ⇒ Retired bounty hunter
+Servitore ⇒ Minion
+Bruto ⇒ Brute
+Campione ⇒ Champion
+Mostruosità ⇒ Monstrosity
+Veicoli ⇒ Vehicles
+Cerca un PNG… ⇒ Search an NPC…
+Nuovo ⇒ New
+Tutti ⇒ All
+Manuale ⇒ Book
+Miei ⇒ Mine
+Tutti i gruppi ⇒ All groups
+· {0} Ferite ⇒ · {0} Wounds
+Modifica {0} ⇒ Edit {0}
+Elimina {0} ⇒ Delete {0}
+Eliminare «{0}»? ⇒ Delete «{0}»?
+Metti sulla mappa ⇒ Put on the map
+(corazzato) ⇒ (armoured)
+Guasti ⇒ Breakdowns
+Speronamento ⇒ Ramming
+Gli attacchi contro un veicolo non si possono contrapporre; è immune alle Condizioni tranne In Fiamme. Ogni «Ferita» è un Guasto. ⇒ Attacks against a vehicle can't be opposed; it is immune to Conditions except Ablaze. Each «Wound» is a Breakdown.
+Nessun PNG trovato. ⇒ No NPCs found.
+Quanti ⇒ How many
+Un gruppo appena creato regge tanti Servitori quanti sono i PG; 1-2 Bruti sono già una sfida; un Campione è il culmine di un’avventura; una Mostruosità è quasi sempre fatale. ⇒ A new party can handle as many Minions as there are PCs; 1-2 Brutes are already a challenge; a Champion is the climax of an adventure; a Monstrosity is almost always deadly.
+Contatti di Talagaad ⇒ Talagaad contacts
+Resilienza ⇒ Resilience
+Altre ⇒ Others
+Una Mostruosità usa tutti i suoi attacchi, ognuno con la sua prova contrapposta ⇒ A Monstrosity uses all its attacks, each with its own opposed test
+Tutti gli attacchi ⇒ All attacks
+Attacca il bersaglio segnato (o tira e basta) ⇒ Attack the marked target (or just roll)
+Protezione ⇒ Protection
+(scudo) ⇒ (shield)
+Mago di Livello ⇒ Wizard of Level
+{0} · Prova di Magia ⇒ {0} · Magic test
+Prova di Magia ⇒ Magic test
+Averi tipici: ⇒ Typical possessions:
+Dove trovarlo. ⇒ Where to find them.
+Favori. ⇒ Favours.
+Necessità. ⇒ Needs.
+Alleati e nemici. ⇒ Allies and enemies.
+Pettegolezzi. ⇒ Rumours.
+Segreto (solo master). ⇒ Secret (GM only).
+Profilo sconosciuto. ⇒ Unknown profile.
+Prono ⇒ Prone
+Esausto ⇒ Exhausted
+Ostacolato ⇒ Hindered
+Barcollante ⇒ Staggered
+Stirpe ⇒ Species
+Carriera ⇒ Career
+Saperi ⇒ Lores
+Tocchi finali ⇒ Finishing touches
+PE dai tiri casuali: ⇒ XP from random rolls:
+· PE totali ⇒ · total XP
+Tira a caso (+1 PE) ⇒ Roll randomly (+1 XP)
+Fato ⇒ Fate
+Abilità a 3: ⇒ Skills at 3:
+più {0} a scelta ⇒ plus {0} of your choice
+Saperi: ⇒ Lores:
+Talenti: ⇒ Talents:
+un tiro ⇒ one roll
+due tiri ⇒ two rolls
+sulla tabella ⇒ on the table
+; in più {0} ⇒ ; plus {0}
+Massimi: ⇒ Maximums:
+La Stirpe dà i valori di partenza; tre +1 a Caratteristiche diverse (o al Fato) li personalizzano. Tirando si guadagna 1 PE (un 10 è a scelta). ⇒ The Species gives the starting values; three +1s to different Characteristics (or to Fate) customise them. Rolling earns 1 XP (a 10 is your choice).
+Tira i tre +1 (+1 PE) ⇒ Roll the three +1s (+1 XP)
+Ne mancano {0} ⇒ {0} left
+Tutti assegnati ⇒ All assigned
+Scegli prima la Stirpe. ⇒ Choose the Species first.
+Tira d100 (+1 PE) ⇒ Roll d100 (+1 XP)
+Non aperta alla tua Stirpe ⇒ Not open to your Species
+Caratteristiche Primarie (migliorarle costa 1 PE in meno): ⇒ Primary Characteristics (improving them costs 1 XP less):
++1 a quattro tra: ⇒ +1 to four of:
+Averi: ⇒ Possessions:
+Risorse: ⇒ Assets:
+Contatti: ⇒ Contacts:
+Scegli prima Stirpe e Carriera. ⇒ Choose Species and Career first.
+: porta a 3 ⇒ : raise to 3
+abilità a scelta ( ⇒ skills of your choice (
+: +1 a quattro tra queste ( ⇒ : +1 to four of these (
+Codice d’Onore ⇒ Code of Honour
+Resistenza Magica ⇒ Magic Resistance
+Un Talento ⇒ One Talent
+{0} Talenti ⇒ {0} Talents
+dalla tabella della Stirpe ⇒ from the Species table
+, più {0} ⇒ , plus {0}
+Tira sulla tabella ⇒ Roll on the table
+Chi odi? ⇒ Who do you hate?
+Il tuo giuramento ⇒ Your oath
+Il segreto della tua nascita ⇒ The secret of your birth
+Magia da Battaglia ⇒ Battle Magic
+Il Fattucchiere ha memorizzato 3 incantesimi ⇒ The Hedge Wizard has memorised 3 spells
+Il Mago Arcano ha un grimorio con 3 incantesimi ⇒ The Arcane Wizard has a grimoire with 3 spells
+del suo Sapere Magico. Ricordati di aggiungere il Sapere Magico nel passo dei Saperi. ⇒ of their Magic Lore. Remember to add the Magic Lore in the Lores step.
+Impara ⇒ Learn
+Scelti: ⇒ Chosen:
+Dalla Stirpe: ⇒ From the Species:
+Dalla Carriera: ⇒ From the Career:
+Dove c’è una scelta (o, a scelta, …) aggiungi tu il Sapere giusto. Un Sapere doppio non dà nulla in più. ⇒ Where there is a choice (or, of your choice, …) add the right Lore yourself. A duplicate Lore gives nothing extra.
+Aggiungi un Sapere (es. Città (Talagaad)) ⇒ Add a Lore (e.g. City (Talagaad))
+Averi della Carriera ⇒ Career possessions
+Dove c’è una scelta (o) prendi uno degli oggetti. Aggiungi qui le armi per usarle dalla scheda. ⇒ Where there is a choice (or) take one of the items. Add weapons here to use them from the sheet.
+Togli ⇒ Remove
+Aggiungi un’arma… ⇒ Add a weapon…
+Vestiti senza armatura ⇒ Clothes, no armour
+Averi ⇒ Possessions
+(una tra: ⇒ (one of:
+Un’Abilità da 3 a 4, oppure due da 2 a 3. ⇒ One Skill from 3 to 4, or two from 2 to 3.
+Un altro Talento ⇒ Another Talent
+Un tiro in più sulla tabella della Stirpe (lo scegli nel passo dei Talenti). ⇒ One more roll on the Species table (you choose it in the Talents step).
+Una Risorsa ⇒ An Asset
+Un tiro sulla tabella delle Risorse Casuali del tuo Status: annotala tra le Risorse. ⇒ A roll on the Random Assets table of your Status: note it among the Assets.
+Poi: Velocità Normale, Resilienza = Resistenza + armatura ( ⇒ Then: Normal Speed, Resilience = Toughness + armour (
+), e si comincia giocando il Tetro Presagio. ⇒ ), and you start by playing the Grim Portent.
+Tira d100 ( ⇒ Roll d100 (
+Le risorse sopra il tuo Status vengono spesso confiscate o rubate ⇒ Assets above your Status are often confiscated or stolen
+: aggiunta alle Risorse. ⇒ : added to the Assets.
+Gruppo di Contatti ⇒ Contact group
+Tira d100 ⇒ Roll d100
+Scegli questo rapporto ⇒ Choose this relationship
+Contatti ⇒ Contacts
+(due, dalle tabelle di ⇒ (two, from the tables of
+Contatti della Carriera ⇒ Career contacts
+Legame ⇒ Bond
+Contatto ⇒ Contact
+Tetro Presagio ⇒ Grim Portent
+L’evento che unisce il gruppo e come affronterai l’antagonista. ⇒ The event that brings the party together and how you will face the antagonist.
+Aspetto, storia, legami ⇒ Appearance, story, bonds
+Prove ⇒ Tests
+Magia ⇒ Magic
+Da mischia ⇒ Melee
+A distanza ⇒ Ranged
+Da lancio ⇒ Thrown
+{0} · VM {1} ⇒ {0} · CV {1}
+Portata ⇒ Range
+Bestiario ⇒ Bestiary
+Tabella delle Ferite ⇒ Wounds table
+Tira 1d10 ⇒ Roll 1d10
+Si Salvi Chi Può! ⇒ Every Man for Himself!
+Tira 1d100 ⇒ Roll 1d100
+Cavalcatura ⇒ Mount
+Evento di Talagaad ⇒ Talagaad event
+Intermezzo ⇒ Interlude
+Prova Prolungata ⇒ Extended test
+{0} successi ⇒ {0} successes
+Corruzione ⇒ Corruption
+Sentiero verso la Corruzione ⇒ Path to Corruption
+Incantesimi improvvisati ⇒ Improvised spells
+Oggetti magici ⇒ Magic items
+Cariche o usi ⇒ Charges or uses
+Una carica in meno ⇒ One charge less
+Una carica in più ⇒ One charge more
+Tra le armi, per attaccare dalla scheda ⇒ Among the weapons, to attack from the sheet
+Impugna ⇒ Wield
+Si consuma ⇒ Consumable
+Usa ⇒ Use
+{0} · Danno {1} · {2}M · ⇒ {0} · Damage {1} · {2}M ·
+Resilienza {0} · ⇒ Resilience {0} ·
+Note (da dove viene, chi lo cerca…) ⇒ Notes (where it comes from, who seeks it…)
+Nessun oggetto magico. ⇒ No magic items.
+Aggiungi un oggetto magico ⇒ Add a magic item
+Aggiungi un oggetto magico… ⇒ Add a magic item…
+Un altro oggetto… ⇒ Another item…
+Nome dell’oggetto ⇒ Item name
+Le armature magiche contano al posto di quella normale se sono migliori; un solo Talismano alla volta funziona. ⇒ Magic armour counts instead of the normal one if it's better; only one Talisman at a time works.
+In banca ⇒ In the bank
+Ritirare non richiede Prove ⇒ Withdrawing requires no Tests
+Ritira una ⇒ Withdraw one
+Si deposita con l’Attività Visitare la Banca dell’Intermezzo. ⇒ Deposit with the Interlude activity Visit the Bank.
+A piedi ⇒ On foot
+In sella: ⇒ Mounted:
+In sella cavaliere e cavalcatura sono un solo combattente; smontare fa parte del movimento. ⇒ When mounted, rider and mount are a single combatant; dismounting is part of movement.
+Stadio ⇒ Stage
+Esposizione al Caos ⇒ Chaos exposure
+Alla fine di un giorno di esposizione, una Prova di Volontà ( ⇒ At the end of a day of exposure, a Willpower Test (
+); fallendo il master sceglie Esausto, Distratto o Assordato e si diventa Vulnerabili. ⇒ ); on a failure the GM picks Exhausted, Distracted or Deafened and you become Vulnerable.
+Volontà contro il Caos ({0}) ⇒ Willpower against Chaos ({0})
+Sentiero ⇒ Path
+Lo sceglie il master… ⇒ The GM chooses…
+Vittime favorite: ⇒ Favourite victims:
+Doni ⇒ Gifts
+Un altro dono o mutazione ⇒ Another gift or mutation
+Aggiungi il dono ⇒ Add the gift
+Note del master ⇒ GM notes
+Riuscita. ⇒ Success.
+Fallita. ⇒ Failure.
++2 Monete per la prossima avventura. ⇒ +2 Coins for the next adventure.
++1 Moneta per la prossima avventura. ⇒ +1 Coin for the next adventure.
+Guarisce una Ferita e tutte le Ferite Purulente. ⇒ Heals one Wound and all Festering Wounds.
+{0} Monete {1} in banca{2}; il resto se ne va in commissioni. ⇒ {0} Coins {1} in the bank{2}; the rest goes in fees.
+(con 3 successi anche una di Status superiore, se ce l’hai) ⇒ (with 3 successes also one of higher Status, if you have it)
+«{0}» completata ({1}/{2}). ⇒ «{0}» completed ({1}/{2}).
+«{0}»: {1}/{2} successi. ⇒ «{0}»: {1}/{2} successes.
+{0} sale a {1}! ⇒ {0} rises to {1}!
+{0} Contatti coinvolti: {1} ⇒ {0} Contacts involved: {1}
+Sessioni dall’ultimo Intermezzo: ⇒ Sessions since the last Interlude:
+Una sessione in meno ⇒ One session less
+Una sessione in più ⇒ One session more
+Attività: ⇒ Activities:
+La tabella degli Eventi di Talagaad (Guida del Gamemaster) ⇒ The Talagaad Events table (Gamemaster's Guide)
+Attività ⇒ Activity
+(Prolungata, {0}) ⇒ (Extended, {0})
+Dadi bonus (una bottega, un Contatto, un alleato che Supporta…) ⇒ Bonus dice (a workshop, a Contact, an ally who Supports…)
+Un dado bonus in meno ⇒ One bonus die less
+Un dado bonus in più ⇒ One bonus die more
+Il Sapere da studiare ⇒ The Lore to study
+L’avere da creare ⇒ The possession to craft
+Su cosa (un incantesimo, un affare…) ⇒ On what (a spell, a deal…)
+Attività finite per questo Intermezzo ⇒ Activities done for this Interlude
+Tira {0} ⇒ Roll {0}
++1d: è l’Abilità Primaria del tuo Contatto ⇒ +1d: it's your Contact's Primary Skill
+Ogni fallimento si segna sull’Abilità: superato il suo valore, sale di 1 (fino a 6). ⇒ Each failure is marked on the Skill: past its value, it rises by 1 (up to 6).
+Fatto in questo Intermezzo ⇒ Done in this Interlude
+successi, ⇒ successes,
+fallimenti segnati. ⇒ failures marked.
+Prove Prolungate in corso ⇒ Extended tests in progress
+Abbandona {0} ⇒ Abandon {0}
+Rivedere le finanze ⇒ Review finances
+Si comincia la prossima avventura con tre Monete ⇒ The next adventure starts with three Coins
+più {0} dagli straordinari ⇒ plus {0} from overtime
+; quelle non spese o depositate vanno perse. ⇒ ; unspent or undeposited ones are lost.
+Chiudi l’Intermezzo ⇒ Close the Interlude
+Nuovo PNG ⇒ New NPC
+Salva ⇒ Save
+Nome del PNG ⇒ NPC name
+Lenta ⇒ Slow
+Normale ⇒ Normal
+Veloce ⇒ Fast
+Corazzato ⇒ Armoured
+Ferite per sconfiggerlo ⇒ Wounds to defeat it
+Tracciato delle Ferite ⇒ Wound track
+una riga per soglia: «1-2 Ferite: Diventa Esausto» ⇒ one line per threshold: «1-2 Ferite: Diventa Esausto»
+«Mischia 4, Volontà 3»; le altre valgono ⇒ «Mischia 4, Volontà 3»; the others are worth
+Altre abilità ⇒ Other skills
+Nome dell’attacco ⇒ Attack name
+Ravvicinata ⇒ Close
+Dadi ⇒ Dice
+Soglia ⇒ Target
+Danno (vuoto: infligge una Condizione) ⇒ Damage (empty: inflicts a Condition)
+Togli l’attacco ⇒ Remove the attack
+Tratti (ignora l’armatura, infligge Prono…) ⇒ Traits (ignora l’armatura, infligge Prono…)
+Abilità di Protezione ⇒ Protection skill
+Atletica ⇒ Athletics
+Difesa ⇒ Defence
+Dadi di Protezione ⇒ Protection dice
+Soglia di Protezione ⇒ Protection target
+scudo ⇒ shield
+Capacità ⇒ Abilities
+Per una Mostruosità, una Capacità con «(Reazione)» nel nome è quella che scatta al posto di una Ferita. ⇒ For a Monstrosity, an Ability with «(Reazione)» in its name is the one triggered instead of a Wound.
+Nome della capacità ⇒ Ability name
+Togli la capacità ⇒ Remove the ability
+Testo della capacità ⇒ Ability text
+Averi tipici ⇒ Typical possessions
+Distratto ⇒ Distracted
+Accecato ⇒ Blinded
+Talenti e Saperi ⇒ Talents and Lores
+Resistenza più armatura: i Danni oltre questo valore causano una Ferita ⇒ Toughness plus armour: Damage above this value causes a Wound
+La riserva con cui ti opponi agli attacchi ⇒ The pool you oppose attacks with
+Protezione ({0}) ⇒ Protection ({0})
+Ferite ⇒ Wounds
+In sella: {0} ⇒ Mounted: {0}
+Fato: ⇒ Fate:
+Spendi: Prova Gloriosa, seconda Azione o copertura in Ritirata ⇒ Spend: Glorious Test, second Action or cover in a Retreat
+Spendi ⇒ Spend
+Brucia (per sempre): Successo Assoluto, Colpo di Striscio o Ultima Resistenza ⇒ Burn (forever): Absolute Success, Glancing Blow or Last Stand
+Bruciare un punto Fato? Il massimo cala di 1 per sempre. ⇒ Burn a Fate point? The maximum drops by 1 forever.
+Brucia ⇒ Burn
+All’inizio della sessione il Fato speso torna ⇒ Spent Fate comes back at the start of the session
+Nuova sessione ⇒ New session
+(Gloriosa) ⇒ (Glorious)
+(Tetra) ⇒ (Grim)
+Attacca ⇒ Attack
+dadi, successo con ⇒ dice, success on
+o meno. 1 successo è Marginale, 2 un Successo, 3+ un Successo Totale. ⇒ or less. 1 success is Marginal, 2 a Success, 3+ a Total Success.
+I 9 vanno nella Riserva degli Incidenti Magici e non si ritirano. ⇒ 9s go to the Miscast Pool and are not rerolled.
+Dadi bonus (Saperi, Aiuto, Talenti…) ⇒ Bonus dice (Lores, Help, Talents…)
+Esausto: niente dadi bonus. ⇒ Exhausted: no bonus dice.
+Penalità (Difficile -1d, Ardua -2d ⇒ Penalty (Hard -1d, Very hard -2d
+, Distratto ⇒ , Distracted
+Gloriosa: ritiri i fallimenti ⇒ Glorious: reroll failures
+Gloriosa ⇒ Glorious
+Spendi Fato per renderla Gloriosa ⇒ Spend Fate to make it Glorious
+Spendi Fato ⇒ Spend Fate
+Tetra: ritiri i successi ⇒ Grim: reroll successes
+(Accecato) ⇒ (Blinded)
+Tetra ⇒ Grim
+Senza opposizione (sorpresa, bersaglio inerme) ⇒ Unopposed (surprise, helpless target)
+Senza opposizione ⇒ Unopposed
+In Carica (+1d) ⇒ Charging (+1d)
+In Carica ⇒ Charging
+Con un bersaglio segnato sulla mappa il tavolo tira anche la sua Protezione e applica Danni, Barcollante e Ferite. Aggiunge da solo +1d per la Carica, la superiorità numerica nella Zona e la posizione sopraelevata (o il bersaglio Prono); a distanza -1d fuori Portata Ottimale, contro la copertura o un bersaglio Prono. ⇒ With a target marked on the map the table also rolls its Protection and applies Damage, Staggered and Wounds. It adds +1d by itself for a Charge, outnumbering in the Zone and higher ground (or a Prone target); at range -1d outside Optimal Range, against cover or a Prone target.
+Caratteristica Primaria della Carriera ⇒ Career Primary Characteristic
+Fallimenti segnati negli Intermezzi: superato il valore dell’Abilità, sale di 1 ⇒ Failures marked in Interludes: past the Skill's value, it rises by 1
+Scarica: va ricaricata ⇒ Unloaded: needs reloading
+Barc. ⇒ Stag.
+Prova Prolungata di Destrezza: {0} successi, una Prova per Azione ⇒ Extended Dexterity test: {0} successes, one Test per Action
+Ricarica {0} ⇒ Reload {0}
+Nessuna arma: il pugno attacca con Muscoli e fa Barcollare. ⇒ No weapon: the fist attacks with Brawn and Staggers.
+Clic su un’arma: con un bersaglio segnato (Ctrl+clic) il tavolo risolve l’attacco contrapposto. Danni = arma + successi in più; sopra la Resilienza è una Ferita, altrimenti Barcollante. Un attacco in mischia fallito ti rende Barcollante. ⇒ Click a weapon: with a marked target (Ctrl+click) the table resolves the opposed attack. Damage = weapon + extra successes; above Resilience it's a Wound, otherwise Staggered. A failed melee attack leaves you Staggered.
+Atletica (schivare) ⇒ Athletics (dodge)
+Difesa (parare) ⇒ Defence (parry)
+· senza armatura ⇒ · no armour
+Azioni in combattimento ⇒ Combat actions
+Aiutare ⇒ Help
+Una Prova: ogni successo dà +1d all’alleato. ⇒ A Test: each success gives +1d to the ally.
+Attaccare ⇒ Attack
+Mischia, Tiro, Lancio o Muscoli contro la Protezione del bersaglio. ⇒ Melee, Shooting, Throwing or Brawn against the target's Protection.
+Improvvisare ⇒ Improvise
+Qualunque altra cosa, con la Prova adatta. ⇒ Anything else, with the fitting Test.
+Manovrare ⇒ Manoeuvre
+Scattare (2 Zone), Caricare (+1d in mischia), Muoversi Silenziosamente o con Cautela. ⇒ Sprint (2 Zones), Charge (+1d in melee), Move Silently or Cautiously.
+Mirare ⇒ Aim
+Prova di Percezione: ogni successo +1d al prossimo tiro. ⇒ Awareness Test: each success +1d to the next roll.
+Recuperare ⇒ Recover
+Togli Barcollante o Prono, oppure una Prova per un’altra Condizione o per medicare una Ferita. ⇒ Remove Staggered or Prone, or a Test for another Condition or to treat a Wound.
+In più un movimento gratuito di una Zona (due se Veloce). Spendendo Fato una seconda Azione. ⇒ Plus a free move of one Zone (two if Fast). Spending Fate, a second Action.
+Tira {0}d10 sulla tabella delle Ferite ⇒ Roll {0}d10 on the Wounds table
+Tabella ( ⇒ Table (
+Purulenta ⇒ Festering
+Guarisce: {0}. ⇒ Heals: {0}.
+Medicata: non aggiunge dadi alla tabella delle Ferite ⇒ Treated: adds no dice to the Wounds table
+Medicata ⇒ Treated
+medicata ⇒ treated
+Guarita ⇒ Healed
+Nessuna Ferita. ⇒ No Wounds.
+Annota una Ferita… ⇒ Note a Wound…
+1d10 più un dado per Ferita non medicata. Si medica Recuperando con Memoria (automatico con Anatomia) o dopo la battaglia Riprendendo Fiato. A fine giornata Prova di Tempra contro l’infezione. ⇒ 1d10 plus one die per untreated Wound. Treat it by Recovering with Recall (automatic with Anatomy) or after the battle by Catching Your Breath. At the end of the day a Fortitude Test against infection.
+Talento di Carriera ⇒ Career Talent
+Talento di Carriera · {0} ⇒ Career Talent · {0}
+Nessun Talento. ⇒ No Talents.
+Nessun Sapere. ⇒ No Lores.
+Un Sapere dà +1d, permette Prove altrimenti impossibili o le rende automatiche (mai bonus agli attacchi, salvo Ammazzamostri). ⇒ A Lore gives +1d, allows Tests that would otherwise be impossible or makes them automatic (never a bonus to attacks, except Monster Slayer).
+{0} · VM {1} · lanciato (Potenza {2}) ⇒ {0} · CV {1} · cast (Potency {2})
+Livello da Mago ⇒ Wizard Level
+Successi accumulati nella Prova Prolungata di Volontà ⇒ Successes gathered in the Extended Willpower Test
+I successi dell’ultima Prova: la Potenza dell’incantesimo che lanci ⇒ The successes of the last Test: the Potency of the spell you cast
+Potenza ⇒ Potency
+Dadi Incidente Magico: se superano il Livello da Mago, Incidente ⇒ Miscast dice: if they exceed the Wizard Level, a Miscast
+Incidenti ⇒ Miscasts
+Presagio di Sventura: il potere è visibile a tutti. ⇒ Omen of Doom: the power is visible to all.
+La Riserva supera il tuo Livello: Incidente Magico! ⇒ The Pool exceeds your Level: Miscast!
+Prova di Magia ( ⇒ Magic test (
+Mischiare i Venti: ogni dado in più va anche nella Riserva degli Incidenti ⇒ Mingling the Winds: each extra die also goes into the Miscast Pool
+Mischia i Venti ⇒ Mingle the Winds
+Con armatura o scudo le Prove di Magia sono Tetre. ⇒ With armour or a shield Magic tests are Grim.
+Incidente Magico ⇒ Miscast
+Tira l’Incidente ( ⇒ Roll the Miscast (
+Recuperare: un dado in meno nella Riserva ⇒ Recover: one die less in the Pool
+Recupera −1 ⇒ Recover −1
+A fine scontro le energie si disperdono senza danni ⇒ At the end of the fight the energies disperse harmlessly
+Disperdi ⇒ Disperse
+Azzera i successi ⇒ Reset the successes
+Lancia sui bersagli segnati (Potenza {0}): il tavolo applica Danni e Condizioni ⇒ Cast on the marked targets (Potency {0}): the table applies Damage and Conditions
+Lancia (Potenza {0}): l’effetto va in chat ⇒ Cast (Potency {0}): the effect goes to chat
+memorizzato ⇒ memorised
+· memorizzato ⇒ · memorised
+· dal grimorio ⇒ · from the grimoire
+Nessun incantesimo. ⇒ No spells.
+Aggiungi un incantesimo… ⇒ Add a spell…
+Livello dell’incantesimo improvvisato ⇒ Improvised spell level
+Ad area ⇒ Area
+a una Zona ⇒ to a Zone
+anche ai vicini ⇒ also to those nearby
+Danno {0}+Potenza ({1}) sui bersagli segnati ⇒ Damage {0}+Potency ({1}) on the marked targets
+Incantesimo improvvisato {0} ⇒ Improvised spell {0}
+Zona ⇒ Zone
+Creatura e vicini ⇒ Creature and nearby
+Creatura ⇒ Creature
+Lunga ⇒ Long
+Istantanea ⇒ Instant
+Danno {0}+Potenza. ⇒ Damage {0}+Potency.
+Lancia ( ⇒ Cast (
+Effetti degli Incidenti Magici ⇒ Miscast effects
+Divinità ⇒ Deity
+Favore di ⇒ Favour of
+Sapere Preferito: ⇒ Favoured Lore:
+Precetti ⇒ Strictures
+Preghiere ⇒ Prayers
+{0} (Volontà) ⇒ {0} (Willpower)
+Preghiera di {0} ⇒ Prayer of {0}
+Miracolo ⇒ Miracle
+Uno solo: per un altro serve di nuovo il Talento Fede. Concordalo col GM. ⇒ Only one: another needs the Faith Talent again. Agree on it with the GM.
+Della Carriera ( ⇒ From the Career (
+Spesa ⇒ Spent
+Da spendere ⇒ To spend
+Una in meno ⇒ One less
+Una in più ⇒ One more
+All’inizio di ogni avventura: tre Monete del tuo Status ⇒ At the start of each adventure: three Coins of your Status
+Nuova avventura: 3 Monete ⇒ New adventure: 3 Coins
+Gli averi di Status inferiore al tuo sono gratuiti; Mercanteggiare è Fascino contro Volontà. ⇒ Possessions of Status lower than yours are free; Haggling is Charm against Willpower.
+Armatura ⇒ Armour
+Nessuna ⇒ None
+Scudo (+1) ⇒ Shield (+1)
+Altri personaggi ⇒ Other characters
+Prove Prolungate ⇒ Extended tests
+Tracce e Indizi ⇒ Leads and Clues
+Favori Dovuti ⇒ Favours Owed
+PE guadagnati ⇒ XP earned
+· spesi ⇒ · spent
+· da spendere ⇒ · to spend
+1 PE a sessione (2 per una grande vittoria). Si spendono negli Intermezzi. ⇒ 1 XP per session (2 for a great victory). Spent during Interludes.
+(max ⇒ (max
+Nuovo Talento ⇒ New Talent
+Prendi ⇒ Take
+Fede richiede anche una prova di devozione; Mago può arrivare a 4 gradi. ⇒ Faith also requires a proof of devotion; Wizard can reach 4 ranks.
+Un’Attività per ogni sessione dall’ultimo Intermezzo (massimo 3): Allenare Abilità, Studiare Sapere, Riposare e Rimettersi, Propiziare il Fato… Segna i fallimenti nella scheda Prove: quando superano il valore dell’Abilità, questa sale di 1. ⇒ One Activity per session since the last Interlude (maximum 3): Train Skill, Study Lore, Rest and Recover, Tempt Fate… Mark failures in the Tests tab: when they exceed the Skill's value, it rises by 1.
+Pronto per la prossima avventura ⇒ Ready for the next adventure
+Niente ⇒ Nothing
+Copia {0} × {1} ⇒ Copy {0} × {1}
+Incolla ⇒ Paste
+Terreno Difficile ⇒ Difficult Terrain
+Copertura ⇒ Cover
+Sopraelevata ⇒ Elevated
+Pericolo ({0}) ⇒ Hazard ({0})
+{0}: clic sul punto di partenza ⇒ {0}: click the starting point
+nessuno dentro ⇒ nobody inside
+fuori dalle Zone ⇒ outside the Zones
+({0}/{1} nel turno) ⇒ ({0}/{1} this turn)
+Lento ⇒ Slow
+troppo lontano ⇒ too far
+serve Manovrare ⇒ needs Manoeuvre
+C’è un muro ⇒ There's a wall
+· terreno difficile ⇒ · difficult terrain
+· {0}/{1} nel turno ⇒ · {0}/{1} this turn
+· troppo lontano ⇒ · too far
+{0} × {1} caselle ⇒ {0} × {1} squares
+· {0} quadretti ⇒ · {0} squares
+{0}: nell’area {1} ⇒ {0}: in the area {1}
+Zona {0} ⇒ Zone {0}
+Area selezionata · Canc per eliminarla ⇒ Area selected · Del to remove it
+Scrivi e premi Invio ⇒ Type and press Enter
+Testo sulla mappa ⇒ Text on the map
+In voce: {0} ⇒ In voice: {0}
+Entra nella chat vocale del tavolo ⇒ Join the table's voice chat
+Mi collego… ⇒ Connecting…
+Entra in voce · {0} ⇒ Join voice · {0}
+Voce ⇒ Voice
+Entra con la videocamera ⇒ Join with camera
+Chat vocale ⇒ Voice chat
+Spegni il microfono (Ctrl+Maiusc+M) ⇒ Mute the microphone (Ctrl+Shift+M)
+Accendi il microfono (Ctrl+Maiusc+M) ⇒ Unmute the microphone (Ctrl+Shift+M)
+Spegni il microfono ⇒ Mute the microphone
+Accendi il microfono ⇒ Unmute the microphone
+Spegni la videocamera ⇒ Turn off the camera
+Accendi la videocamera ⇒ Turn on the camera
+Microfono, videocamera e altoparlanti ⇒ Microphone, camera and speakers
+Impostazioni audio e video ⇒ Audio and video settings
+Esci dalla chat vocale ⇒ Leave the voice chat
+Quello del sistema ⇒ System default
+Microfono ⇒ Microphone
+Livello del microfono ⇒ Microphone level
+Videocamera ⇒ Camera
+Altoparlanti o cuffie ⇒ Speakers or headphones
+Le voci arrivano dirette dai computer degli altri, senza passare dal server. Usa le cuffie per evitare l’eco. ⇒ Voices come directly from the others' computers, without going through the server. Use headphones to avoid echo.
+Mostra chi è in voce ⇒ Show who's in voice
+Voce · ⇒ Voice ·
+Chi è in voce ⇒ Who's in voice
+In voce · ⇒ In voice ·
+Riquadri più grandi ⇒ Larger tiles
+Riquadri più piccoli ⇒ Smaller tiles
+Cambia grandezza ⇒ Change size
+Nascondi i riquadri ⇒ Hide the tiles
+microfono spento ⇒ microphone off
+(tu) ⇒ (you)
+Connessione diretta non riuscita: le vostre reti non si raggiungono. Riprovo da solo. ⇒ Direct connection failed: your networks can't reach each other. I'll retry by myself.
+Volume di {0} ⇒ Volume of {0}
+Nuovo incontro ⇒ New encounter
+Agguato al guado ⇒ Ambush at the ford
+Capitolo ⇒ Chapter
+Capitolo 1 ⇒ Chapter 1
+Le creature tornano sulla mappa, nella stessa scena e posizione, quando lanci l’incontro ⇒ The creatures return to the map, in the same scene and position, when you launch the encounter
+con {0} {1} ⇒ with {0} {1}
+Salva le creature selezionate ⇒ Save the selected creatures
+Salva tutte le creature della scena (non i personaggi) ⇒ Save all the creatures in the scene (not the characters)
+, togliendole dalla mappa finché non lanci l’incontro. ⇒ , removing them from the map until you launch the encounter.
+Senza capitolo ⇒ No chapter
+creature ⇒ creatures
+· musica ⇒ · music
+· dispensa ⇒ · handout
+· già lanciato ⇒ · already launched
+Lancia: scena, creature, musica e dispensa ⇒ Launch: scene, creatures, music and handout
+Prepara gli incontri prima della sessione: metti le creature sulla mappa, scegli musica e dispensa, salva. Al tavolo basta un clic. ⇒ Prepare encounters before the session: put the creatures on the map, pick music and handout, save. At the table one click is enough.
+Incontri ⇒ Encounters
+Scena ⇒ Scene
+Quella in gioco ⇒ The one in play
+Musica ⇒ Music
+Dispensa da condividere ⇒ Handout to share
+Le creature entrano in iniziativa ⇒ The creatures join initiative
+Promemoria per il master ⇒ Reminder for the GM
+Cosa vogliono, come reagiscono, cosa trovano i personaggi… ⇒ What they want, how they react, what the characters find…
+Creature ( ⇒ Creatures (
+Sostituisce le creature con quelle selezionate sulla mappa ⇒ Replaces the creatures with those selected on the map
+Sostituisci con la selezione ( ⇒ Replace with the selection (
+Pozione ⇒ Potion
+Percezione ⇒ Perception
+Colpo al bersaglio ⇒ Hit the target
+Tempra ⇒ Fortitude
+Volontà nascosta ⇒ Hidden Willpower
+Prova a scelta ⇒ Test of your choice
+tira i dadi (/gr di nascosto, /br alla cieca) ⇒ rolls dice (/gr hidden, /br blind)
+tira e toglie i PF ai token selezionati ⇒ rolls and removes HP from the selected tokens
+tira e ridà i PF ai token selezionati ⇒ rolls and restores HP to the selected tokens
+mette o toglie una condizione (per 3 round, se dici quanti) ⇒ adds or removes a condition (for 3 rounds, if you say how many)
+aggiunge i token selezionati all’iniziativa ⇒ adds the selected tokens to initiative
+messaggio al solo master ⇒ message to the GM only
+un messaggio in chat ⇒ a chat message
+chiede un valore quando la lanci (5 se non lo cambi) ⇒ asks for a value when you run it (5 if you don't change it)
+modificatori di caratteristica della tua scheda ⇒ ability modifiers from your sheet
+competenza, livello, CA, bonus d’iniziativa ⇒ proficiency, level, AC, initiative bonus
+tira la riserva: 4 dadi, successo con 3 o meno (/gr di nascosto, /br alla cieca) ⇒ rolls the pool: 4 dice, success on 3 or less (/gr hidden, /br blind)
+prova Gloriosa (ritira i fallimenti) o Tetra (ritira i successi) ⇒ Glorious test (rerolls failures) or Grim (rerolls successes)
+mette o toglie una condizione ai token selezionati ⇒ adds or removes a condition on the selected tokens
+la riserva di quell’Abilità dalla tua scheda (es. 4d10s4) ⇒ that Skill's pool from your sheet (e.g. 4d10s4)
+Resilienza e nome del personaggio ⇒ Resilience and character name
+{0}: restano {1} azioni leggendarie su {2} ⇒ {0}: {1} of {2} legendary actions left
+(leggendaria) ⇒ (legendary)
+(tana) ⇒ (lair)
+{0}: segna i bersagli con Ctrl+clic sulla mappa ⇒ {0}: mark the targets with Ctrl+click on the map
+· danni {0} ⇒ · damage {0}
+· {0} a colpire ⇒ · {0} to hit
+· costa {0} ⇒ · costs {0}
+Sui bersagli segnati (Ctrl+clic). Maiusc: vantaggio · Alt: svantaggio ⇒ On the marked targets (Ctrl+click). Shift: advantage · Alt: disadvantage
+I bersagli segnati (Ctrl+clic) tirano il TS ⇒ The marked targets (Ctrl+click) roll the save
+{0} · del tavolo {1} ⇒ {0} · table {1}
+Azioni leggendarie: si ricaricano all’inizio del suo turno ⇒ Legendary actions: they recharge at the start of its turn
+Leggendarie ⇒ Legendary
+Azioni di tana: all’iniziativa 20 ⇒ Lair actions: on initiative 20
+Tana ⇒ Lair
+Crea e modifica le macro ⇒ Create and edit macros
+Gestisci le macro ⇒ Manage macros
+Quali macro ⇒ Which macros
+Del tavolo ⇒ The table's
+Le vedono e le usano tutti al tavolo. ⇒ Everyone at the table sees and uses them.
+Le prepara il master: puoi usarle, non cambiarle. ⇒ The GM prepares them: you can use them, not change them.
+Sposta su {0} ⇒ Move up {0}
+Sposta giù {0} ⇒ Move down {0}
+Esempi da cui partire ⇒ Examples to start from
+Nome della macro ⇒ Macro name
+Colore ⇒ Colour
+Colore {0} ⇒ Colour {0}
+Testo della macro ⇒ Macro text
+Anteprima della macro ⇒ Macro preview
+Cosa farà ⇒ What it will do
+Scrivi una riga per comando: guarda l’aiuto qui sotto. ⇒ Write one line per command: see the help below.
+Prima di partire chiede: ⇒ Before running it asks:
+I valori @ vengono dalla scheda del tuo personaggio: qui non ne hai uno. ⇒ @ values come from your character's sheet: you don't have one here.
+Agisce su: {0}. ⇒ Acts on: {0}.
+Agisce sui token che selezioni sulla mappa. ⇒ Acts on the tokens you select on the map.
+Prova ⇒ Test
+Salvata ⇒ Saved
+Elimina davvero ⇒ Really delete
+Elimina la macro ⇒ Delete the macro
+Cosa si può scrivere ⇒ What you can write
+Il master non ha ancora preparato macro per il tavolo. ⇒ The GM hasn't prepared any table macros yet.
+Le macro fanno in un clic ciò che scriveresti in chat: tiri, danni, cure, condizioni, iniziativa. Parti da un esempio a sinistra. ⇒ Macros do in one click what you would type in chat: rolls, damage, healing, conditions, initiative. Start from an example on the left.
+Seleziona e sposta ⇒ Select and move
+Terreno ⇒ Terrain
+Muri, porte e finestre ⇒ Walls, doors and windows
+Oggetti di scena ⇒ Props
+Luci ⇒ Lights
+Scritte sulla mappa ⇒ Map labels
+Copia, incolla e stanze pronte ⇒ Copy, paste and ready-made rooms
+Pennello ⇒ Brush
+Trascina per dipingere ⇒ Drag to paint
+Linea ⇒ Line
+Trascina: una striscia dritta (strade, fiumi, corridoi) ⇒ Drag: a straight strip (roads, rivers, corridors)
+Rettangolo ⇒ Rectangle
+Trascina: un rettangolo pieno (stanze) ⇒ Drag: a filled rectangle (rooms)
+Ellisse ⇒ Ellipse
+Trascina: un ovale pieno (laghi, radure, caverne) ⇒ Drag: a filled oval (lakes, clearings, caves)
+Riempi ⇒ Fill
+Clic: riempie la zona dello stesso terreno (vedi l’anteprima prima di cliccare) ⇒ Click: fills the area of the same terrain (see the preview before clicking)
+Contagocce ⇒ Eyedropper
+Clic su un punto della mappa per prenderne il terreno ⇒ Click a point on the map to pick its terrain
+Pavimenti ⇒ Floors
+Natura ⇒ Nature
+Acqua e pericoli ⇒ Water and hazards
+Roccia ⇒ Rock
+Arredi ⇒ Furniture
+Passaggi tra i piani ⇒ Passages between floors
+Pietra ⇒ Stone
+All’aperto ⇒ Outdoors
+Fuochi ⇒ Fires
+Trappole (nascoste ai giocatori) ⇒ Traps (hidden from players)
+Grande ⇒ Large
+Strumenti dell’editor ⇒ Editor tools
+Annulla: {0} (Ctrl+Z) ⇒ Undo: {0} (Ctrl+Z)
+Niente da annullare ⇒ Nothing to undo
+Ripeti: {0} (Ctrl+Y) ⇒ Redo: {0} (Ctrl+Y)
+Niente da ripetere ⇒ Nothing to redo
+Ripeti ⇒ Redo
+Token visibili: nascondili per lavorare sulla mappa ⇒ Tokens visible: hide them to work on the map
+Token nascosti nell’editor ⇒ Tokens hidden in the editor
+Mostra i token ⇒ Show the tokens
+i giocatori vedono le modifiche dal vivo ⇒ players see the changes live
+lavori in privato: i giocatori sono su «{0}» ⇒ you're working privately: players are on «{0}»
+Porta i giocatori su questa scena ⇒ Bring the players to this scene
+Mostra ai giocatori ⇒ Show to players
+Torna al gioco (E) ⇒ Back to the game (E)
+Scena da modificare ⇒ Scene to edit
+· in gioco ⇒ · in play
+Nuova scena vuota ⇒ New empty scene
+Genera una mappa ⇒ Generate a map
+Libreria di mappe: salva questa, o usane una già pronta ⇒ Map library: save this one, or use a ready-made one
+Libreria di mappe ⇒ Map library
+Clic su un oggetto, una porta o una luce per modificarli; trascina per spostarli, Maiusc+trascina per prenderne tanti. Canc li elimina. Le scritte si cancellano con la gomma dello strumento Scritte. ⇒ Click a prop, a door or a light to edit it; drag to move, Shift+drag to grab many. Del removes them. Labels are erased with the eraser of the Labels tool.
+Come dipingere ⇒ How to paint
+Pennello: ⇒ Brush:
+Misura del pennello ⇒ Brush size
+[ e ] per cambiarla al volo ⇒ [ and ] to change it on the fly
+Gomma ⇒ Eraser
+Toglie il terreno: si vede l’immagine della scena, se c’è ⇒ Removes terrain: the scene image shows, if any
+La roccia, e i bordi delle stanze dipinte sul vuoto, diventano muri che bloccano vista e movimento ⇒ Rock, and the edges of rooms painted on the void, become walls that block sight and movement
+Muri automatici dalla mappa ⇒ Automatic walls from the map
+Muri automatici ⇒ Automatic walls
+Pietra, legno e marmo sono pavimenti di un edificio: contro erba, terra, acqua o una strada selciata prendono il muro. Le porte si mettono con lo strumento Muri. ⇒ Stone, wood and marble are building floors: against grass, dirt, water or a paved road they get a wall. Doors are placed with the Walls tool.
+Muri attorno agli edifici ⇒ Walls around buildings
+Cancella tutto il terreno ⇒ Clear all terrain
+Cosa costruire ⇒ What to build
+Muro ⇒ Wall
+Blocca vista, luce e passaggio ⇒ Blocks sight, light and passage
+Porta ⇒ Door
+Si apre con un clic; anche a chiave ⇒ Opens with a click; can be locked
+Finestra ⇒ Window
+Lascia passare vista e luce, non le persone ⇒ Lets sight and light through, not people
+Come costruire ⇒ How to build
+Sul lato ⇒ On the edge
+Clic vicino al lato di una casella: ci va lì (ideale per porte e finestre) ⇒ Click near a square's edge: it goes there (ideal for doors and windows)
+Clic dopo clic; Invio, Esc o tasto destro per finire ⇒ Click after click; Enter, Esc or right-click to finish
+Stanza ⇒ Room
+Trascina: quattro muri attorno a un rettangolo ⇒ Drag: four walls around a rectangle
+Clic su un muro, una porta o una finestra per toglierla ⇒ Click a wall, a door or a window to remove it
+Le nuove porte sono ⇒ New doors are
+Nuove porte ⇒ New doors
+Chiuse ⇒ Closed
+Aperte ⇒ Open
+A chiave ⇒ Locked
+I muri della mappa dipinta non si cancellano qui: ridipingi il pavimento. ⇒ Walls of the painted map aren't erased here: repaint the floor.
+Una porta messa su un muro della mappa dipinta gli apre il suo spazio. ⇒ A door placed on a wall of the painted map opens its space.
+Cancella i muri messi a mano ⇒ Clear hand-placed walls
+Luce da posare ⇒ Light to place
+Clic sulla mappa per posarla: l’anteprima mostra fin dove arriva. Le luci dei token si impostano nel loro pannello. ⇒ Click the map to place it: the preview shows how far it reaches. Token lights are set in their panel.
+Ogni giocatore vede solo ciò che vedono i suoi token ⇒ Each player sees only what their tokens see
+Visione dinamica ⇒ Dynamic vision
+Luce ambientale ⇒ Ambient light
+Giorno ⇒ Day
+Penombra ⇒ Dim
+Buio ⇒ Dark
+Luci e ombre come le vedono i giocatori dai loro token ⇒ Lights and shadows as players see them from their tokens
+Anteprima come i giocatori ⇒ Preview as players
+Taverna del Grifone ⇒ Griffin Tavern
+Grandezza ⇒ Size
+Grandezza delle scritte ⇒ Label size
+Trascina sulle scritte per cancellarle ⇒ Drag over labels to erase them
+Clic sulla mappa e scrivi; Invio per confermare. I giocatori le vedono come parte della mappa. ⇒ Click the map and type; Enter to confirm. Players see them as part of the map.
+Larghezza ⇒ Width
+Ogni casella ⇒ Each square
+Unità ⇒ Unit
+metri ⇒ metres
+piedi ⇒ feet
+Griglia visibile ⇒ Visible grid
+Cambia immagine di sfondo ⇒ Change background image
+Immagine di sfondo ⇒ Background image
+Togli l’immagine ⇒ Remove the image
+Salva la mappa come immagine PNG (senza muri né token) ⇒ Save the map as a PNG image (no walls or tokens)
+Esporta come immagine ⇒ Export as image
+· fa luce ⇒ · gives light
+· blocca la vista ⇒ · blocks sight
+Ruota a sinistra ⇒ Rotate left
+Ruota a destra (R) ⇒ Rotate right (R)
+Ruota a destra ⇒ Rotate right
+Cerca un oggetto ⇒ Search a prop
+Nessun oggetto con questo nome. ⇒ No prop with this name.
+Clic sulla mappa per posarlo; Alt per posarlo fuori griglia. Per un’immagine tua, trascinala sulla mappa con lo strumento Seleziona. ⇒ Click the map to place it; Alt to place it off-grid. For your own image, drag it onto the map with the Select tool.
+Mappa {0} ⇒ Map {0}
+Nome della scena ⇒ Scene name
+Nome della nuova scena ⇒ New scene name
+Dimensione ⇒ Size
+Si parte da ⇒ Start from
+Vuota ⇒ Empty
+Tutta roccia ⇒ All rock
+Prato ⇒ Grass
+Crea e modifica ⇒ Create and edit
+Anteprima del pezzo da incollare ⇒ Preview of the piece to paste
+Copia o incolla ⇒ Copy or paste
+Copia una zona ⇒ Copy an area
+Trascina sulla mappa: terreno, muri e porte, oggetti e scritte di quella zona vengono copiati. ⇒ Drag on the map: terrain, walls and doors, props and labels of that area are copied.
+Clic sulla mappa per incollarlo dove vedi l’anteprima (anche più volte). R lo ruota. Un Ctrl+Z lo toglie. ⇒ Click the map to paste it where you see the preview (even several times). R rotates it. Ctrl+Z removes it.
+Zona copiata ⇒ Copied area
+Ruota di un quarto (R) ⇒ Rotate a quarter (R)
+Ruota ⇒ Rotate
+Stanze pronte ⇒ Ready-made rooms
+Caverna ⇒ Cave
+Stanze e corridoi, porte, torce. Buio: serve luce. ⇒ Rooms and corridors, doors, torches. Dark: light needed.
+Gallerie naturali, pozze d’acqua, rocce. Buio. ⇒ Natural tunnels, pools, rocks. Dark.
+Radura ⇒ Clearing
+Bosco, sentiero e uno stagno. Pieno giorno. ⇒ Woods, a path and a pond. Broad daylight.
+Creo la scena… ⇒ Creating the scene…
+Crea la scena ⇒ Create the scene
+Anteprima della mappa ⇒ Map preview
+Un’altra mappa con le stesse impostazioni ⇒ Another map with the same settings
+Un’altra ⇒ Another
+Tipo di luogo ⇒ Kind of place
+Stanze ⇒ Rooms
+Spazio e rocce ⇒ Space and rocks
+Bosco ⇒ Woods
+Densità ⇒ Density
+Porte ⇒ Doors
+Fuoco da campo ⇒ Campfire
+Arredi e tesori ⇒ Furniture and treasure
+caselle · ⇒ squares ·
+muri · ⇒ walls ·
+porte · ⇒ doors ·
+oggetti. ⇒ props.
+La scena nuova diventa quella attiva. ⇒ The new scene becomes the active one.
+Si può ritoccare nell’editor. ⇒ You can touch it up in the editor.
+«{0}» è nella libreria ⇒ «{0}» is in the library
+Non riesco a salvare la mappa ⇒ Can't save the map
+Questa mappa non si trova più sul disco ⇒ This map is no longer on disk
+«{0}» è una nuova scena di questa campagna ⇒ «{0}» is a new scene in this campaign
+«{0}» aggiunta alla libreria ⇒ «{0}» added to the library
+file non valido ⇒ invalid file
+Salva « ⇒ Save «
+Terreno, muri e porte, oggetti, luci, scritte e immagini. Poi la usi in qualsiasi campagna. ⇒ Terrain, walls and doors, props, lights, labels and images. Then use it in any campaign.
+Con mostri e PNG ⇒ With monsters and NPCs
+Con mostri e PNG ( ⇒ With monsters and NPCs (
+Salvo… ⇒ Saving…
+Salva nella libreria ⇒ Save to the library
+Cerca una mappa ⇒ Search a map
+Aggiungi mappe ricevute da altri master (file .{0}) ⇒ Add maps received from other GMs (.{0} files)
+Importa file ⇒ Import file
+Importa mappe da file ⇒ Import maps from file
+La libreria è vuota. Salva qui le mappe che prepari: le ritrovi in tutte le tue campagne, e puoi passarle ad altri master come file. ⇒ The library is empty. Save the maps you prepare here: you'll find them in all your campaigns, and you can give them to other GMs as files.
+Nessuna mappa con questo nome. ⇒ No map with this name.
+Mappe salvate ⇒ Saved maps
+Usala in questa campagna ⇒ Use it in this campaign
+Nuovo nome ⇒ New name
+Apro… ⇒ Opening…
+Usa qui ⇒ Use here
+Salva come file, da dare a un altro master ⇒ Save as a file, to give to another GM
+Esporta {0} ⇒ Export {0}
+Rinomina ⇒ Rename
+Rinomina {0} ⇒ Rename {0}
+Togli dalla libreria ⇒ Remove from the library
+Togli {0} dalla libreria ⇒ Remove {0} from the library
+Silenzia ⇒ Mute
+Riattiva audio ⇒ Unmute
+Volume musica ⇒ Music volume
+Musica del tavolo ⇒ Table music
+In riproduzione ⇒ Playing
+In pausa ⇒ Paused
+Il volume vale solo per te. ⇒ The volume applies only to you.
+{0}: non è un file audio ⇒ {0}: not an audio file
+{0}: troppo grande (max 11 MB). Prova un MP3 o OGG. ⇒ {0}: too large (max 11 MB). Try an MP3 or OGG.
+In riproduzione per tutti ⇒ Playing for everyone
+Nessun brano ⇒ No track
+Ripeti il brano: attivo ⇒ Repeat track: on
+Ripeti il brano ⇒ Repeat track
+Pausa ⇒ Pause
+Riproduci ⇒ Play
+Posizione ⇒ Position
+Scaletta ⇒ Playlist
+Carico… ⇒ Loading…
+Aggiungi brani ⇒ Add tracks
+Aggiungi file MP3 o OGG dal tuo computer: vengono inviati ai giocatori e suonano per tutti nello stesso momento. ⇒ Add MP3 or OGG files from your computer: they are sent to the players and play for everyone at the same time.
+Riproduci {0} ⇒ Play {0}
+Nome del brano ⇒ Track name
+Rimuovi {0} ⇒ Remove {0}
+Tiro alla cieca: il risultato lo vede solo il master ⇒ Blind roll: only the GM sees the result
+alla cieca ⇒ blind
+si oppone ⇒ opposes
+1 successo ⇒ 1 success
+un 9: Incidente Magico ⇒ a 9: Miscast
+{0} nove: Incidenti Magici ⇒ {0} nines: Miscasts
+Infliggi come danni ⇒ Apply as damage
+Metà danni (tiro salvezza riuscito) ⇒ Half damage (successful save)
+privato ⇒ private
+Nessun messaggio. Prova /r 1d20+5 ⇒ No messages. Try /r 1d20+5
+Messaggio, /r 2d6+3, /gr tiro nascosto ⇒ Message, /r 2d6+3, /gr hidden roll
+Messaggio, /r 1d20+4, /br alla cieca, /gm al master ⇒ Message, /r 1d20+4, /br blind, /gm to the GM
+Round {0} ⇒ Round {0}
+Combattimento non iniziato ⇒ Combat not started
+Turno precedente ⇒ Previous turn
+Inizia ⇒ Start
+Fine turno ⇒ End turn
+Avanti ⇒ Next
+Azioni leggendarie: {0}/{1} ⇒ Legendary actions: {0}/{1}
+Azioni leggendarie di {0}: {1} su {2} ⇒ Legendary actions of {0}: {1} of {2}
+Azioni di {0} ⇒ Actions of {0}
+Azione bonus ⇒ Bonus action
+Reazione ⇒ Reaction
+Schieramento ⇒ Side
+Nemici ⇒ Enemies
+Seleziona un token e premi «Iniziativa», oppure aggiungi una voce. ⇒ Select a token and press «Initiative», or add an entry.
+Prima i PG, poi i nemici ⇒ PCs first, then enemies
+Imboscata: prima i nemici ⇒ Ambush: enemies first
+Sconfitto ⇒ Defeated
+Morto ⇒ Dead
+Battaglia ⇒ Battle
+Imboscata! ⇒ Ambush!
+Tira per tutti i token ⇒ Roll for all tokens
+Termina combattimento ⇒ End combat
+Sistema di gioco non supportato. ⇒ Game system not supported.
+Nessun personaggio al tavolo. I giocatori li assegnano dalla pagina della campagna. ⇒ No characters at the table. Players assign them from the campaign page.
+Non hai un personaggio in questa campagna. Assegnalo dalla pagina della campagna. ⇒ You don't have a character in this campaign. Assign it from the campaign page.
+Apri la scheda in una finestra ⇒ Open the sheet in a window
+Le schede si aprono in finestre che puoi spostare, allargare e ridurre. ⇒ Sheets open in windows you can move, enlarge and shrink.
+Questo personaggio non è più al tavolo. ⇒ This character is no longer at the table.
+Nessun bestiario per questo sistema. ⇒ No bestiary for this system.
+Scene ⇒ Scenes
+Attiva ⇒ Activate
+Elimina scena ⇒ Delete scene
+Nuova scena ⇒ New scene
+Crea scena ⇒ Create scene
+Scena attiva ⇒ Active scene
+Larghezza (celle) ⇒ Width (cells)
+Altezza (celle) ⇒ Height (cells)
+Distanza per casella ⇒ Distance per square
+Ogni giocatore vede solo ciò che vedono i suoi token: i muri e l'oscurità nascondono il resto ⇒ Each player sees only what their tokens see: walls and darkness hide the rest
+Giorno: tutto illuminato ⇒ Day: everything lit
+Penombra: crepuscolo, luna piena ⇒ Dim: dusk, full moon
+Buio: solo luci e scurovisione ⇒ Dark: only lights and darkvision
+Nebbia di guerra ⇒ Fog of war
+Cambia mappa ⇒ Change map
+Carica mappa ⇒ Load map
+Rimuovi mappa ⇒ Remove map
+Suggerimento: trascina un'immagine sul tavolo per usarla come mappa, o su un token per dargli un ritratto. ⇒ Tip: drag an image onto the table to use it as a map, or onto a token to give it a portrait.
+Privata ⇒ Private
+Al master ⇒ To the GM
+Se la mappa ha già una griglia disegnata, allineala a quella del tavolo ⇒ If the map already has a grid drawn, align it with the table's
+Griglia della mappa ⇒ Map grid
+Pixel per casella ⇒ Pixels per square
+Sposta X ⇒ Offset X
+Sposta Y ⇒ Offset Y
+Adatta la scena alla mappa ( ⇒ Fit the scene to the map (
+caselle) ⇒ squares)
+Conta i quadretti della mappa: pixel per casella = larghezza dell’immagine ( ⇒ Count the map's squares: pixels per square = image width (
+Nuova nota ⇒ New note
+Per il master ⇒ For the GM
+Cerca nelle note ⇒ Search notes
+Nuova nota o dispensa ⇒ New note or handout
+Un messaggio per il master o per il gruppo ⇒ A message for the GM or the group
+Scrivi ⇒ Write
+Qui le dispense del master e i messaggi per il gruppo. I tuoi appunti personali stanno nel Diario. ⇒ Here are the GM's handouts and messages for the group. Your personal notes live in the Journal.
+Apri il Diario ⇒ Open the Journal
+Nessuna nota trovata. ⇒ No notes found.
+Scrivi appunti segreti o prepara dispense (lettere, mappe, indizi) da mostrare ai giocatori quando serve. ⇒ Write secret notes or prepare handouts (letters, maps, clues) to show players when needed.
+Ancora nessuna dispensa. ⇒ No handouts yet.
+Chi può leggerla ⇒ Who can read it
+Elimina nota ⇒ Delete note
+Solo io ⇒ Only me
+Solo il master ⇒ GM only
+Alcuni ⇒ Some
+Rimuovi immagine ⇒ Remove image
+Aggiungi immagine ⇒ Add image
+Scrivi qui… ⇒ Write here…
+Testo della nota ⇒ Note text
+Luce ⇒ Light
+Personalizzata ⇒ Custom
+Aura ⇒ Aura
+Colore dell'aura ⇒ Aura colour
+Chiudi la porta ⇒ Close the door
+Apri la porta ⇒ Open the door
+Chiusa a chiave ⇒ Locked
+I giocatori aprono le porte vicine con un clic, tranne quelle a chiave. Doppio clic sulla porta per aprirla o chiuderla al volo. ⇒ Players open nearby doors with a click, except locked ones. Double-click a door to open or close it on the fly.
+Oggetto ⇒ Prop
+Rotazione ⇒ Rotation
+Blocca la vista ⇒ Blocks sight
+Nascosto ai giocatori ⇒ Hidden from players
+Porta a (un altro piano) ⇒ Leads to (another floor)
+Porta a ⇒ Leads to
+Da nessuna parte ⇒ Nowhere
+Un token che ci finisce sopra va su « ⇒ A token that ends on it goes to «
+», accanto al passaggio che riporta qui. Quando tutto il gruppo è passato, la scena lo segue. ⇒ », next to the passage leading back here. When the whole party has passed, the scene follows.
+Duplica ⇒ Duplicate
+Resistente ⇒ Resistant
+metà danni ⇒ half damage
+Immune ⇒ Immune
+nessun danno ⇒ no damage
+Vulnerabile ⇒ Vulnerable
+danni doppi ⇒ double damage
+Resistenze e immunità ⇒ Resistances and immunities
+· nessuna ⇒ · none
+Togli {0} da {1} ⇒ Remove {0} from {1}
+Aggiungi a {0} ⇒ Add to {0}
+Azioni del turno ⇒ Turn actions
+{0}: usata (clic per ridarla) ⇒ {0}: used (click to restore)
+{0}: disponibile (clic quando la usi) ⇒ {0}: available (click when you use it)
+Usa un’azione leggendaria ⇒ Use a legendary action
+Ripristina ⇒ Restore
+Media / Piccola ⇒ Medium / Small
+Enorme ⇒ Huge
+Mastodontica ⇒ Gargantuan
+Scurovisione ({0}) ⇒ Darkvision ({0})
+Durata delle condizioni ⇒ Condition durations
+Durata di {0} ⇒ Duration of {0}
+finché non la togli ⇒ until removed
+Le durate scalano all’inizio di ogni turno del token, in iniziativa. ⇒ Durations count down at the start of each of the token's turns, in initiative.
+Controllato da ⇒ Controlled by
+Nessun giocatore ⇒ No player
+Rivela ⇒ Reveal
+Nascondi ⇒ Hide
+Scheda del mostro ⇒ Monster sheet
+Nel turno ⇒ In the turn
+Entra in battaglia ⇒ Join the battle
+Tira iniziativa ⇒ Roll initiative
+Rimuovi token ⇒ Remove token
+Nessuna condizione visibile. ⇒ No visible conditions.
+Aggiungi Resilienza e Ferite ⇒ Add Resilience and Wounds
+Ferite (su {0}) ⇒ Wounds (of {0})
+Una Ferita in meno ⇒ One Wound less
+Una Ferita ⇒ One Wound
+Ferita: tira sulla tabella ⇒ Wound: roll on the table
+Veicolo (Guasti al posto delle Ferite) ⇒ Vehicle (Breakdowns instead of Wounds)
+· corazzato ⇒ · armoured
+· si oppone in mischia con {0}d/{1}, a distanza con {2}d/{3} ⇒ · opposes in melee with {0}d/{1}, at range with {2}d/{3}
+· {0} Ferite da medicare ⇒ · {0} Wounds to treat
+· in sella: {0} ⇒ · mounted: {0}
+· Zone percorse {0}/{1} ⇒ · Zones moved {0}/{1}
+Manovrare in questo turno ⇒ Manoeuvre this turn
+Chi ha colpito sceglie: ⇒ The attacker chooses:
+{0} sceglie: ⇒ {0} chooses:
+Ferita o Reazione? ⇒ Wound or Reaction?
+Ferita ⇒ Wound
+Esposizione al Caos oggi ⇒ Chaos exposure today
+Ritirata ⇒ Retreat
+Chi spende Fato per coprire la ritirata? ⇒ Who spends Fate to cover the retreat?
+Retroguardia ⇒ Rearguard
+Nessuno: il master esige un prezzo ⇒ Nobody: the GM demands a price
+Atletica per tutti ⇒ Athletics for everyone
+Se il nemico non insegue, non serve tirare. Chi ha i Saperi adatti può riuscire da solo: toglilo dal tiro chiudendo il suo token. ⇒ If the enemy doesn't pursue, no roll is needed. Those with the right Lores can succeed on their own: remove them from the roll by closing their token.
+completata ⇒ completed
+Formula per {0} ⇒ Formula for {0}
+La riserva della prova: dadi (Caratteristica) e soglia (Abilità), come 4d10s3 ⇒ The test's pool: dice (Characteristic) and target (Skill), like 4d10s3
+Un successo in meno ⇒ One success less
+Un successo in più ⇒ One success more
+Elimina la prova ⇒ Delete the test
+Nuova prova ⇒ New test
+Successi necessari ⇒ Successes needed
+Aggiungi la prova ⇒ Add the test
+Pericolo ⇒ Hazard
+Grado del Pericolo ⇒ Hazard rating
+Grado ⇒ Rating
+Fallendo ⇒ On failure
+Condizione del fallimento ⇒ Failure condition
+Solo la Ferita ⇒ Only the Wound
+Ferita e ⇒ Wound and
+Pericolo ({0}): fallendo, una Ferita{1} ⇒ Hazard ({0}): on failure, a Wound{1}
+Prova di {0}{1} ⇒ {0} test{1}
+(profilo generico) ⇒ (generic profile)
+Tira contro il Pericolo ({0}) ⇒ Roll against the Hazard ({0})
+Fallimento ⇒ Failure
+Successo Marginale ⇒ Marginal Success
+Successo ⇒ Success
+Successo Totale ⇒ Total Success
+Prova {0}d/{1}{2} ⇒ Test {0}d/{1}{2}
+Un dado in meno ⇒ One die less
+Dadi (la Caratteristica) ⇒ Dice (the Characteristic)
+Un dado in più ⇒ One die more
+Soglia più bassa ⇒ Lower target
+Soglia (l’Abilità): successo con questo o meno ⇒ Target (the Skill): success on this or less
+Soglia più alta ⇒ Higher target
+Gloriosa: ritira i fallimenti ⇒ Glorious: reroll failures
+Tetra: ritira i successi ⇒ Grim: reroll successes
+Tira la riserva ⇒ Roll the pool
+Tiri nascosti ai giocatori ⇒ Rolls hidden from players
+Vantaggio ⇒ Advantage
+2d20, tieni il più alto ⇒ 2d20, keep the highest
+2d20, tieni il più basso ⇒ 2d20, keep the lowest
+Movimento nel turno ⇒ Movement this turn
+Movimento nel turno: ⇒ Movement this turn:
+· oltre la velocità ⇒ · beyond speed
+Azzera ⇒ Reset
+Tiro salvezza di gruppo ⇒ Group saving throw
+TS {0} ⇒ Save {0}
+Cosa (es. Trappola di fuoco) ⇒ What (e.g. Fire trap)
+Nome del tiro salvezza ⇒ Saving throw name
+Classe difficoltà ⇒ Difficulty class
+Danni: 4d6 ⇒ Damage: 4d6
+tipo… ⇒ type…
+Chi lo supera subisce metà danni ⇒ Those who succeed take half damage
+Tira per ⇒ Roll for
+Riassunto pubblicato ⇒ Recap published
+Chiudi la sessione ⇒ Close the session
+Resta al tavolo ⇒ Stay at the table
+Chiudi senza riassunto ⇒ Close without a recap
+Pubblica e chiudi ⇒ Publish and close
+Ho preparato una bozza dal registro del tavolo ( ⇒ I drafted it from the table log (
+righe). Sistemala e pubblicala: la trovate tutti tra i riassunti della campagna. ⇒ lines). Fix it up and publish it: everyone will find it among the campaign recaps.
+Riassunto della sessione ⇒ Session recap
+Cosa è successo ⇒ What happened
+Annullato ⇒ Undone
+Ripetuto ⇒ Redone
+Appunti ⇒ Notes
+{0} nel Diario ⇒ {0} in the Journal
+Il tuo appunto personale è stato spostato ⇒ Your personal note has been moved
+{0} appunti personali sono stati spostati ⇒ {0} personal notes have been moved
+Chat e tiri ⇒ Chat and rolls
+Note e dispense ⇒ Notes and handouts
+Missioni ⇒ Quests
+Lascia il tavolo ⇒ Leave the table
+Editor mappa: dipingi, costruisci, arreda (E) ⇒ Map editor: paint, build, furnish (E)
+Chiudi editor ⇒ Close editor
+Editor mappa ⇒ Map editor
+Riprendi il gioco ⇒ Resume the game
+Pausa gioco: i giocatori possono solo scrivere e tirare dadi ⇒ Pause the game: players can only chat and roll dice
+Pausa gioco ⇒ Pause game
+Scorciatoie da tastiera (?) ⇒ Keyboard shortcuts (?)
+Scorciatoie da tastiera ⇒ Keyboard shortcuts
+Diario: i tuoi appunti personali, che leggi solo tu ⇒ Journal: your personal notes, only you read them
+· connessione diretta ⇒ · direct connection
+· via server ⇒ · via server
+· offline ⇒ · offline
+Il master si è allontanato ⇒ The GM stepped away
+Connessione al master persa ⇒ Connection to the GM lost
+Il tavolo riprende da solo appena ⇒ The table resumes by itself as soon as
+il master ⇒ the GM
+riapre la sessione ⇒ reopens the session
+torna raggiungibile ⇒ is reachable again
+Gioco in pausa ⇒ Game paused
+Il master ha fermato il gioco. Puoi scrivere in chat, tirare i dadi e consultare la scheda. ⇒ The GM paused the game. You can chat, roll dice and check your sheet.
+In pausa: i giocatori non possono muovere né disegnare ⇒ Paused: players can't move or draw
+In attesa del master ⇒ Waiting for the GM
+Il tavolo si aprirà appena ⇒ The table will open as soon as
+avvierà la sessione. ⇒ starts the session.
+Preparo il tavolo… ⇒ Setting up the table…
+Mi siedo al tavolo… ⇒ Taking a seat at the table…
+Seleziona e sposta (V) ⇒ Select and move (V)
+Righello (M) ⇒ Ruler (M)
+Ping (P · o Alt+clic) ⇒ Ping (P · or Alt+click)
+Aree d’effetto (A) ⇒ Areas of effect (A)
+Disegna (D) ⇒ Draw (D)
+Zone: trascina per disegnarne una ⇒ Zones: drag to draw one
+Editor mappa: terreno, muri, porte, oggetti, luci (E) ⇒ Map editor: terrain, walls, doors, props, lights (E)
+Aggiungi token ⇒ Add token
+Aggancia alla griglia: attivo (G) · tieni Alt per spostare libero ⇒ Snap to grid: on (G) · hold Alt to move freely
+Movimento libero (G) · tieni Alt per agganciare alla griglia ⇒ Free movement (G) · hold Alt to snap to the grid
+Sfera ⇒ Sphere
+Cono ⇒ Cone
+Cubo ⇒ Cube
+Cancella tutte ⇒ Clear all
+trascina dall’origine ⇒ drag from the origin
+Penna ⇒ Pen
+Testo (T): clic sulla mappa e scrivi ⇒ Text (T): click the map and type
+Il tuo colore ⇒ Your colour
+Testo piccolo ⇒ Small text
+Testo medio ⇒ Medium text
+Testo grande ⇒ Large text
+Sottile ⇒ Thin
+Medio ⇒ Medium
+Spesso ⇒ Thick
+Gomma: trascina sui tratti ⇒ Eraser: drag over strokes
+Cancella tutto ⇒ Clear all
+Cancella i miei ⇒ Clear mine
+Copri ⇒ Cover
+Rivela tutto ⇒ Reveal all
+Copri tutto ⇒ Cover all
+Disattiva ⇒ Turn off
+Visione dinamica: vedi solo quello che vedono i tuoi token. Metti il tuo personaggio sulla mappa. ⇒ Dynamic vision: you see only what your tokens see. Put your character on the map.
+Mostra luci e ombre come le vedono i giocatori ⇒ Show lights and shadows as players see them
+Vista giocatori ⇒ Player view
+Vista master ⇒ GM view
+L’editor ⇒ The editor
+Il pannello ⇒ The panel
+La finestra ⇒ The window
+Zone ⇒ Zones
+Disegna: trascina sulla mappa ⇒ Draw: drag on the map
+Disegna ⇒ Draw
+Cancella: clic su una zona ⇒ Erase: click a zone
+Cancella ⇒ Erase
+Nome della zona ⇒ Zone name
+Elimina la zona ⇒ Delete the zone
+Atletica per attraversarla; fallendo si cade Proni ⇒ Athletics to cross it; on failure you fall Prone
+-1d ai tiri contro chi è dentro ⇒ -1d to rolls against those inside
++1d agli attacchi in mischia da qui ⇒ +1d to melee attacks from here
+successi per evitarlo ⇒ successes to avoid it
+Dal manuale ⇒ From the book
+Esempio di Pericolo ⇒ Hazard example
+Ogni turno ⇒ Every turn
+Scegli un esempio… ⇒ Pick an example…
+Prova contro il Pericolo ⇒ Test against the Hazard
+Condizione del Pericolo ⇒ Hazard condition
+Colpisce a fine turno chi resta dentro, non solo chi entra ⇒ Hits at the end of the turn whoever stays inside, not only who enters
+Fallendo si subisce solo la condizione ⇒ On failure only the condition applies
+Senza Ferita ⇒ No Wound
+In combattimento il tavolo conta le Zone percorse, tira Atletica sul Terreno Difficile e la prova contro i Pericoli per chi entra. ⇒ In combat the table counts the Zones moved, rolls Athletics on Difficult Terrain and the test against Hazards for whoever enters.
+Trascina sulla mappa per disegnare una Zona: stanze, cortili, tratti di strada. Le distanze si contano in Zone. ⇒ Drag on the map to draw a Zone: rooms, courtyards, stretches of road. Distances are counted in Zones.
+Giocatori collegati direttamente al tuo computer ⇒ Players connected directly to your computer
+diretti ⇒ direct
+Collegato direttamente al computer del master ⇒ Connected directly to the GM's computer
+Diretta ⇒ Direct
+Collegato al master tramite il server ⇒ Connected to the GM through the server
+Via server ⇒ Via server
+Selezione multipla ⇒ Multiple selection
+selezionati ⇒ selected
+Deseleziona ⇒ Deselect
+Deseleziona (Esc) ⇒ Deselect (Esc)
+Trascina uno di loro per spostarli insieme. Shift+clic aggiunge o toglie, Shift+trascina seleziona un’area. ⇒ Drag one of them to move them together. Shift+click adds or removes, Shift+drag selects an area.
+Nascondi ai giocatori ⇒ Hide from players
+Righello ⇒ Ruler
+Ping (o Alt+clic ovunque) ⇒ Ping (or Alt+click anywhere)
+Aree d’effetto ⇒ Areas of effect
+Editor mappa (apri e chiudi) ⇒ Map editor (open and close)
+Sulla mappa ⇒ On the map
+Rotella ⇒ Wheel
+Trascina il vuoto · tasto destro ⇒ Drag empty space · right button
+Sposta la vista ⇒ Pan the view
+Aggancia alla griglia / movimento libero ⇒ Snap to grid / free movement
+Alt + trascina ⇒ Alt + drag
+Il contrario dell’aggancio, per una volta ⇒ The opposite of snapping, just once
+Shift + clic ⇒ Shift + click
+Aggiungi o togli dalla selezione ⇒ Add to or remove from the selection
+Shift + trascina ⇒ Shift + drag
+Seleziona un’area ⇒ Select an area
+Ctrl + clic su un token ⇒ Ctrl + click a token
+Segnalo come bersaglio degli attacchi (Esc li toglie) ⇒ Mark it as the attack target (Esc clears them)
+Canc ⇒ Del
+Elimina ciò che è selezionato ⇒ Delete what is selected
+Deseleziona · chiudi i muri ⇒ Deselect · close the walls
+Clic su una porta ⇒ Click a door
+Aprila o chiudila ⇒ Open or close it
+Doppio clic su una porta ⇒ Double-click a door
+Aprila o chiudila (un clic la seleziona) ⇒ Open or close it (one click selects it)
+Invio · tasto destro ⇒ Enter · right button
+Finisci una linea di muri ⇒ Finish a line of walls
+Terreno, muri, oggetti, luci, scritte, seleziona ⇒ Terrain, walls, props, lights, labels, select
+Pennello più piccolo o più grande ⇒ Smaller or larger brush
+Ruota l’oggetto da posare ⇒ Rotate the prop to place
+Alt + clic ⇒ Alt + click
+Posa fuori griglia ⇒ Place off-grid
+Annulla l’ultima modifica alla mappa ⇒ Undo the last map change
+Lancia la macro in quella posizione della barra ⇒ Run the macro at that position in the bar
+Voce e video ⇒ Voice and video
+Ctrl + Maiusc + M ⇒ Ctrl + Shift + M
+Accendi o spegni il microfono ⇒ Turn the microphone on or off
+Tira i dadi ⇒ Roll dice
+Tiro nascosto (master) ⇒ Hidden roll (GM)
+Tiro alla cieca: il risultato lo vede il master ⇒ Blind roll: the GM sees the result
+Messaggio al solo master ⇒ Message to the GM only
+Scorciatoie ⇒ Shortcuts
+Premi ? per aprire o chiudere questo elenco. ⇒ Press ? to open or close this list.
++1 ora ⇒ +1 hour
++8 ore ⇒ +8 hours
++1 giorno ⇒ +1 day
+Giorno {0} · {1} ⇒ Day {0} · {1}
+Ora del mondo: {0} ⇒ World time: {0}
+Orologio del mondo ⇒ World clock
+Ora ⇒ Time
+Imposta ⇒ Set
+La luce di « ⇒ The light of «
+» segue l’ora ⇒ » follows the time
+La luce segue l’ora ⇒ Light follows the time
+Per le scene all’aperto: giorno dalle 7 alle 19, penombra all’alba e al tramonto, buio di notte. ⇒ For outdoor scenes: day from 7 to 19, dim at dawn and dusk, dark at night.
+Fine dello scontro: tutte le Ferite medicate, le più lievi guarite, la magia si disperde ⇒ End of the fight: all Wounds treated, the lightest healed, magic disperses
+Riprendere Fiato ⇒ Catch Your Breath
+Otto ore: guariscono anche le Ferite da Notte di Riposo ⇒ Eight hours: Night's Rest Wounds heal too
+Notte di Riposo ⇒ Night's Rest
+Il Fato speso torna a tutti ⇒ Spent Fate comes back to everyone
+Tempra contro le infezioni per chi è stato ferito oggi, Volontà per chi è stato esposto al Caos ⇒ Fortitude against infection for those wounded today, Willpower for those exposed to Chaos
+Fine della giornata ⇒ End of the day
+Un’ora: ognuno può spendere i suoi dadi vita ⇒ One hour: everyone can spend their hit dice
+Otto ore: PF, slot, dadi vita e risorse tornano ⇒ Eight hours: HP, slots, hit dice and resources come back
+In corso ⇒ In progress
+Compiuta ⇒ Done
+Fallita ⇒ Failed
+Nuova missione ⇒ New quest
+Scrivi le missioni del gruppo, con i loro obiettivi. Rendile visibili quando i giocatori ne vengono a sapere. ⇒ Write the party's quests, with their objectives. Make them visible when the players learn about them.
+Ancora nessuna missione. ⇒ No quests yet.
+Visibile ai giocatori ⇒ Visible to players
+Nascosta ai giocatori ⇒ Hidden from players
+{0} obiettivi su {1} ⇒ {0} of {1} objectives
+Modifica la missione ⇒ Edit the quest
+Titolo della missione ⇒ Quest title
+Descrizione della missione ⇒ Quest description
+Chi l’ha affidata, cosa si sa, la ricompensa… ⇒ Who gave it, what is known, the reward…
+Stato ⇒ Status
+Obiettivi ⇒ Objectives
+Nuovo obiettivo ⇒ New objective
+Missione eliminata ⇒ Quest deleted
+Dadi vita · {0} ⇒ Hit dice · {0}
+{0} spende {1} dadi vita e recupera {2} PF ⇒ {0} spends {1} hit dice and recovers {2} HP
+Riposo breve · {0} ⇒ Short rest · {0}
+Più tardi ⇒ Later
+Riposa senza dadi ⇒ Rest without dice
+Il master ha chiamato un riposo breve. Spendi dadi vita per recuperare PF; le risorse che si ricaricano col riposo breve tornano disponibili. ⇒ The GM called a short rest. Spend hit dice to recover HP; resources that recharge on a short rest become available again.
+· dadi vita ⇒ · hit dice
+Dadi da spendere ⇒ Dice to spend
+Dadi vita da spendere ⇒ Hit dice to spend
+Cassa ⇒ Crate
+Barile ⇒ Barrel
+Forziere ⇒ Chest
+Tavolo ⇒ Table
+Sedia ⇒ Chair
+Letto ⇒ Bed
+Libreria ⇒ Bookcase
+Tappeto ⇒ Rug
+Altare ⇒ Altar
+Falò ⇒ Bonfire
+Torcia a muro ⇒ Wall torch
+Braciere ⇒ Brazier
+Fonte di luce ⇒ Light source
+Colonna ⇒ Pillar
+Statua ⇒ Statue
+Albero ⇒ Tree
+Cespuglio ⇒ Bush
+Masso ⇒ Boulder
+Pozzo ⇒ Well
+Scale ⇒ Stairs
+Scala a pioli ⇒ Ladder
+Botola ⇒ Trapdoor
+Ponte ⇒ Bridge
+Carro ⇒ Cart
+Tenda ⇒ Tent
+Staccionata ⇒ Fence
+Trappola ⇒ Trap
+Candela (1,5 m + 1,5 m) ⇒ Candle (1.5 m + 1.5 m)
+Torcia (6 m + 6 m) ⇒ Torch (6 m + 6 m)
+Lampada (4,5 m + 9 m) ⇒ Lamp (4.5 m + 9 m)
+Lanterna schermabile (9 m + 9 m) ⇒ Hooded lantern (9 m + 9 m)
+Lanterna a occhio di bue (18 m + 18 m) ⇒ Bullseye lantern (18 m + 18 m)
+Incantesimo Luce (6 m + 6 m) ⇒ Light spell (6 m + 6 m)
+Luce diurna (18 m + 18 m) ⇒ Daylight (18 m + 18 m)
+{0}: {1} di {2} m. Clicca sulla mappa per posarla, Esc per annullare. ⇒ {0}: {1} of {2} m. Click the map to place it, Esc to cancel.
+Cella ⇒ Cell
+Scalinata ⇒ Staircase
+Sala del trono ⇒ Throne room
+Ponte sul fiume ⇒ River bridge
+Accampamento ⇒ Camp
+Taverna ⇒ Tavern
+Il server non è ancora pronto ⇒ The server isn't ready yet
+Indirizzo non valido ⇒ Invalid address
+Il vostro tavolo da gioco. Crea campagne, invita gli amici, gioca. ⇒ Your game table. Create campaigns, invite friends, play.
+Dove giocate? ⇒ Where do you play?
+Ospito io ⇒ I'm hosting
+Il server gira su questo PC. Tu inviti gli amici. ⇒ The server runs on this PC. You invite your friends.
+Mi unisco ⇒ I'm joining
+Ho il codice che mi ha dato un amico. ⇒ I have the code a friend gave me.
+Server attivo. Gli amici entrano con ⇒ Server running. Friends join with
+Copia ⇒ Copy
+Indirizzo copiato ⇒ Address copied
+È il codice del tuo gruppo: non cambia mai, funziona da qualunque rete e senza toccare il router. ⇒ It's your group's code: it never changes, works from any network and without touching the router.
+Raggiungibile da internet. Il codice del gruppo arriva tra un attimo. ⇒ Reachable from the internet. The group code is coming in a moment.
+Preparo il collegamento automatico… {0}% ⇒ Preparing the automatic link… {0}%
+Preparo il collegamento da internet… ⇒ Preparing the internet link…
+Per ora vale solo per la stessa rete di casa. I dettagli sono in Impostazioni → Server. ⇒ For now it works only on the same home network. Details are in Settings → Server.
+Server attivo su questo PC. ⇒ Server running on this PC.
+Avvio del server… ⇒ Starting the server…
+Codice o indirizzo del gruppo ⇒ Group code or address
+es. ABCD-EFGH-JKLM-NPQR ⇒ e.g. ABCD-EFGH-JKLM-NPQR
+Nuovo account ⇒ New account
+Ho già un account ⇒ I have an account
+Nome utente ⇒ Username
+Nome visualizzato (facoltativo) ⇒ Display name (optional)
+Entra ⇒ Sign in
+Crea account ⇒ Create account
+Stai giocando dal browser sul server del tuo master: tienilo aperto in una scheda mentre giocate. ⇒ You're playing from the browser on your GM's server: keep it open in a tab while you play.
+Ogni gruppo usa un solo server: account, partecipanti e campagne vivono lì. Chi ospita deve tenere TheVTT aperto mentre si gioca. ⇒ Each group uses a single server: accounts, people and campaigns live there. The host must keep TheVTT open while playing.
+Copertina aggiornata ⇒ Cover updated
+Campagna non trovata. ⇒ Campaign not found.
+Cambia copertina ⇒ Change cover
+Aggiungi copertina ⇒ Add cover
+Copertina della campagna ⇒ Campaign cover
+Altre azioni ⇒ More actions
+Elimina campagna ⇒ Delete campaign
+· master ⇒ · GM
+al tavolo ⇒ at the table
+Torna al tavolo ⇒ Back to the table
+Avvia sessione ⇒ Start session
+Siediti al tavolo ⇒ Take a seat
+Aggiungi una descrizione per i giocatori (menu ⋯ › Modifica). ⇒ Add a description for the players (menu ⋯ › Edit).
+Il tuo personaggio ⇒ Your character
+Nessun personaggio ⇒ No character
+(in un’altra campagna) ⇒ (in another campaign)
+Apri scheda ⇒ Open sheet
+Crea nuovo ⇒ Create new
+Al tavolo · ⇒ At the table ·
+connesso ⇒ connected
+Personaggio assegnato ⇒ Character assigned
+Giocatore rimosso ⇒ Player removed
+Hai lasciato la campagna ⇒ You left the campaign
+Lascia ⇒ Leave
+invitato, in attesa ⇒ invited, pending
+Annulla invito ⇒ Cancel invite
+Invita ⇒ Invite
+Invito inviato a {0} ⇒ Invite sent to {0}
+Tutti i partecipanti sono già in questa campagna. ⇒ Everyone is already in this campaign.
+Nessun altro partecipante su questo server: condividi il codice del gruppo per farli entrare. ⇒ No other people on this server: share the group code to let them in.
+Modifica campagna ⇒ Edit campaign
+Eliminare la campagna? ⇒ Delete the campaign?
+Campagna eliminata ⇒ Campaign deleted
+» verrà eliminata per tutti. I personaggi restano ai rispettivi giocatori. ⇒ » will be deleted for everyone. Characters stay with their players.
+tra poco ⇒ soon
+oggi, tra {0} {1} ⇒ today, in {0} {1}
+tra {0} giorni ⇒ in {0} days
+Ci sono ⇒ I'm in
+Forse ⇒ Maybe
+Non posso ⇒ Can't make it
+Sessione fissata: i giocatori ricevono un avviso ⇒ Session scheduled: players get a notice
+Sessione annullata ⇒ Session cancelled
+Prossima sessione ⇒ Next session
+Cambia ⇒ Change
+Fissa una data ⇒ Set a date
+Data e ora ⇒ Date and time
+Annulla la sessione ⇒ Cancel the session
+Non ha ancora risposto ⇒ Hasn't answered yet
+Nessuna data in programma. Fissala: i giocatori ricevono un avviso e possono rispondere. ⇒ No date scheduled. Set one: players get a notice and can answer.
+Il master non ha ancora fissato la prossima sessione. ⇒ The GM hasn't scheduled the next session yet.
+Riassunto salvato ⇒ Recap saved
+Riassunti delle sessioni ⇒ Session recaps
+Scrivi riassunto ⇒ Write recap
+Dopo ogni sessione scrivi due righe su cosa è successo: i giocatori le ritrovano qui prima della volta successiva. ⇒ After each session write a couple of lines about what happened: players find them here before the next time.
+Mostra meno ⇒ Show less
+Tutti i riassunti ({0}) ⇒ All recaps ({0})
+Modifica riassunto ⇒ Edit recap
+Pubblica ⇒ Publish
+Luoghi visitati, PNG incontrati, indizi, tesori, conti in sospeso… ⇒ Places visited, NPCs met, clues, treasure, unfinished business…
+Chat del gruppo ⇒ Group chat
+Scrivi al gruppo ⇒ Write to the group
+Quelle che guidi e quelle a cui partecipi. ⇒ The ones you run and the ones you play in.
+Nuova campagna ⇒ New campaign
+Come master ⇒ As GM
+La tua prima campagna ⇒ Your first campaign
+Come giocatore ⇒ As player
+Quando un amico ti invita, la campagna comparirà qui. ⇒ When a friend invites you, the campaign will show up here.
+Crea ⇒ Create
+La maledizione di… ⇒ The curse of…
+Due righe per i giocatori: tono, ambientazione, orari. ⇒ A couple of lines for the players: tone, setting, schedule.
+Sistema di gioco ⇒ Game system
+Bozza salvata ⇒ Draft saved
+Personaggio salvato ⇒ Character saved
+Salvataggio non riuscito ⇒ Save failed
+Personaggio non trovato. ⇒ Character not found.
+Nuovo personaggio ⇒ New character
+Per quale gioco? ⇒ For which game?
+Modifica personaggio ⇒ Edit character
+Torna alla scheda ⇒ Back to the sheet
+Salva bozza ⇒ Save draft
+Salva e assegna ⇒ Save and assign
+Modifica scelte ⇒ Edit choices
+Elimina personaggio ⇒ Delete character
+Eliminare il personaggio? ⇒ Delete the character?
+Personaggio eliminato ⇒ Character deleted
+» verrà eliminato definitivamente. ⇒ » will be deleted permanently.
+Personaggio importato ⇒ Character imported
+{0} personaggi importati ⇒ {0} characters imported
+Nessun personaggio nel file ⇒ No characters in the file
+I tuoi eroi, pronti per qualsiasi tavolo. ⇒ Your heroes, ready for any table.
+Un file di personaggi esportato da TheVTT ⇒ A characters file exported from TheVTT
+Importa personaggi ⇒ Import characters
+Salva i tuoi personaggi in un file ⇒ Save your characters to a file
+Crea il tuo primo eroe ⇒ Create your first hero
+Buona notte ⇒ Good night
+Buongiorno ⇒ Good morning
+Buon pomeriggio ⇒ Good afternoon
+Buonasera ⇒ Good evening
+{0} adesso. ⇒ {0} now.
+{0} tavoli sono aperti ⇒ {0} tables are open
+Nessun tavolo aperto. ⇒ No table open.
+è in gioco ⇒ is in play
+al tavolo · master ⇒ at the table · GM
+Siediti ⇒ Join
+Prossime sessioni ⇒ Upcoming sessions
+· rispondi! ⇒ · answer!
+Le tue campagne ⇒ Your campaigns
+Ancora nessuna campagna. Creane una, oppure aspetta l'invito di un amico. ⇒ No campaigns yet. Create one, or wait for a friend's invite.
+I tuoi personaggi ⇒ Your characters
+Nessun personaggio ancora: la creazione guidata ti accompagna passo passo. ⇒ No characters yet: the guided creation takes you step by step.
+Da fare ⇒ To do
+Invito a « ⇒ Invite to «
+da ⇒ from
+Partecipanti online ⇒ People online
+Nessuno online. ⇒ Nobody online.
+Apri ⇒ Open
+Appunti di sessione che legge solo tu. ⇒ Session notes only you read.
+Appunti di sessione che legge solo tu. Al tavolo lo apri in una finestra accanto alla mappa. ⇒ Session notes only you read. At the table you open it in a window next to the map.
+Insieme in {0} ⇒ Together in {0}
+Scrivi a {0} ⇒ Write to {0}
+Tutti quelli che giocano su questo server. Puoi invitarli nelle tue campagne o scrivergli in privato. ⇒ Everyone playing on this server. You can invite them to your campaigns or message them privately.
+Cerca per nome ⇒ Search by name
+Cerca tra i partecipanti ⇒ Search people
+Per ora ci sei solo tu. Condividi il codice del gruppo: chi si registra con quel codice compare qui. ⇒ For now it's just you. Share the group code: whoever signs up with it shows up here.
+Nessuno online in questo momento. ⇒ Nobody online right now.
+Messaggi con {0} ⇒ Messages with {0}
+Avanzate ⇒ Advanced
+Tema ⇒ Theme
+Modalità ⇒ Mode
+Scura ⇒ Dark
+Chiara ⇒ Light
+Sistema ⇒ System
+Accento ⇒ Accent
+Colore personalizzato ⇒ Custom colour
+Carattere ⇒ Font
+Moderno ⇒ Modern
+Arrotondato ⇒ Rounded
+Classico ⇒ Classic
+Angoli ⇒ Corners
+Compatta ⇒ Compact
+Ariosa ⇒ Airy
+Pannelli traslucidi ⇒ Translucent panels
+Sul tavolo ⇒ At the table
+Riduci animazioni ⇒ Reduce motion
+Pannello laterale ⇒ Side panel
+Sinistra ⇒ Left
+Destra ⇒ Right
+Sfondo ⇒ Background
+Griglia ⇒ Grid
+Opacità {0}% ⇒ Opacity {0}%
+Nomi dei token ⇒ Token names
+Sempre ⇒ Always
+Al passaggio ⇒ On hover
+Mai ⇒ Never
+Barre dei punti ferita ⇒ Hit point bars
+Dadi 3D ⇒ 3D dice
+I dadi rotolano sul tavolo a ogni tiro. Disattivati anche con «Riduci animazioni». ⇒ Dice roll on the table with every roll. Also off with «Reduce motion».
+Connessione diretta ⇒ Direct connection
+Master e giocatori si collegano senza passare dal server; se non riesce si usa il server. ⇒ GM and players connect without going through the server; if that fails, the server is used.
+Copiato ⇒ Copied
+Amici da casa loro (dopo aver aperto la porta sul router) ⇒ Friends from their homes (after opening the port on the router)
+Non riesco a scoprire il tuo indirizzo pubblico ⇒ Can't find out your public address
+Mostra il mio indirizzo pubblico ⇒ Show my public address
+Server del gruppo ⇒ Group server
+Sei collegato a ⇒ You are connected to
+, cioè al server ospitato su questo PC. ⇒ , that is the server hosted on this PC.
+Account, partecipanti e campagne vivono su questo server. ⇒ Accounts, people and campaigns live on this server.
+Cambia server ⇒ Change server
+Ospitare il server è possibile solo dall'app desktop. ⇒ Hosting the server is only possible from the desktop app.
+Ospita il server su questo PC ⇒ Host the server on this PC
+Resta attivo finché TheVTT è aperto e riparte da solo all'avvio. ⇒ Stays on while TheVTT is open and restarts by itself at launch.
+Collegamento automatico (consigliato) ⇒ Automatic link (recommended)
+Gli amici ti raggiungono da qualunque rete con il codice del gruppo, senza toccare il router. Usa un tunnel gratuito di Cloudflare. ⇒ Friends reach you from any network with the group code, without touching the router. Uses a free Cloudflare tunnel.
+Apri la porta sul router automaticamente ⇒ Open the port on the router automatically
+Usa UPnP, supportato dalla maggior parte dei router di casa. ⇒ Uses UPnP, supported by most home routers.
+Applica ⇒ Apply
+Attivo sulla porta {0} ⇒ Running on port {0}
+Avvio… ⇒ Starting…
+Codice del gruppo · da dare agli amici, non cambia mai ⇒ Group code · give it to your friends, it never changes
+Attivo: chi usa il codice trova il tuo server ovunque sia. ⇒ Active: whoever uses the code finds your server wherever it is.
+Non riesco a pubblicare l’indirizzo: controlla la connessione. Riprovo da solo. ⇒ Can't publish the address: check the connection. I'll retry by myself.
+Scarico il componente per il collegamento (una volta sola)… {0}% ⇒ Downloading the link component (only once)… {0}%
+Collegamento automatico non riuscito: {0}. Riprovo da solo. ⇒ Automatic link failed: {0}. I'll retry by myself.
+Preparo il collegamento… ⇒ Preparing the link…
+Indirizzo pubblico di questa sessione (cambia a ogni avvio) ⇒ Public address of this session (changes at each launch)
+Amici da casa loro ⇒ Friends from their homes
+Amici sulla tua stessa rete ⇒ Friends on your same network
+Giocatori dal browser, senza installare niente ⇒ Players from the browser, nothing to install
+Dal browser, voce e video funzionano solo con il collegamento automatico (indirizzo https). ⇒ From the browser, voice and video work only with the automatic link (https address).
+Sto chiedendo al router di aprire la porta… ⇒ Asking the router to open the port…
+Il router ha aperto la porta ⇒ The router opened port
+Apertura automatica della porta disattivata. ⇒ Automatic port opening is off.
+Per giocare con amici fuori casa apri a mano la porta ⇒ To play with friends outside your home, manually open port
+nelle impostazioni del router, verso ⇒ in the router settings, towards
+questo PC ⇒ this PC
+Nome visualizzato ⇒ Display name
+Immagine del profilo ⇒ Profile picture
+La vedono gli altri partecipanti, anche in chat ⇒ Other people see it, in chat too
+Carica ⇒ Upload
+Immagine aggiornata ⇒ Picture updated
+Il tuo nome in chat, i tuoi token, disegni e ping ⇒ Your name in chat, your tokens, drawings and pings
+Scegli un colore qualsiasi ⇒ Pick any colour
+Backup salvato ({0}): {1} ⇒ Backup saved ({0}): {1}
+Il tuo backup ⇒ Your backup
+Un file con tutto quello che è su questo PC: ⇒ One file with everything on this PC:
+account, campagne, personaggi, diari e chat del gruppo che ospiti, ⇒ accounts, campaigns, characters, journals and chats of the group you host,
+mappe e tavoli, creature personalizzate e il codice del gruppo. Salvalo su una chiavetta o nel cloud: se cambi computer, lo ripristini qui e riparti da dove eri. ⇒ maps and tables, custom creatures and the group code. Save it on a USB stick or in the cloud: if you change computer, restore it here and pick up where you left off.
+Crea un backup ⇒ Create a backup
+Scegli dove salvare il file ⇒ Choose where to save the file
+Crea backup ⇒ Create backup
+Ripristina da un file ⇒ Restore from a file
+Sostituisce i dati di questo PC; quelli di adesso vengono messi da parte ⇒ Replaces this PC's data; the current data is set aside
+Scegli il file… ⇒ Choose the file…
+Backup automatici ⇒ Automatic backups
+Apri cartella ⇒ Open folder
+Uno al giorno, all’avvio dell’app; tengo gli ultimi sette. Servono se qualcosa va storto su questo PC: per cambiare computer usa il backup qui sopra. ⇒ One a day, when the app starts; I keep the last seven. They help if something goes wrong on this PC: to change computer use the backup above.
+Ancora nessuno: il primo viene fatto al prossimo avvio. ⇒ None yet: the first is made at the next launch.
+Ripristinare questo backup? ⇒ Restore this backup?
+Ripristina e riavvia ⇒ Restore and restart
+Backup del ⇒ Backup of
+campagne, account e diari del gruppo ⇒ the group's campaigns, accounts and journals
+nessun gruppo ospitato ⇒ no hosted group
+I dati di adesso vengono salvati in un backup automatico prima del ripristino, così puoi tornare indietro. L’app si riavvia da sola. ⇒ The current data is saved in an automatic backup before restoring, so you can go back. The app restarts by itself.
+Controllo… ⇒ Checking…
+Controllo automatico all’avvio e ogni 6 ore ⇒ Automatic check at launch and every 6 hours
+Disponibile la {0}: la trovi in alto a destra ⇒ Version {0} available: you'll find it at the top right
+Hai l’ultima versione ⇒ You have the latest version
+Aggiornamenti disattivati in questa installazione ⇒ Updates are disabled in this installation
+Versione {0} ⇒ Version {0}
+Controlla aggiornamenti ⇒ Check for updates
+Condividi il tuo stile o importane uno ⇒ Share your style or import one
+Tema importato ⇒ Theme imported
+Ripristina l'aspetto predefinito ⇒ Restore the default appearance
+Dati locali ⇒ Local data
+CSS personalizzato ⇒ Custom CSS
+Sovrascrivi qualsiasi stile. Variabili utili: ⇒ Override any style. Useful variables:
+Ponte per voce e video (facoltativo) ⇒ Voice and video relay (optional)
+Voce e video vanno diretti tra i computer. Se due giocatori non riescono a sentirsi (reti aziendali, alcune connessioni mobili), inserisci qui un server TURN: per esempio uno gratuito di Open Relay o Cloudflare. ⇒ Voice and video go directly between computers. If two players can't hear each other (corporate networks, some mobile connections), enter a TURN server here: for example a free one from Open Relay or Cloudflare.
+Indirizzo del server TURN ⇒ TURN server address
+Utente ⇒ User
+Utente TURN ⇒ TURN user
+Password TURN ⇒ TURN password
+L’indirizzo inizia con turn: o turns: ⇒ The address starts with turn: or turns:
+UI error ⇒ UI error
+Terminale ⇒ Terminal
+(1 PE) ⇒ (1 XP)
+· Res ⇒ · Res
+(VM ⇒ (CV
+luce {0} + {1} {2} ⇒ light {0} + {1} {2}
+Lingua ⇒ Language
+Lingua dell'interfaccia. I testi di gioco (regole, incantesimi, mostri) restano in italiano. ⇒ Interface language. Game texts (rules, spells, monsters) stay in Italian.
+VAN ⇒ ADV
+SVA ⇒ DIS

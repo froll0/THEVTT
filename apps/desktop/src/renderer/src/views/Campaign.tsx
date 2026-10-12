@@ -108,7 +108,9 @@ export function CampaignView({ id }: { id: string }) {
         <div className="hero-content">
           <div className="col" style={{ gap: 4, minWidth: 0 }}>
             <div className="row">
-              <h1 className="ellipsis">{campaign.name}</h1>
+              <h1 className="ellipsis" translate="no">
+                {campaign.name}
+              </h1>
               {live && <span className="badge live solid">in gioco</span>}
             </div>
             <p className="hero-meta">

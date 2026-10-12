@@ -69,6 +69,16 @@ function Appearance() {
         </div>
       </Section>
       <div className="list">
+        <Setting title="Lingua" hint="Lingua dell'interfaccia. I testi di gioco (regole, incantesimi, mostri) restano in italiano.">
+          <Tabs<Settings['language']>
+            value={s.language ?? 'it'}
+            onChange={(language) => s.set({ language })}
+            options={[
+              { id: 'it', label: 'Italiano' },
+              { id: 'en', label: 'English' },
+            ]}
+          />
+        </Setting>
         <Setting title="Modalità">
           <Tabs<Settings['theme']>
             value={s.theme}

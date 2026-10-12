@@ -62,7 +62,9 @@ export function HomeView() {
                   return (
                     <div className="list-item clickable" key={c.id} onClick={() => go({ name: 'campaign', id: c.id })}>
                       <div className="grow">
-                        <div className="title">{c.name}</div>
+                        <div className="title" translate="no">
+                          {c.name}
+                        </div>
                         <div className="meta">
                           {formatSession(c.nextSession!)} · {relativeDay(c.nextSession!)} · {coming} {coming === 1 ? 'conferma' : 'conferme'}
                           {c.gmId !== user?.id && !answer ? ' · rispondi!' : ''}

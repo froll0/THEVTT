@@ -246,8 +246,14 @@ export function TableView({ campaignId }: { campaignId: string }) {
           >
             <ArrowLeft size={15} />
           </button>
-          <span className="ellipsis">{campaign.name}</span>
-          {scene && <span className="faint ellipsis">/ {scene.name}</span>}
+          <span className="ellipsis" translate="no">
+            {campaign.name}
+          </span>
+          {scene && (
+            <span className="faint ellipsis" translate="no">
+              / {scene.name}
+            </span>
+          )}
         </div>
         {state && (
           <div className="row no-drag" style={{ gap: 'var(--s3)', marginLeft: 'var(--s3)' }}>

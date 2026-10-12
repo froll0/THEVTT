@@ -15,9 +15,10 @@ export function EncountersPanel() {
   const open = list.find((e) => e.id === editing);
   if (open) return <EncounterEditor e={open} onBack={() => setEditing(null)} />;
   // the creatures to save: those selected, or every one on the map that isn't a character
-  const picked = group.tokens.length ? group.tokens : selectedTokenId ? [selectedTokenId] : [];
+  // (a selection can outlive its tokens: a saved encounter takes them off the map)
+  const picked = (group.tokens.length ? group.tokens : selectedTokenId ? [selectedTokenId] : []).filter((id) => state.tokens[id]);
   const onMap = Object.values(state.tokens).filter((t) => t.sceneId === state.activeSceneId && !t.characterId);
-  const capture = picked.length ? picked.filter((id) => !state.tokens[id]?.characterId) : onMap.map((t) => t.id);
+  const capture = picked.length ? picked.filter((id) => !state.tokens[id]!.characterId) : onMap.map((t) => t.id);
   const chapters = [...new Set(list.map((e) => e.chapter))].sort((a, b) => a.localeCompare(b));
   return (
     <div className="panel-body col encounters">
@@ -87,7 +88,7 @@ function EncounterEditor({ e, onBack }: { e: Encounter; onBack: () => void }) {
   const { state, dispatch, group, selectedTokenId } = useTable();
   if (!state) return null;
   const save = (patch: Partial<Encounter>) => dispatch({ type: 'encounter.save', encounter: { id: e.id, name: e.name, ...patch } });
-  const picked = group.tokens.length ? group.tokens : selectedTokenId ? [selectedTokenId] : [];
+  const picked = (group.tokens.length ? group.tokens : selectedTokenId ? [selectedTokenId] : []).filter((id) => state.tokens[id] && !state.tokens[id].characterId);
   const notes = Object.values(state.notes ?? {}).filter((n) => n.authorId === state.gmId);
   return (
     <div className="panel-body col encounters">
