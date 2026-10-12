@@ -1105,12 +1105,12 @@ export function Board({
             const from = zoneAt(zones, t.x + t.size / 2, t.y + t.size / 2);
             const to = zoneAt(zones, nx + t.size / 2, ny + t.size / 2);
             const hops = from && to ? zoneHops(zones, from, to) : 0;
-            const free = freeZones(t.pool.speed);
+            const free = freeZones(t.pool.speed, inCombat ? t.maneuver : undefined);
             const total = (inCombat ? (t.zonesMoved ?? 0) : 0) + (Number.isFinite(hops) ? hops : 0);
             const bits = [to ? to.name : 'fuori dalle Zone'];
             if (hops) bits.push(`${hops} Zon${hops === 1 ? 'a' : 'e'}${inCombat ? ` (${total}/${free} nel turno)` : ''}`);
             if (inCombat && total > free) bits.push(t.pool.speed === 'Lento' ? 'troppo lontano' : 'serve Manovrare');
-            if (to?.difficult || from?.difficult) bits.push('Terreno Difficile');
+            if ((to?.difficult || from?.difficult) && t.maneuver !== 'cautela') bits.push('Terreno Difficile');
             if (to?.hazard && to.id !== from?.id) bits.push(`Pericolo (${to.hazard})`);
             return { text: bits.join(' · '), over: inCombat && total > free };
           })();

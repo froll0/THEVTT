@@ -1,6 +1,6 @@
 import type { Macro } from '../macros';
 import type { MapPackage } from './library';
-import type { ExtendedTest, PoolCheck, Zone } from './pool';
+import type { ExtendedTest, Maneuver, PoolCheck, Zone } from './pool';
 import type { AreaTemplate, ChatCard, GameState, Note, Prop, Quest, Scene, Token, Wall } from './state';
 
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
@@ -90,6 +90,8 @@ export type GameAction =
       maxTargets?: number;
       note?: string;
     }
+  /** the Manovrare action of a token for this turn (null: none) */
+  | { type: 'pool.maneuver'; tokenId: string; maneuver: Maneuver | null }
   /** a Mostruosità's choice after a blow: take the wound, or its Reaction */
   | { type: 'pool.react'; tokenId: string; choice: 'wound' | 'reaction' }
   /**

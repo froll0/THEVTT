@@ -240,9 +240,18 @@ export function cleanExtendedTest(v: unknown, id: string): ExtendedTest | null {
   return out;
 }
 
-/** Free zones of movement in a turn. */
-export function freeZones(speed: PoolSpeed | undefined): number {
-  return speed === 'Veloce' ? 2 : 1;
+/** Manovrare: Scattare (a zone more), Caricare, Muoversi con Cautela or Silenziosamente. */
+export type Maneuver = 'scattare' | 'caricare' | 'cautela' | 'silenzio';
+export const MANEUVERS: { id: Maneuver; name: string; text: string }[] = [
+  { id: 'scattare', name: 'Scattare', text: 'Una Zona in più (e un’altra con Atletica, fallendo si è Barcollanti).' },
+  { id: 'caricare', name: 'Caricare', text: 'Fino a un nemico entro Distanza Media e attacco con +1d in mischia.' },
+  { id: 'cautela', name: 'Con Cautela', text: 'Niente Prova di Atletica sul Terreno Difficile.' },
+  { id: 'silenzio', name: 'Silenziosamente', text: 'Furtività contro la Percezione del nemico più vigile.' },
+];
+
+/** Free zones of movement in a turn (Scattare: one more). */
+export function freeZones(speed: PoolSpeed | undefined, maneuver?: Maneuver): number {
+  return (speed === 'Veloce' ? 2 : 1) + (maneuver === 'scattare' ? 1 : 0);
 }
 
 /** Which side a token fights on: the players' (owned or a PC) or the GM's. */

@@ -13,6 +13,7 @@ import {
   EXPOSURE_LEVELS,
   faultFor,
   freeZones,
+  MANEUVERS,
   POOL_CHECKS,
   retreatFor,
   trackRow,
@@ -928,6 +929,20 @@ export class GameHost {
         this.poolSpell(from, caster, picked, action);
         break;
       }
+      case 'pool.maneuver': {
+        const t = s.tokens[action.tokenId];
+        if (!t?.pool) return { ok: false, reason: 'Token inesistente' };
+        if (!isGm && !t.ownerIds.includes(from)) return { ok: false, reason: 'Non controlli questo token' };
+        const m = MANEUVERS.find((x) => x.id === action.maneuver);
+        if (!m) {
+          delete t.maneuver;
+          break;
+        }
+        if (t.pool.speed === 'Lento') return { ok: false, reason: 'Chi è Lento non può Manovrare' };
+        t.maneuver = m.id;
+        this.log({ kind: 'system', authorId: 'system', text: `${t.name} Manovra: ${m.name}`, private: t.hidden });
+        break;
+      }
       case 'pool.react': {
         const t = s.tokens[action.tokenId];
         if (!t?.pool?.pending) return { ok: false, reason: 'Nessuna scelta in sospeso' };
@@ -1188,6 +1203,7 @@ export class GameHost {
         for (const t of Object.values(s.tokens)) {
           delete t.moved;
           delete t.zonesMoved;
+          delete t.maneuver;
         }
         break;
       }
@@ -1604,7 +1620,11 @@ export class GameHost {
     // what the table sees for itself: charge, numbers, high ground, range, cover, Prono
     const mods = a.noAuto
       ? { dice: 0, notes: [] as string[] }
-      : attackModifiers(this.sceneZones(t.sceneId), Object.values(this._state.tokens).filter((x) => x.sceneId === t.sceneId), attacker, t, { ranged: a.ranged, charge: a.charge, optimal: a.optimal });
+      : attackModifiers(this.sceneZones(t.sceneId), Object.values(this._state.tokens).filter((x) => x.sceneId === t.sceneId), attacker, t, {
+          ranged: a.ranged,
+          charge: a.charge || attacker?.maneuver === 'caricare',
+          optimal: a.optimal,
+        });
     const att = pool((Number(a.dice) || 0) + mods.dice, Number(a.target) || 1, flags);
     const helpless = t.conditions.includes('Indifeso');
     // vehicles can't dodge: every success lands
@@ -1633,7 +1653,7 @@ export class GameHost {
     }
     const over = def ? hits - blocks : hits;
     // a horse's charge bowls over anything smaller than a monster (Nobile Destriero)
-    if (a.charge && !a.ranged && attacker?.pool?.mounted && /cavall|destrier/i.test(attacker.pool.mounted) && st && !st.monster && !st.vehicle && !t.conditions.includes('Prono')) {
+    if ((a.charge || attacker?.maneuver === 'caricare') && !a.ranged && attacker?.pool?.mounted && /cavall|destrier/i.test(attacker.pool.mounted) && st && !st.monster && !st.vehicle && !t.conditions.includes('Prono')) {
       t.conditions = [...t.conditions, 'Prono'];
       lines.push(`Nobile Destriero: ${t.name} cade Prono.`);
     }
@@ -1878,7 +1898,7 @@ export class GameHost {
     if (before && after && before.id !== after.id) {
       const hops = zoneHops(zones, before, after);
       if (Number.isFinite(hops)) {
-        const free = freeZones(t.pool.speed);
+        const free = freeZones(t.pool.speed, t.maneuver);
         const prev = t.zonesMoved ?? 0;
         t.zonesMoved = prev + hops;
         if (t.zonesMoved > free && prev <= free + 1)
@@ -1895,6 +1915,11 @@ export class GameHost {
     }
     const key = `${ini.round}:${ini.turn}:${t.id}`;
     const rough = [after, before].find((z) => z?.difficult);
+    // Muoversi con Cautela: no test on difficult ground
+    if (rough && t.maneuver === 'cautela' && !this.difficultDone.has(key)) {
+      this.difficultDone.add(key);
+      this.log({ kind: 'system', authorId: 'system', private: t.hidden, text: `${t.name} attraversa con cautela il Terreno Difficile di «${rough.name}».` });
+    }
     if (rough && !this.difficultDone.has(key)) {
       if (this.difficultDone.size > 500) this.difficultDone.clear();
       this.difficultDone.add(key);
@@ -1980,6 +2005,7 @@ export class GameHost {
   private startTurn(t: Token): void {
     t.moved = 0;
     if (t.pool) t.zonesMoved = 0;
+    delete t.maneuver;
     // action, bonus action and reaction come back; so do legendary actions
     if (t.used) delete t.used;
     if (t.legendary) t.legendary = { ...t.legendary, left: t.legendary.max };

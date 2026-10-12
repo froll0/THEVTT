@@ -1,4 +1,4 @@
-import { describeRoll, EXPOSURE_LEVELS, freeZones, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
+import { describeRoll, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
@@ -1476,8 +1476,25 @@ function PoolFields({ token, isGm, onChange, onWound }: { token: Token; isGm: bo
         {p.untreated ? ` · ${p.untreated} Ferite da medicare` : ''}
         {p.speed ? ` · ${p.speed}` : ''}
         {p.mounted ? ` · in sella: ${p.mounted}` : ''}
-        {inCombat ? ` · Zone percorse ${token.zonesMoved ?? 0}/${freeZones(p.speed)}` : ''}
+        {inCombat ? ` · Zone percorse ${token.zonesMoved ?? 0}/${freeZones(p.speed, token.maneuver)}` : ''}
       </span>
+      {inCombat && (isGm || token.ownerIds.includes(meId)) && p.speed !== 'Lento' && !p.vehicle && (
+        <div className="col" style={{ gap: 4 }}>
+          <span className="small muted">Manovrare in questo turno</span>
+          <div className="row wrap" style={{ gap: 4 }}>
+            {MANEUVERS.map((m) => (
+              <button
+                key={m.id}
+                className={`chip sm ${token.maneuver === m.id ? 'on' : ''}`}
+                title={m.text}
+                onClick={() => dispatch({ type: 'pool.maneuver', tokenId: token.id, maneuver: token.maneuver === m.id ? null : m.id })}
+              >
+                {m.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {p.pending && (
         <div className="col pool-pending" style={{ gap: 4 }}>
           <span className="small">

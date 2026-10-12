@@ -254,3 +254,22 @@ describe('success-pool spells', () => {
     expect(host.state.tokens[gunter.id]!.conditions).toEqual([]);
   });
 });
+
+describe('Manovrare', () => {
+  it('moving with caution skips the test on difficult ground; sprinting allows a zone more', () => {
+    const { host, gunter } = table(seq(9));
+    host.dispatch('gm', { type: 'zone.create', zone: { name: 'Strada', x: 0, y: 0, w: 2, h: 5 } });
+    host.dispatch('gm', { type: 'zone.create', zone: { name: 'Fango', x: 2, y: 0, w: 3, h: 5, difficult: true } });
+    host.dispatch('gm', { type: 'zone.create', zone: { name: 'Prato', x: 5, y: 0, w: 3, h: 5 } });
+    host.dispatch('gm', { type: 'initiative.add', name: 'Gunter', tokenId: gunter.id, side: 'players' });
+    host.dispatch('gm', { type: 'initiative.next' });
+    host.dispatch('p1', { type: 'pool.maneuver', tokenId: gunter.id, maneuver: 'cautela' });
+    host.dispatch('p1', { type: 'token.move', tokenId: gunter.id, x: 3, y: 1 });
+    expect(host.state.tokens[gunter.id]!.conditions).not.toContain('Prono');
+    expect(host.state.log.some((e) => e.text.includes('con cautela'))).toBe(true);
+    host.dispatch('p1', { type: 'pool.maneuver', tokenId: gunter.id, maneuver: 'scattare' });
+    host.dispatch('p1', { type: 'token.move', tokenId: gunter.id, x: 6, y: 1 });
+    expect(host.state.tokens[gunter.id]!.zonesMoved).toBe(2);
+    expect(host.state.log.some((e) => e.text.includes('serve l’Azione Manovrare'))).toBe(false);
+  });
+});

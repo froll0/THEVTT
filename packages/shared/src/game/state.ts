@@ -1,4 +1,4 @@
-import type { ExtendedTest, PoolStats, Zone } from './pool';
+import type { ExtendedTest, Maneuver, PoolStats, Zone } from './pool';
 import type { RollResult } from '../dice';
 import type { Macro } from '../macros';
 import { tokenVisible, type Fog } from './fog';
@@ -147,6 +147,8 @@ export interface Token {
   moved?: number;
   /** zones crossed in its current turn (success-pool systems, only during combat) */
   zonesMoved?: number;
+  /** the Manovrare action taken this turn (success-pool systems) */
+  maneuver?: Maneuver;
   /** damage types (as written in the chat: «fuoco», «taglienti»…) it takes half, none or double of */
   defenses?: Defenses;
   /** what it has spent this round: action, bonus action, reaction (back at the start of its turn) */
