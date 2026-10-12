@@ -273,3 +273,23 @@ describe('Manovrare', () => {
     expect(host.state.log.some((e) => e.text.includes('serve l’Azione Manovrare'))).toBe(false);
   });
 });
+
+describe('journeys', () => {
+  it('a day on the road moves the clock on a day and tests Sopravvivenza against the Hazard', () => {
+    // every die a 10: the test fails
+    const { host, gunter } = table(seq(10));
+    expect(host.dispatch('gm', { type: 'travel.day', tokenIds: [gunter.id] }).ok).toBe(false);
+    host.dispatch('gm', { type: 'travel.set', travel: { from: 'Talagaad', to: 'Küsel', mode: 'a piedi', days: 2 } });
+    const before = host.state.world?.minutes ?? 8 * 60;
+    host.dispatch('gm', { type: 'travel.day', tokenIds: [gunter.id], hazard: { label: 'Giornata di Marcia Estenuante', grade: 1, condition: 'Esausto', noWound: true } });
+    expect(host.state.world!.minutes).toBe(before + 1440);
+    expect(host.state.travel).toMatchObject({ day: 1, to: 'Küsel' });
+    expect(host.state.tokens[gunter.id]!.conditions).toContain('Esausto');
+    expect(host.state.tokens[gunter.id]!.pool!.wounds).toBe(0);
+    host.dispatch('gm', { type: 'travel.day', tokenIds: [gunter.id] });
+    expect(host.state.log.some((l) => l.text === 'Il gruppo arriva a Küsel')).toBe(true);
+    expect(host.dispatch('p1', { type: 'travel.set', travel: null }).ok).toBe(false);
+    host.dispatch('gm', { type: 'travel.set', travel: null });
+    expect(host.state.travel).toBeNull();
+  });
+});

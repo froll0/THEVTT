@@ -199,3 +199,14 @@ describe('Warhammer: talents and items at the roll', () => {
     expect(w.characteristic({ ...c, corruption: { ...c.corruption, gifts: ['Muscoli Possenti'] } }, 'f')).toBe(w.characteristic(c, 'f') + 2);
   });
 });
+
+describe('Talagaad', () => {
+  it('its quarters sit on the scene and the terrain fills it', async () => {
+    const { warhammer: w } = await import('../src');
+    const { w: W, h: H } = w.TALAGAAD_SIZE;
+    expect(w.talagaadTerrain()).toHaveLength(W * H);
+    for (const q of w.QUARTERS) expect(q.x >= 0 && q.y >= 0 && q.x + q.w <= W && q.y + q.h <= H, q.name).toBe(true);
+    expect(w.OMENS.map((o) => o.page)).toEqual([16, 17, 18]);
+    expect(w.omenNote(w.OMENS[0]!)).toContain('Guida del Gamemaster, p. 16');
+  });
+});

@@ -1,6 +1,6 @@
 import { POOL_CHECKS, rotatePiece, sessionDigest, type PoolCheck, type SessionDigest } from '@thevtt/shared';
 import { getSystem, warhammer } from '@thevtt/systems';
-import { Clapperboard, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Clapperboard, Route, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -17,6 +17,7 @@ import { CallControls, CallTiles, type CallPerson } from './Call';
 import { GroupSaveForm } from './Saves';
 import { QuestsPanel, RestPrompt, WorldClock } from './World';
 import { EncountersPanel } from './Encounters';
+import { TravelPanel } from './Travel';
 import { SessionEnd } from './SessionEnd';
 import { MacroBar } from './Macros';
 import { useCall } from '../store/call';
@@ -28,7 +29,7 @@ import { Journal } from '../components/Journal';
 
 const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
 
-type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'encounters' | 'scene' | 'notes' | 'quests' | 'music' | 'rules';
+type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'encounters' | 'travel' | 'scene' | 'notes' | 'quests' | 'music' | 'rules';
 
 export function TableView({ campaignId }: { campaignId: string }) {
   const { campaigns, user, go, status } = useApp();
@@ -224,6 +225,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     { id: 'sheet', label: 'Scheda', icon: Users },
     { id: 'bestiary', label: 'Bestiario', icon: BookOpen, gm: true },
     { id: 'encounters', label: 'Incontri', icon: Clapperboard, gm: true },
+    ...(state?.systemId === 'wtow' ? [{ id: 'travel' as const, label: 'Talagaad e viaggi', icon: Route, gm: true }] : []),
     { id: 'scene', label: 'Scene', icon: MapIcon, gm: true },
     { id: 'notes', label: 'Note e dispense', icon: NotebookPen },
     { id: 'quests', label: 'Missioni', icon: ListChecks },
@@ -555,6 +557,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 {tab === 'sheet' && <SheetPanel />}
                 {tab === 'bestiary' && isGm && <BestiaryPanel placeAt={viewCenter} />}
                 {tab === 'encounters' && isGm && <EncountersPanel />}
+                {tab === 'travel' && isGm && <TravelPanel />}
                 {tab === 'scene' && isGm && <ScenePanel />}
                 {tab === 'notes' && <NotesPanel />}
                 {tab === 'quests' && <QuestsPanel />}

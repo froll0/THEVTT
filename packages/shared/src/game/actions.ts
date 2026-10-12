@@ -1,7 +1,7 @@
 import type { Macro } from '../macros';
 import type { MapPackage } from './library';
 import type { ExtendedTest, Maneuver, PoolCheck, Zone } from './pool';
-import type { AreaTemplate, ChatCard, Encounter, GameState, Note, Prop, Quest, Scene, Token, Wall } from './state';
+import type { AreaTemplate, ChatCard, Encounter, GameState, Note, Prop, Quest, Scene, Token, Travel, Wall } from './state';
 
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
@@ -160,6 +160,13 @@ export type GameAction =
   | { type: 'game.pause'; paused: boolean }
   /** GM: the macros shared with everyone at the table */
   | { type: 'macros.set'; macros: Macro[] }
+  /** GM: a journey starts, changes or ends (null) */
+  | { type: 'travel.set'; travel: Pick<Travel, 'from' | 'to' | 'mode' | 'days'> | null }
+  /**
+   * GM: a day on the road. The clock moves on a day; with a Hazard every token
+   * given tests Sopravvivenza against it.
+   */
+  | { type: 'travel.day'; tokenIds: string[]; hazard?: { label: string; grade: number; condition?: string; noWound?: boolean } }
   /** GM: the world's clock moves on (or is set) */
   | { type: 'time.advance'; minutes: number }
   | { type: 'time.set'; minutes: number }

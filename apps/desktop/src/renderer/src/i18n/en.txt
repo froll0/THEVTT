@@ -2133,3 +2133,19 @@ Forma della griglia ⇒ Grid shape
 Con gli esagoni i token si fermano al centro di un esagono e il righello conta gli esagoni ⇒ With hexes tokens stop in the middle of a hex and the ruler counts hexes
 Quadretti ⇒ Squares
 Esagoni ⇒ Hexes
+Talagaad e viaggi ⇒ Talagaad and journeys
+Crea la scena di Talagaad ⇒ Create the Talagaad scene
+La scena di Talagaad c’è già ⇒ The Talagaad scene already exists
+Tetri Presagi per iniziare ⇒ Grim Portents to start with
+Prepara ⇒ Prepare
+Viaggio ⇒ Journey
+Da ⇒ From
+A ⇒ To
+Come ⇒ How
+Giorni previsti ⇒ Expected days
+Si parte ⇒ Set off
+Pericolo di oggi ⇒ Today's Hazard
+Nessuno: una giornata tranquilla ⇒ None: a quiet day
+Un giorno di viaggio ⇒ A day on the road
+Arrivati ⇒ Arrived
+Nessuna prova oggi. ⇒ No test today.

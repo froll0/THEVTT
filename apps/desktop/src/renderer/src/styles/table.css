@@ -1181,3 +1181,21 @@ kbd {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+
+.travel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--s3);
+  border-radius: var(--r-lg, 12px);
+  background: var(--bg-sunken, rgba(127, 127, 127, 0.08));
+}
+
+.omen-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--s3);
+  border-radius: var(--r-lg, 12px);
+  background: var(--bg-sunken, rgba(127, 127, 127, 0.08));
+}

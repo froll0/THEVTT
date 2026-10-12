@@ -541,6 +541,43 @@ export class GameHost {
         }));
         break;
       }
+      case 'travel.set': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!action.travel) {
+          if (s.travel) this.system(`Viaggio concluso: ${s.travel.to}, dopo ${s.travel.day} ${s.travel.day === 1 ? 'giorno' : 'giorni'}`);
+          s.travel = null;
+          break;
+        }
+        const t = action.travel;
+        const clean = (v: unknown) => String(v ?? '').trim().slice(0, 80);
+        const fresh = !s.travel;
+        s.travel = { from: clean(t.from), to: clean(t.to) || 'destinazione ignota', mode: clean(t.mode) || 'a piedi', days: clampInt(t.days ?? 0, 0, 365), day: s.travel?.day ?? 0, startedAt: s.travel?.startedAt ?? this.now() };
+        if (fresh) this.system(`In viaggio${s.travel.from ? ` da ${s.travel.from}` : ''} verso ${s.travel.to}, ${s.travel.mode}`);
+        break;
+      }
+      case 'travel.day': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!s.travel) return { ok: false, reason: 'Nessun viaggio in corso' };
+        this.apply(from, { type: 'time.advance', minutes: 1440 });
+        s.travel.day++;
+        const of = s.travel.days ? `/${s.travel.days}` : '';
+        this.log({ kind: 'card', authorId: from, text: 'Viaggio', card: { title: `Giorno di viaggio ${s.travel.day}${of}`, subtitle: `Verso ${s.travel.to} · ${s.travel.mode}`, body: action.hazard ? `Pericolo: ${String(action.hazard.label).slice(0, 60)} (Grado ${clampInt(action.hazard.grade, 0, 9)})` : 'Nessun Pericolo oggi.' } });
+        if (action.hazard) {
+          const tokens = (Array.isArray(action.tokenIds) ? action.tokenIds : []).slice(0, 30).map((id) => s.tokens[id]).filter((t): t is Token => !!t?.pool);
+          for (const t of tokens)
+            this.poolCheck(from, t, 'Sopravvivenza', {
+              label: String(action.hazard.label).slice(0, 60),
+              grade: clampInt(action.hazard.grade, 0, 9),
+              condition: action.hazard.condition ? String(action.hazard.condition).slice(0, 30) : undefined,
+              noWound: !!action.hazard.noWound,
+              bonus: 0,
+            });
+        }
+        if (s.travel.days && s.travel.day >= s.travel.days) this.system(`Il gruppo arriva a ${s.travel.to}`);
+        break;
+      }
       case 'time.advance':
       case 'time.set': {
         const denied = gmOnly();

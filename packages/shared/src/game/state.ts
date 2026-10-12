@@ -228,6 +228,18 @@ export interface Note {
   shownImage?: string | null;
 }
 
+/** A journey: where to, how, how many days so far and expected. */
+export interface Travel {
+  from: string;
+  to: string;
+  /** on foot, by coach, by river barge… (free text) */
+  mode: string;
+  day: number;
+  /** the GM's estimate; 0 = unknown */
+  days: number;
+  startedAt: number;
+}
+
 export const REVEAL_COLS = 6;
 export const REVEAL_ROWS = 4;
 
@@ -352,6 +364,8 @@ export interface GameState {
   world?: { minutes: number };
   /** quests: players see those the GM made visible */
   quests?: Record<string, Quest>;
+  /** a journey under way (Warhammer: the days on the road and their Hazards) */
+  travel?: Travel | null;
   /** encounters the GM prepared (never sent to the players) */
   encounters?: Record<string, Encounter>;
   /** the last rest the GM called: each player spends their hit dice */

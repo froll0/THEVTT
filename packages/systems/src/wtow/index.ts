@@ -34,6 +34,7 @@ export * from './rules';
 export * from './extras';
 export * from './tables';
 export * from './contacts';
+export * from './talagaad';
 
 export function characterPool(c: WtowCharacter): NonNullable<TokenDefaults['pool']> {
   const p = protection(c);
