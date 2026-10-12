@@ -254,7 +254,7 @@ export function MusicPanel() {
         <span className="section-title">Scaletta</span>
         <label className="btn sm">
           <Plus size={14} /> {loading ? 'Carico…' : 'Aggiungi brani'}
-          <input type="file" accept="audio/*" multiple hidden onChange={(e) => void add(e.target.files).then(() => (e.target.value = ''))} />
+          <input type="file" accept="audio/*" multiple hidden aria-label="Aggiungi brani" onChange={(e) => void add(e.target.files).then(() => (e.target.value = ''))} />
         </label>
       </div>
       {m.tracks.length === 0 ? (

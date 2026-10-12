@@ -10,8 +10,12 @@ concurrency:
 
 jobs:
   test:
-    name: Typecheck e test
-    runs-on: ubuntu-latest
+    name: Typecheck e test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -26,8 +30,12 @@ jobs:
       - run: pnpm test
 
   e2e:
-    name: Test end-to-end (Electron)
-    runs-on: ubuntu-latest
+    name: Test end-to-end (Electron, ${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -38,9 +46,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @thevtt/desktop build
       - name: Playwright + Electron
-        run: xvfb-run -a pnpm exec playwright test
+        shell: bash
+        # Linux has no screen on the runner: a virtual one
+        run: ${{ runner.os == 'Linux' && 'xvfb-run -a ' || '' }}pnpm exec playwright test
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: e2e-results
+          name: e2e-results-${{ matrix.os }}
           path: test-results

@@ -233,7 +233,7 @@ test('a group plays at a table hosted inside the GM app', async () => {
 
   // music: the GM plays a track, it plays for the player too
   await G.getByTitle('Musica').click();
-  await G.locator('.panel-body input[type=file]').setInputFiles(fileURLToPath(new URL('./fixtures/taverna.wav', import.meta.url)));
+  await G.getByLabel('Aggiungi brani').setInputFiles(fileURLToPath(new URL('./fixtures/taverna.wav', import.meta.url)));
   await G.getByRole('button', { name: 'Riproduci taverna' }).click();
   await expect(P.locator('.music-chip', { hasText: 'taverna' })).toHaveAttribute('data-audible', 'true', { timeout: 15_000 });
   await G.getByRole('button', { name: 'Pausa', exact: true }).first().click();
