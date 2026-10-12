@@ -34,6 +34,7 @@ test('table rules: group saves with immunities, legendary actions, turn economy,
   await nav(P, 'Campagne');
   await P.getByText('Tana').click();
   await P.getByRole('button', { name: 'Siediti al tavolo' }).click();
+  await expect(P.locator('.log')).toBeVisible();
 
   // Elara and a red dragon on the map
   await G.getByTitle('Scheda').click();
