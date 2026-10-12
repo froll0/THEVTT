@@ -54,6 +54,10 @@ jobs:
         shell: bash
         # Linux has no screen on the runner: a virtual one
         run: ${{ runner.os == 'Linux' && 'xvfb-run -a ' || '' }}pnpm exec playwright test
+      - name: Pagine al momento dell'errore
+        if: failure()
+        shell: bash
+        run: for f in test-results/*/error-context.md; do echo "=== $f"; sed -n '/Page snapshot/,/Test source/p' "$f" | head -250; done
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
