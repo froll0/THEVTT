@@ -47,7 +47,7 @@ export interface UpdateInfo {
   pageUrl: string;
   publishedAt: string | null;
   asset: { name: string; url: string; size: number } | null;
-  mode: 'installer' | 'appimage' | 'page';
+  mode: 'installer' | 'appimage' | 'dmg' | 'page';
 }
 
 export type UpdateCheck =

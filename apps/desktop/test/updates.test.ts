@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isNewer, pickUpdate, type GithubRelease } from '../src/main/updates';
+import { isNewer, macBundlePath, macInstallScript, pickUpdate, type GithubRelease } from '../src/main/updates';
 
 const release: GithubRelease = {
   tag_name: 'v0.5.0',
@@ -28,6 +28,19 @@ describe('app updates', () => {
     // a .deb install can't replace itself: show the page
     expect(pickUpdate(release, '0.4.0', 'linux', 'x64', false)).toMatchObject({ mode: 'page', asset: null });
     expect(pickUpdate(release, '0.4.0', 'darwin', 'arm64', false)).toMatchObject({ mode: 'page', asset: { url: 'https://x/arm.dmg' } });
+    // installed in Applications: copied out of the new .dmg; run from the .dmg itself: the page
+    expect(pickUpdate(release, '0.4.0', 'darwin', 'arm64', false, '/Applications/TheVTT.app')).toMatchObject({ mode: 'dmg', asset: { url: 'https://x/arm.dmg' } });
+    expect(pickUpdate(release, '0.4.0', 'darwin', 'arm64', false, '/Volumes/TheVTT/TheVTT.app')).toMatchObject({ mode: 'page' });
     expect(pickUpdate({ ...release, prerelease: true }, '0.4.0', 'win32', 'x64', false)).toBeNull();
+  });
+
+  it('replaces the macOS bundle from the .dmg after the app quits', () => {
+    expect(macBundlePath('/Applications/TheVTT.app/Contents/MacOS/TheVTT')).toBe('/Applications/TheVTT.app');
+    expect(macBundlePath('/usr/bin/electron')).toBeNull();
+    const script = macInstallScript("/tmp/TheVTT 1.dmg", "/Users/a'b/TheVTT.app", 42);
+    expect(script).toContain('kill -0 42');
+    expect(script).toContain(`'/tmp/TheVTT 1.dmg'`);
+    expect(script).toContain(`ditto "$SRC" '/Users/a'\\''b/TheVTT.app'`);
+    expect(script.trim().endsWith(`open '/Users/a'\\''b/TheVTT.app'`)).toBe(true);
   });
 });

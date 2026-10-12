@@ -163,7 +163,7 @@ function UpdateButton() {
             </div>
           )}
           {error && <span className="danger-text small">{error}</span>}
-          {info.mode === 'installer' && !installing && <span className="faint tiny">Se sei al tavolo come master, chiudi prima la sessione: i giocatori verranno disconnessi.</span>}
+          {info.mode !== 'page' && !installing && <span className="faint tiny">Se sei al tavolo come master, chiudi prima la sessione: i giocatori verranno disconnessi.</span>}
         </div>
       )}
     </Popover>

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import type { HostedServerConfig, HostedServerStatus, UpdateInfo } from '../preload/api';
 import { DEFAULT_RENDEZVOUS, newIdentity, normalizeCode, resolve as resolveCode, type GroupIdentity } from './group-code';
 import { DEFAULT_SERVER_CONFIG, HostedServer } from './hosted-server';
-import { pickUpdate, RELEASES_API, type GithubRelease } from './updates';
+import { macBundlePath, macInstallScript, pickUpdate, RELEASES_API, type GithubRelease } from './updates';
 import { applyBackup, autoBackup, autoDir, BACKUP_EXT, createBackup, listAuto, readBackup, summarize, type BackupFile } from './backup';
 
 const isMac = process.platform === 'darwin';
@@ -180,7 +180,7 @@ ipcMain.handle('update:check', async () => {
     const res = await net.fetch(updateUrl, { headers: { accept: 'application/vnd.github+json', 'user-agent': `TheVTT/${app.getVersion()}` } });
     if (!res.ok) return { state: 'error', message: res.status === 404 ? 'Nessuna versione pubblicata' : `GitHub ha risposto ${res.status}` };
     const release = (await res.json()) as GithubRelease;
-    pendingUpdate = pickUpdate(release, app.getVersion(), process.platform, process.arch, !!process.env.APPIMAGE);
+    pendingUpdate = pickUpdate(release, app.getVersion(), process.platform, process.arch, !!process.env.APPIMAGE, process.platform === 'darwin' ? macBundlePath(process.execPath) : null);
     return pendingUpdate ? { state: 'available', info: pendingUpdate } : { state: 'none', current: app.getVersion() };
   } catch {
     return { state: 'error', message: 'Non riesco a controllare gli aggiornamenti: sei offline?' };
@@ -217,9 +217,13 @@ ipcMain.handle('update:install', async (e) => {
     }
     await new Promise<void>((resolve, reject) => out.end((err?: Error | null) => (err ? reject(err) : resolve())));
     if (u.mode === 'installer') {
-      // the installer replaces the app: let it start, then get out of its way
-      spawn(target, [], { detached: true, stdio: 'ignore' }).unref();
+      // silent install over the current one, then the installer starts the new version
+      spawn(target, ['/S', '--updated', '--force-run'], { detached: true, stdio: 'ignore' }).unref();
       setTimeout(() => app.quit(), 800);
+    } else if (u.mode === 'dmg') {
+      const script = macInstallScript(target, macBundlePath(process.execPath)!, process.pid);
+      spawn('/bin/sh', ['-c', script], { detached: true, stdio: 'ignore' }).unref();
+      setTimeout(() => app.quit(), 300);
     } else {
       await chmod(target, 0o755);
       await rename(target, process.env.APPIMAGE!);

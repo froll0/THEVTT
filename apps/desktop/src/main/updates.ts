@@ -1,7 +1,8 @@
 /**
- * App updates from the GitHub releases of the project. On Windows the new
- * installer is downloaded and started; a Linux AppImage replaces itself; on
- * macOS (unsigned builds) the release page is opened instead.
+ * App updates from the GitHub releases of the project, installed in one click:
+ * on Windows the new installer runs silently and restarts the app; a Linux
+ * AppImage replaces itself; on macOS the app is copied out of the new .dmg.
+ * Anything else (a .deb install…) opens the release page.
  */
 
 import type { UpdateInfo } from '../preload/api';
@@ -44,7 +45,7 @@ export function isNewer(latest: string, current: string): boolean {
 }
 
 /** What to offer for this release on this machine, or null when up to date. */
-export function pickUpdate(release: GithubRelease, current: string, platform: string, arch: string, isAppImage: boolean): UpdateInfo | null {
+export function pickUpdate(release: GithubRelease, current: string, platform: string, arch: string, isAppImage: boolean, macBundle: string | null = null): UpdateInfo | null {
   if (release.draft || release.prerelease || !isNewer(release.tag_name, current)) return null;
   const find = (re: RegExp) => release.assets.find((a) => re.test(a.name));
   let asset: ReleaseAsset | undefined;
@@ -58,6 +59,8 @@ export function pickUpdate(release: GithubRelease, current: string, platform: st
     if (asset) mode = 'appimage';
   } else if (platform === 'darwin') {
     asset = find(new RegExp(`${arch === 'arm64' ? 'arm64' : 'x64'}\\.dmg$`, 'i')) ?? find(/\.dmg$/i);
+    // replacing the bundle needs to know where it is (not when run from the mounted .dmg itself)
+    if (asset && macBundle && !macBundle.startsWith('/Volumes/')) mode = 'dmg';
   }
   return {
     current,
@@ -68,4 +71,29 @@ export function pickUpdate(release: GithubRelease, current: string, platform: st
     asset: asset ? { name: asset.name, url: asset.browser_download_url, size: asset.size } : null,
     mode,
   };
+}
+
+/** /Applications/TheVTT.app/Contents/MacOS/TheVTT → /Applications/TheVTT.app */
+export function macBundlePath(execPath: string): string | null {
+  const m = /^(.+?\.app)\/Contents\/MacOS\//.exec(execPath);
+  return m ? m[1]! : null;
+}
+
+const sh = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
+
+/**
+ * Run detached once the app has quit: mounts the new .dmg, copies the app over
+ * the current bundle, unmounts and starts the new version.
+ */
+export function macInstallScript(dmg: string, bundle: string, pid: number): string {
+  return [
+    `while kill -0 ${pid} 2>/dev/null; do sleep 0.5; done`,
+    `MNT=$(mktemp -d /tmp/thevtt-update.XXXXXX)`,
+    `hdiutil attach -nobrowse -noautoopen -mountpoint "$MNT" ${sh(dmg)} >/dev/null || exit 1`,
+    `SRC=$(ls -d "$MNT"/*.app | head -n 1)`,
+    `if [ -n "$SRC" ]; then rm -rf ${sh(bundle)}.old && mv ${sh(bundle)} ${sh(bundle)}.old && ditto "$SRC" ${sh(bundle)} && rm -rf ${sh(bundle)}.old || { rm -rf ${sh(bundle)}; mv ${sh(bundle)}.old ${sh(bundle)}; }; fi`,
+    `hdiutil detach "$MNT" -quiet; rm -f ${sh(dmg)}`,
+    `xattr -dr com.apple.quarantine ${sh(bundle)} 2>/dev/null`,
+    `open ${sh(bundle)}`,
+  ].join('\n');
 }

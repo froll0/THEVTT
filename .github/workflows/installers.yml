@@ -68,10 +68,30 @@ jobs:
         working-directory: apps/desktop
         # bash on every OS: PowerShell would split the dotted -c.extraMetadata argument
         shell: bash
-        run: pnpm exec electron-builder ${{ matrix.target }} --config electron-builder.yml --publish never -c.extraMetadata.version=${{ env.VERSION }}
+        # signed when the certificates are in the repository secrets (docs/FIRMA.md), unsigned otherwise
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" && -n "$WIN_CSC_LINK" ]]; then
+            export CSC_LINK="$WIN_CSC_LINK" CSC_KEY_PASSWORD="$WIN_CSC_KEY_PASSWORD"
+          elif [[ "$RUNNER_OS" == "macOS" && -n "$MAC_CSC_LINK" ]]; then
+            export CSC_LINK="$MAC_CSC_LINK" CSC_KEY_PASSWORD="$MAC_CSC_KEY_PASSWORD"
+          fi
+          if [[ -z "${CSC_LINK:-}" ]]; then
+            echo "Nessun certificato: installer non firmati"
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          # notarization (macOS) only with all three Apple values
+          if [[ -z "$APPLE_ID" || -z "$APPLE_APP_SPECIFIC_PASSWORD" || -z "$APPLE_TEAM_ID" ]]; then
+            unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+          fi
+          pnpm exec electron-builder ${{ matrix.target }} --config electron-builder.yml --publish never -c.extraMetadata.version=${{ env.VERSION }}
         env:
-          # no signing certificates yet: build unsigned installers
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - uses: actions/upload-artifact@v4
         with:
