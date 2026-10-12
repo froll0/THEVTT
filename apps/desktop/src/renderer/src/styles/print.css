@@ -1,0 +1,71 @@
+/* A character sheet on paper (or PDF): only the sheet, light, every tab in turn. */
+@media screen {
+  .print-root {
+    display: none;
+  }
+}
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-root,
+  .print-root * {
+    visibility: visible;
+  }
+  .print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    color: #111;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    --bg: #fff;
+    --bg-elev: #fff;
+    --fg: #111;
+    --fg-muted: #444;
+    --fg-faint: #666;
+    --fill: #f1f1f1;
+    --material: #fff;
+    --border: #ccc;
+    --border-strong: #aaa;
+  }
+  .print-root h1 {
+    margin: 0;
+    font-size: 20pt;
+  }
+  .print-sub {
+    margin: 0 0 8pt;
+    color: #555;
+  }
+  .print-part {
+    break-inside: avoid-page;
+    margin-top: 10pt;
+  }
+  .print-part > h2 {
+    font-size: 13pt;
+    border-bottom: 1px solid #999;
+    padding-bottom: 2pt;
+    margin: 0 0 6pt;
+  }
+  .print-root .no-print,
+  .print-root button.icon,
+  .print-root .portrait {
+    display: none !important;
+  }
+  .print-root .card,
+  .print-root .section,
+  .print-root .glass {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    background: #fff !important;
+  }
+}

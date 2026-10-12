@@ -3,6 +3,7 @@ import { warhammer as w } from '@thevtt/systems';
 import { BookOpen, Dices, Flame, HeartCrack, MessageSquareShare, Minus, Plus, Shield, Sparkles, Sword, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { Modal, Section, Switch } from '../../components/ui';
+import { PrintPart } from '../../components/Print';
 import type { SheetProps, SheetTable } from '..';
 import { BankSection, CorruptionTab, IntermezzoTab, MagicItemsSection, MountSection, rollTest } from './Extras';
 
@@ -30,7 +31,7 @@ interface PendingTest {
 
 const rid = () => Math.random().toString(36).slice(2, 10);
 
-export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, table }: SheetProps<C> & { compact?: boolean }) {
+export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, table, print }: SheetProps<C> & { compact?: boolean }) {
   const c = w.normalize(data);
   const set: Set = (patch) => onChange({ ...c, ...patch });
   const [tab, setTab] = useState<'tests' | 'combat' | 'talents' | 'magic' | 'faith' | 'gear' | 'notes' | 'chaos' | 'downtime' | 'advance'>('tests');
@@ -58,6 +59,10 @@ export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, 
     { id: 'chaos', label: 'Corruzione' },
     { id: 'advance', label: 'PE', show: editable },
   ] as const;
+  type TabId = (typeof tabs)[number]['id'];
+  // on paper: what the character is, not the Intermezzo's workings or the advancement screen
+  const show = (t: TabId) => (print ? t !== 'downtime' && t !== 'advance' && tabs.some((x) => x.id === t && (!('show' in x) || x.show)) : tab === t);
+  const tabLabel = (t: TabId) => tabs.find((x) => x.id === t)?.label ?? t;
 
   return (
     <div className="sheet wtow">
@@ -131,7 +136,7 @@ export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, 
 
       <ConditionBar conditions={conditions} editable={editable} onChange={setConditions} />
 
-      <div className="sheet-tabs">
+      <div className="sheet-tabs no-print">
         {tabs
           .filter((t) => !('show' in t) || t.show)
           .map((t) => (
@@ -141,16 +146,16 @@ export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, 
           ))}
       </div>
 
-      {tab === 'tests' && <TestsTab c={c} editable={editable} set={set} onTest={test} />}
-      {tab === 'combat' && <CombatTab c={c} editable={editable} set={set} onTest={test} onRoll={onRoll} table={table} />}
-      {tab === 'talents' && <TalentsTab c={c} onShare={onShare} />}
-      {tab === 'magic' && <MagicTab c={c} editable={editable} set={set} onRoll={onRoll} onShare={onShare} table={table} onTest={test} />}
-      {tab === 'faith' && <FaithTab c={c} editable={editable} set={set} onShare={onShare} onTest={test} />}
-      {tab === 'gear' && <GearTab c={c} editable={editable} set={set} />}
-      {tab === 'notes' && <NotesTab c={c} editable={editable} set={set} />}
-      {tab === 'downtime' && <IntermezzoTab c={c} editable={editable} set={set} table={table} onShare={onShare} />}
-      {tab === 'chaos' && <CorruptionTab c={c} editable={editable} set={set} onTest={test} />}
-      {tab === 'advance' && editable && <AdvanceTab c={c} set={set} />}
+      {show('tests') && <PrintPart label={tabLabel('tests')} print={print}>{<TestsTab c={c} editable={editable} set={set} onTest={test} />}</PrintPart>}
+      {show('combat') && <PrintPart label={tabLabel('combat')} print={print}>{<CombatTab c={c} editable={editable} set={set} onTest={test} onRoll={onRoll} table={table} />}</PrintPart>}
+      {show('talents') && <PrintPart label={tabLabel('talents')} print={print}>{<TalentsTab c={c} onShare={onShare} />}</PrintPart>}
+      {show('magic') && <PrintPart label={tabLabel('magic')} print={print}>{<MagicTab c={c} editable={editable} set={set} onRoll={onRoll} onShare={onShare} table={table} onTest={test} />}</PrintPart>}
+      {show('faith') && <PrintPart label={tabLabel('faith')} print={print}>{<FaithTab c={c} editable={editable} set={set} onShare={onShare} onTest={test} />}</PrintPart>}
+      {show('gear') && <PrintPart label={tabLabel('gear')} print={print}>{<GearTab c={c} editable={editable} set={set} />}</PrintPart>}
+      {show('notes') && <PrintPart label={tabLabel('notes')} print={print}>{<NotesTab c={c} editable={editable} set={set} />}</PrintPart>}
+      {show('downtime') && <PrintPart label={tabLabel('downtime')} print={print}>{<IntermezzoTab c={c} editable={editable} set={set} table={table} onShare={onShare} />}</PrintPart>}
+      {show('chaos') && <PrintPart label={tabLabel('chaos')} print={print}>{<CorruptionTab c={c} editable={editable} set={set} onTest={test} />}</PrintPart>}
+      {show('advance') && <PrintPart label={tabLabel('advance')} print={print}>{editable && <AdvanceTab c={c} set={set} />}</PrintPart>}
 
       {pending && (
         <TestModal

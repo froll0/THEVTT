@@ -2149,3 +2149,7 @@ Nessuno: una giornata tranquilla ⇒ None: a quiet day
 Un giorno di viaggio ⇒ A day on the road
 Arrivati ⇒ Arrived
 Nessuna prova oggi. ⇒ No test today.
+Stampa ⇒ Print
+Tutta la scheda su carta, o in PDF dalla finestra di stampa ⇒ The whole sheet on paper, or as PDF from the print dialog
+Un file di personaggi di TheVTT, oppure un personaggio di D&D Beyond (JSON) o di Foundry VTT (Export Data) ⇒ A TheVTT characters file, or a D&D Beyond (JSON) or Foundry VTT (Export Data) character
+{0} importato da {1}: controlla le scelte con «Modifica scelte» ⇒ {0} imported from {1}: check the choices with «Edit choices»

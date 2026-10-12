@@ -1,4 +1,4 @@
-import { getSystem } from '@thevtt/systems';
+import { dnd5e, getSystem } from '@thevtt/systems';
 import { Download, Upload } from 'lucide-react';
 import { CharacterCard, NewCard } from '../components/Cards';
 import { PageHeader } from '../components/ui';
@@ -31,6 +31,14 @@ export function CharactersView() {
       const parsed = JSON.parse(await f.text()) as { characters?: unknown[] } & Record<string, unknown>;
       const list = (Array.isArray(parsed.characters) ? parsed.characters : [parsed]) as { name?: unknown; systemId?: unknown; data?: unknown }[];
       const ok = list.filter((c) => c && typeof c.systemId === 'string' && getSystem(c.systemId) && c.data && typeof c.data === 'object');
+      if (!ok.length) {
+        // a D&D character from D&D Beyond or Foundry VTT
+        const other = dnd5e.importCharacter(parsed);
+        if (other) {
+          upsertCharacter(await api.createCharacter({ name: other.character.name, systemId: 'dnd5e-2024', data: other.character }));
+          return toast(`${other.character.name} importato da ${other.source}: controlla le scelte con «Modifica scelte»`, 'success');
+        }
+      }
       for (const c of ok) {
         const name = String(c.name ?? (c.data as { name?: string }).name ?? 'Senza nome').slice(0, 80);
         upsertCharacter(await api.createCharacter({ name, systemId: c.systemId as string, data: c.data }));
@@ -44,7 +52,7 @@ export function CharactersView() {
   return (
     <div className="page wide">
       <PageHeader title="Personaggi" subtitle="I tuoi eroi, pronti per qualsiasi tavolo.">
-        <label className="btn ghost" title="Un file di personaggi esportato da TheVTT">
+        <label className="btn ghost" title="Un file di personaggi di TheVTT, oppure un personaggio di D&D Beyond (JSON) o di Foundry VTT (Export Data)">
           <Upload size={14} /> Importa
           <input aria-label="Importa personaggi" type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && void importFile(e.target.files[0]).then(() => (e.target.value = ''))} />
         </label>

@@ -1,6 +1,6 @@
 import { describeRoll, roll, successes } from '@thevtt/shared';
 import { getSystem, listSystems } from '@thevtt/systems';
-import { ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Printer } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Modal, PageHeader, Popover } from '../components/ui';
 import { useApp } from '../store/app';
@@ -19,6 +19,18 @@ export function CharacterEditor({ id, systemId: requestedSystem, assignTo }: { i
   const [data, setData] = useState<unknown>(initial);
   const [mode, setMode] = useState<Mode>(existing && system && !system.validate(existing.data).length ? 'sheet' : 'build');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // the whole sheet, rendered for paper, while the print dialog is open
+  const [printing, setPrinting] = useState(false);
+  useEffect(() => {
+    if (!printing) return;
+    const done = () => setPrinting(false);
+    window.addEventListener('afterprint', done);
+    const t = setTimeout(() => window.print(), 300);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('afterprint', done);
+    };
+  }, [printing]);
   const [dirty, setDirty] = useState(false);
   const savedId = useRef<string | null>(existing?.id ?? null);
 
@@ -125,6 +137,9 @@ export function CharacterEditor({ id, systemId: requestedSystem, assignTo }: { i
             <button className="btn sm" onClick={() => setMode('build')}>
               Modifica scelte
             </button>
+            <button className="btn sm" onClick={() => setPrinting(true)} title="Tutta la scheda su carta, o in PDF dalla finestra di stampa">
+              <Printer size={14} /> Stampa
+            </button>
             <Popover
               trigger={(_o, toggle) => (
                 <button className="btn ghost sm icon" onClick={toggle} aria-label="Altre azioni">
@@ -140,6 +155,11 @@ export function CharacterEditor({ id, systemId: requestedSystem, assignTo }: { i
             </Popover>
           </div>
           <ui.Sheet data={current} editable onChange={change} onRoll={localRoll} />
+          {printing && (
+            <div className="print-root">
+              <ui.Sheet data={current} editable={false} print onChange={() => {}} onRoll={() => {}} />
+            </div>
+          )}
         </>
       )}
       {confirmDelete && existing && (

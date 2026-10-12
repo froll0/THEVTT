@@ -21,6 +21,8 @@ export interface SheetProps<T = any> {
   editable: boolean;
   /** narrow layout (table dock) */
   compact?: boolean;
+  /** for paper: every tab one after the other, nothing to click */
+  print?: boolean;
   onChange: (next: T) => void;
   onRoll: (formula: string, label: string) => void;
   /** at the table: post a spell, feature or attack to the chat */

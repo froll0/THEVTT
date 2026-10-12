@@ -3,6 +3,7 @@ import { dnd5e } from '@thevtt/systems';
 import { ArrowUpCircle, BookOpen, Dices, Heart, MessageSquareShare, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { Modal, Section, Switch } from '../../components/ui';
+import { PrintPart } from '../../components/Print';
 import type { SheetProps, SheetTable } from '..';
 import { DetailsEditor, InventoryEditor } from './editors';
 
@@ -50,7 +51,7 @@ function spellCard(c: C, sc: dnd5e.Spellcasting, s: dnd5e.SpellDef): ChatCard {
   };
 }
 
-export function Dnd5eSheet({ data, editable, onChange, onRoll, onShare, compact, table }: SheetProps<C> & { compact?: boolean }) {
+export function Dnd5eSheet({ data, editable, onChange, onRoll, onShare, compact, table, print }: SheetProps<C> & { compact?: boolean }) {
   const c = dnd5e.normalize(data);
   const set = (patch: Partial<C>) => onChange({ ...c, ...patch });
   const sc = dnd5e.spellcasting(c);
@@ -78,6 +79,8 @@ export function Dnd5eSheet({ data, editable, onChange, onRoll, onShare, compact,
     { id: 'inventory', label: 'Inventario' },
     { id: 'details', label: 'Personaggio' },
   ];
+  const show = (t: Tab) => (print ? tabs.some((x) => x.id === t && x.show !== false) : tab === t);
+  const tabLabel = (t: Tab) => tabs.find((x) => x.id === t)?.label ?? t;
 
   return (
     <div className="sheet">
@@ -218,7 +221,7 @@ export function Dnd5eSheet({ data, editable, onChange, onRoll, onShare, compact,
         {dnd5e.darkvision(c) > 0 && <span className="muted">Scurovisione {dnd5e.fmtMeters(dnd5e.darkvision(c))}</span>}
       </div>
 
-      <div className="sheet-tabs">
+      <div className="sheet-tabs no-print">
         {tabs
           .filter((t) => t.show !== false)
           .map((t) => (
@@ -228,12 +231,12 @@ export function Dnd5eSheet({ data, editable, onChange, onRoll, onShare, compact,
           ))}
       </div>
 
-      {tab === 'main' && <MainTab c={c} onRoll={onRoll} />}
-      {tab === 'combat' && <CombatTab c={c} editable={editable} set={set} onRoll={onRoll} onShare={onShare} table={table} onRest={() => setResting(true)} onLongRest={() => onChange(dnd5e.longRest(c))} />}
-      {tab === 'spells' && sc && <SpellsTab c={c} sc={sc} editable={editable} set={set} onRoll={onRoll} onShare={onShare} table={table} />}
-      {tab === 'features' && <FeaturesTab c={c} onShare={onShare} />}
-      {tab === 'inventory' && <InventoryEditor c={c} set={set} readOnly={!editable} onShare={onShare} />}
-      {tab === 'details' && (editable && !compact ? <DetailsEditor c={c} set={set} /> : <DetailsView c={c} />)}
+      {show('main') && <PrintPart label={tabLabel('main')} print={print}>{<MainTab c={c} onRoll={onRoll} />}</PrintPart>}
+      {show('combat') && <PrintPart label={tabLabel('combat')} print={print}>{<CombatTab c={c} editable={editable} set={set} onRoll={onRoll} onShare={onShare} table={table} onRest={() => setResting(true)} onLongRest={() => onChange(dnd5e.longRest(c))} />}</PrintPart>}
+      {show('spells') && <PrintPart label={tabLabel('spells')} print={print}>{sc && <SpellsTab c={c} sc={sc} editable={editable} set={set} onRoll={onRoll} onShare={onShare} table={table} />}</PrintPart>}
+      {show('features') && <PrintPart label={tabLabel('features')} print={print}>{<FeaturesTab c={c} onShare={onShare} />}</PrintPart>}
+      {show('inventory') && <PrintPart label={tabLabel('inventory')} print={print}>{<InventoryEditor c={c} set={set} readOnly={!editable} onShare={onShare} />}</PrintPart>}
+      {show('details') && <PrintPart label={tabLabel('details')} print={print}>{(editable && !compact ? <DetailsEditor c={c} set={set} /> : <DetailsView c={c} />)}</PrintPart>}
 
       {levelUp && <LevelUpModal c={c} onClose={() => setLevelUp(false)} onConfirm={(r) => { onChange(dnd5e.levelUp(c, r)); setLevelUp(false); }} />}
       {resting && <ShortRestModal c={c} onClose={() => setResting(false)} onConfirm={(dice, healed) => { onChange(dnd5e.shortRest(c, dice, healed)); setResting(false); }} />}
