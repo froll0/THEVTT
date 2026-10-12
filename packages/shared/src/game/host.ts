@@ -38,6 +38,8 @@ import {
   type LogEntry,
   type Note,
   type Prop,
+  type Encounter,
+  type EncounterToken,
   type Quest,
   type TableCharacter,
   type TablePlayer,
@@ -82,6 +84,7 @@ const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: s
   'pool.check': { cols: ['tokens'], label: 'prova' },
   'pool.react': { cols: ['tokens'], label: 'reazione' },
   'pool.spell': { cols: ['tokens'], label: 'incantesimo' },
+  'encounter.launch': { cols: ['tokens'], label: 'incontro' },
   'scene.import': { cols: ['scenes', 'walls', 'props', 'drawings', 'tokens'], label: 'mappa dalla libreria' },
 };
 const HISTORY_LIMIT = 50;
@@ -564,6 +567,76 @@ export class GameHost {
         // the players hear of it when they're meant to
         if (next.visible && !old?.visible) this.system(`Nuova missione: ${next.title}`);
         else if (next.visible && old && old.status !== next.status && next.status !== 'active') this.system(`${next.status === 'done' ? 'Missione compiuta' : 'Missione fallita'}: ${next.title}`);
+        break;
+      }
+      case 'encounter.save': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const e = action.encounter;
+        s.encounters ??= {};
+        const old = e.id ? s.encounters[e.id] : undefined;
+        if (!old && Object.keys(s.encounters).length >= 100) return { ok: false, reason: 'Troppi incontri' };
+        const captured = (Array.isArray(action.captureTokenIds) ? action.captureTokenIds : [])
+          .slice(0, 60)
+          .map((id) => s.tokens[id])
+          .filter((t): t is Token => !!t && !t.characterId);
+        const next: Encounter = {
+          id: old?.id ?? newId(),
+          name: String(e.name ?? old?.name ?? 'Incontro').trim().slice(0, 80) || 'Incontro',
+          chapter: String(e.chapter ?? old?.chapter ?? '').trim().slice(0, 80),
+          sceneId: e.sceneId !== undefined ? (e.sceneId && s.scenes[e.sceneId] ? e.sceneId : null) : captured[0]?.sceneId ?? old?.sceneId ?? null,
+          tokens: captured.length
+            ? captured.map((t) => {
+                const out: EncounterToken = { name: t.name, x: t.x, y: t.y, size: t.size, color: t.color, image: t.image, monsterId: t.monsterId ?? null, hp: t.hp, ac: t.ac, hidden: t.hidden, conditions: [...t.conditions] };
+                if (t.darkvision) out.darkvision = t.darkvision;
+                if (t.defenses) out.defenses = structuredClone(t.defenses);
+                if (t.legendary) out.legendary = { ...t.legendary };
+                if (t.lair) out.lair = [...t.lair];
+                if (t.pool) out.pool = { ...structuredClone(t.pool), wounds: 0, untreated: 0 };
+                return out;
+              })
+            : (old?.tokens ?? []),
+          trackId: e.trackId !== undefined ? (e.trackId && s.music?.tracks.some((t) => t.id === e.trackId) ? e.trackId : null) : (old?.trackId ?? null),
+          noteId: e.noteId !== undefined ? (e.noteId && s.notes?.[e.noteId] ? e.noteId : null) : (old?.noteId ?? null),
+          text: String(e.text ?? old?.text ?? '').slice(0, 4000),
+          initiative: e.initiative !== undefined ? !!e.initiative : (old?.initiative ?? true),
+          launchedAt: old?.launchedAt,
+        };
+        s.encounters[next.id] = next;
+        // the creatures saved for later leave the map
+        if (action.removeCaptured) for (const t of captured) delete s.tokens[t.id];
+        break;
+      }
+      case 'encounter.delete': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!s.encounters?.[action.encounterId]) return { ok: false, reason: 'Incontro inesistente' };
+        delete s.encounters[action.encounterId];
+        break;
+      }
+      case 'encounter.launch': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const e = s.encounters?.[action.encounterId];
+        if (!e) return { ok: false, reason: 'Incontro inesistente' };
+        if (e.sceneId && s.scenes[e.sceneId] && s.activeSceneId !== e.sceneId) this.apply(from, { type: 'scene.activate', sceneId: e.sceneId });
+        const created: string[] = [];
+        for (const t of e.tokens) {
+          const before = new Set(Object.keys(s.tokens));
+          this.apply(from, { type: 'token.create', token: { ...structuredClone(t), sceneId: s.activeSceneId, ownerIds: [] } });
+          created.push(...Object.keys(s.tokens).filter((id) => !before.has(id)));
+        }
+        if (e.trackId && s.music?.tracks.some((t) => t.id === e.trackId)) this.apply(from, { type: 'music.play', trackId: e.trackId });
+        if (e.noteId && s.notes?.[e.noteId] && s.notes[e.noteId]!.shared !== 'all') this.apply(from, { type: 'note.update', noteId: e.noteId, patch: { shared: 'all' } });
+        if (e.initiative && created.length) {
+          const sides = s.initiative.entries.some((x) => x.value === 2 || x.value === 1) && created.every((id) => s.tokens[id]?.pool);
+          for (const id of created) {
+            const t = s.tokens[id]!;
+            this.apply(from, sides || t.pool ? { type: 'initiative.add', name: t.name, tokenId: id, side: 'enemies' } : { type: 'initiative.add', name: t.name, tokenId: id, modifier: 0 });
+          }
+        }
+        e.launchedAt = this.now();
+        this.log({ kind: 'card', authorId: from, text: e.name, private: true, card: { title: `Incontro: ${e.name}`, subtitle: e.chapter || undefined, body: e.text || `${created.length} creature sulla mappa.` } });
         break;
       }
       case 'quest.delete': {

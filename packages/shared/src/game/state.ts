@@ -322,8 +322,50 @@ export interface GameState {
   world?: { minutes: number };
   /** quests: players see those the GM made visible */
   quests?: Record<string, Quest>;
+  /** encounters the GM prepared (never sent to the players) */
+  encounters?: Record<string, Encounter>;
   /** the last rest the GM called: each player spends their hit dice */
   rest?: { id: string; kind: 'short' | 'long' };
+}
+
+/** A creature of a prepared encounter, as it will appear. */
+export interface EncounterToken {
+  name: string;
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  image: string | null;
+  monsterId?: string | null;
+  hp: { current: number; max: number } | null;
+  ac: number | null;
+  hidden: boolean;
+  conditions: string[];
+  darkvision?: number;
+  defenses?: Defenses;
+  legendary?: { max: number; left: number } | null;
+  lair?: string[];
+  pool?: PoolStats;
+}
+
+/** Something the GM prepared: a scene, its creatures, music and a note, launched in one click. */
+export interface Encounter {
+  id: string;
+  name: string;
+  /** the part of the adventure it belongs to */
+  chapter: string;
+  /** the scene it happens in (null: wherever the table is) */
+  sceneId: string | null;
+  tokens: EncounterToken[];
+  trackId: string | null;
+  /** a note to share with the players when it starts */
+  noteId: string | null;
+  /** the GM's reminder: what happens, what the creatures want */
+  text: string;
+  /** its creatures join the initiative when it starts */
+  initiative: boolean;
+  /** when it was last launched */
+  launchedAt?: number;
 }
 
 export interface QuestObjective {
@@ -443,6 +485,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     gmNotes: '',
     history: undefined,
     quests: Object.fromEntries(Object.entries(state.quests ?? {}).filter(([, q]) => q.visible)),
+    encounters: undefined,
   });
 }
 

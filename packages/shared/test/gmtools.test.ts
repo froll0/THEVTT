@@ -57,3 +57,28 @@ describe('table macros', () => {
     expect(viewFor(host.state, 'p1').macros).toHaveLength(1);
   });
 });
+
+describe('prepared encounters', () => {
+  it('captures creatures, hides them from the players, and brings them back with scene and initiative', async () => {
+    const { createInitialState, GameHost, viewFor } = await import('../src');
+    const state = createInitialState({ campaignId: 'c', campaignName: 'T', systemId: 'dnd5e-2024', gmId: 'gm', sceneId: 's1' });
+    state.players.p1 = { id: 'p1', displayName: 'Giulia', color: '#fff', online: true, characterId: null };
+    let n = 0;
+    const host = new GameHost({ state, send: () => {}, rng: () => 10, now: () => ++n });
+    host.dispatch('gm', { type: 'token.create', token: { name: 'Goblin', x: 4, y: 4, hp: { current: 7, max: 7 }, ac: 15 } });
+    const goblin = Object.values(host.state.tokens)[0]!;
+    host.dispatch('gm', { type: 'scene.create', name: 'Caverna', id: 's2' });
+    expect(host.dispatch('gm', { type: 'encounter.save', encounter: { name: 'Agguato', chapter: 'Capitolo 1' }, captureTokenIds: [goblin.id], removeCaptured: true }).ok).toBe(true);
+    expect(Object.keys(host.state.tokens)).toHaveLength(0);
+    const enc = Object.values(host.state.encounters!)[0]!;
+    expect(enc.sceneId).toBe('s1');
+    expect(viewFor(host.state, 'p1').encounters).toBeUndefined();
+    host.dispatch('gm', { type: 'scene.activate', sceneId: 's2' });
+    host.dispatch('gm', { type: 'encounter.launch', encounterId: enc.id });
+    expect(host.state.activeSceneId).toBe('s1');
+    const back = Object.values(host.state.tokens);
+    expect(back.map((t) => [t.name, t.x, t.y, t.ac])).toEqual([['Goblin', 4, 4, 15]]);
+    expect(host.state.initiative.entries.map((e) => e.name)).toEqual(['Goblin']);
+    expect(host.dispatch('p1', { type: 'encounter.launch', encounterId: enc.id }).ok).toBe(false);
+  });
+});
