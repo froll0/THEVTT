@@ -1,6 +1,6 @@
 import { POOL_CHECKS, rotatePiece, sessionDigest, type PoolCheck, type SessionDigest } from '@thevtt/shared';
 import { getSystem, warhammer } from '@thevtt/systems';
-import { Clapperboard, Route, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Clapperboard, Route, Sparkles, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -18,6 +18,8 @@ import { GroupSaveForm } from './Saves';
 import { QuestsPanel, RestPrompt, WorldClock } from './World';
 import { EncountersPanel } from './Encounters';
 import { TravelPanel } from './Travel';
+import { AssistantPanel } from './Assistant';
+import { bridge } from '../lib/platform';
 import { SessionEnd } from './SessionEnd';
 import { MacroBar } from './Macros';
 import { useCall } from '../store/call';
@@ -29,7 +31,7 @@ import { Journal } from '../components/Journal';
 
 const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
 
-type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'encounters' | 'travel' | 'scene' | 'notes' | 'quests' | 'music' | 'rules';
+type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'encounters' | 'travel' | 'assistant' | 'scene' | 'notes' | 'quests' | 'music' | 'rules';
 
 export function TableView({ campaignId }: { campaignId: string }) {
   const { campaigns, user, go, status } = useApp();
@@ -231,6 +233,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     { id: 'notes', label: 'Note e dispense', icon: NotebookPen },
     { id: 'quests', label: 'Missioni', icon: ListChecks },
     { id: 'music', label: 'Musica', icon: Music, gm: true },
+    ...(bridge ? [{ id: 'assistant' as const, label: 'Assistente', icon: Sparkles, gm: true }] : []),
     { id: 'rules', label: 'Compendio', icon: Library },
   ];
 
@@ -501,7 +504,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
           )}
 
           {showKeys && <ShortcutsHelp isGm={isGm} onClose={() => setShowKeys(false)} />}
-          {ending && campaign && <SessionEnd campaignId={campaign.id} digest={ending} onCancel={() => setEnding(null)} onDone={() => go({ name: 'campaign', id: campaign.id })} />}
+          {ending && campaign && <SessionEnd campaignId={campaign.id} systemId={campaign.systemId} digest={ending} onCancel={() => setEnding(null)} onDone={() => go({ name: 'campaign', id: campaign.id })} />}
           {state && table.group.tokens.length + table.group.props.length > 1 && <GroupBar isGm={isGm} />}
           {selected && !editing && <TokenInspector token={selected} />}
           {isGm && table.selectedPropId && state?.props?.[table.selectedPropId] && <PropInspector prop={state.props[table.selectedPropId]!} />}
@@ -559,6 +562,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 {tab === 'bestiary' && isGm && <BestiaryPanel placeAt={viewCenter} />}
                 {tab === 'encounters' && isGm && <EncountersPanel />}
                 {tab === 'travel' && isGm && <TravelPanel />}
+                {tab === 'assistant' && isGm && <AssistantPanel />}
                 {tab === 'scene' && isGm && <ScenePanel />}
                 {tab === 'notes' && <NotesPanel />}
                 {tab === 'quests' && <QuestsPanel />}

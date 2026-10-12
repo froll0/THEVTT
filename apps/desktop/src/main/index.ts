@@ -4,9 +4,10 @@ import { createWriteStream } from 'node:fs';
 import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { HostedServerConfig, HostedServerStatus, UpdateInfo } from '../preload/api';
+import type { AssistantRequest, HostedServerConfig, HostedServerStatus, UpdateInfo } from '../preload/api';
 import { DEFAULT_RENDEZVOUS, newIdentity, normalizeCode, resolve as resolveCode, type GroupIdentity } from './group-code';
 import { DEFAULT_SERVER_CONFIG, HostedServer } from './hosted-server';
+import { askAssistant, assistantStatus, setAssistantKey } from './assistant';
 import { macBundlePath, macInstallScript, pickUpdate, RELEASES_API, type GithubRelease } from './updates';
 import { applyBackup, autoBackup, autoDir, BACKUP_EXT, createBackup, listAuto, readBackup, summarize, type BackupFile } from './backup';
 
@@ -236,6 +237,12 @@ ipcMain.handle('update:install', async (e) => {
     return { error: 'Download non riuscito. Riprova, oppure scarica la nuova versione dalla pagina del progetto.' };
   }
 });
+
+// ---------- the GM's assistant ----------
+
+ipcMain.handle('assistant:status', () => assistantStatus());
+ipcMain.handle('assistant:set-key', (_e, key: string | null) => setAssistantKey(typeof key === 'string' ? key : null));
+ipcMain.handle('assistant:ask', (_e, req: AssistantRequest) => askAssistant(req));
 
 ipcMain.handle('update:open-page', () => (pendingUpdate ? shell.openExternal(pendingUpdate.pageUrl) : undefined));
 

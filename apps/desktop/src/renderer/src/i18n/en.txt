@@ -2153,3 +2153,26 @@ Stampa ⇒ Print
 Tutta la scheda su carta, o in PDF dalla finestra di stampa ⇒ The whole sheet on paper, or as PDF from the print dialog
 Un file di personaggi di TheVTT, oppure un personaggio di D&D Beyond (JSON) o di Foundry VTT (Export Data) ⇒ A TheVTT characters file, or a D&D Beyond (JSON) or Foundry VTT (Export Data) character
 {0} importato da {1}: controlla le scelte con «Modifica scelte» ⇒ {0} imported from {1}: check the choices with «Edit choices»
+Assistente ⇒ Assistant
+Assistente del master (IA) ⇒ GM assistant (AI)
+Facoltativo. Con una chiave API di Anthropic, al tavolo il master può chiedere a Claude un PNG al volo, una risposta sulle regole dal compendio o il racconto della sessione. I testi che invii vanno ad Anthropic; la chiave resta su questo computer, cifrata quando il sistema lo permette, e i costi sono quelli del tuo account. ⇒ Optional. With an Anthropic API key, at the table the GM can ask Claude for an NPC on the spot, a rules answer from the compendium or the session told as a story. The texts you send go to Anthropic; the key stays on this computer, encrypted when the system allows, and costs are those of your account.
+Chiave salvata ⇒ Key saved
+Rimuovi la chiave ⇒ Remove the key
+Chiave API di Anthropic ⇒ Anthropic API key
+Assistente pronto ⇒ Assistant ready
+Chiave rimossa ⇒ Key removed
+PNG al volo ⇒ NPC on the spot
+Domanda sulle regole ⇒ Rules question
+Idea del PNG ⇒ NPC idea
+Chiedi ⇒ Ask
+Ci penso… ⇒ Thinking…
+Risponde partendo dalle voci del compendio più vicine alla domanda. ⇒ Answers starting from the compendium entries closest to the question.
+Salva nelle note ⇒ Save to notes
+Salvato nelle note, solo per te ⇒ Saved to notes, only for you
+Scritto dall’IA: controllalo prima di usarlo. ⇒ Written by AI: check it before using it.
+Per usare l’assistente serve una chiave API di Anthropic: la inserisci una volta nelle impostazioni. ⇒ The assistant needs an Anthropic API key: you enter it once in the settings.
+Impostazioni → Avanzate ⇒ Settings → Advanced
+L’assistente c’è solo nell’app desktop del master. ⇒ The assistant is only in the GM's desktop app.
+Scrivi il racconto ⇒ Write the story
+Scrivo il racconto… ⇒ Writing the story…
+L’assistente trasforma la bozza in un racconto da leggere ai giocatori: controllalo prima di pubblicare ⇒ The assistant turns the draft into a story to read to the players: check it before publishing

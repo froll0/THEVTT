@@ -586,6 +586,7 @@ function Advanced() {
 
   return (
     <>
+      {bridge && <AssistantSettings />}
       <div className="list">
         <Setting title="Tema" hint="Condividi il tuo stile o importane uno">
           <button className="btn sm" onClick={exportTheme}>
@@ -654,5 +655,43 @@ function TurnSetting({ cfg, apply }: { cfg: HostedServerConfig; apply: (c: Hoste
         </button>
       </div>
     </Setting>
+  );
+}
+
+/** The GM's assistant: the Anthropic API key, kept on this computer. */
+function AssistantSettings() {
+  const toast = useApp((x) => x.toast);
+  const [configured, setConfigured] = useState<boolean | null>(null);
+  const [key, setKey] = useState('');
+  useEffect(() => {
+    void bridge?.assistant.status().then((r) => setConfigured(r.configured));
+  }, []);
+  const save = async (value: string | null) => {
+    const r = await bridge!.assistant.setKey(value);
+    setConfigured(r.configured);
+    setKey('');
+    toast(r.configured ? 'Assistente pronto' : 'Chiave rimossa', 'success');
+  };
+  return (
+    <Section title="Assistente del master (IA)">
+      <p className="small muted">
+        Facoltativo. Con una chiave API di Anthropic, al tavolo il master può chiedere a Claude un PNG al volo, una risposta sulle regole dal compendio o il racconto della sessione. I testi che invii vanno ad Anthropic; la chiave resta su questo computer, cifrata quando il sistema lo permette, e i costi sono quelli del tuo account.
+      </p>
+      {configured ? (
+        <div className="row" style={{ gap: 8 }}>
+          <span className="badge live">Chiave salvata</span>
+          <button className="btn ghost sm" onClick={() => void save(null)}>
+            Rimuovi la chiave
+          </button>
+        </div>
+      ) : (
+        <div className="row" style={{ gap: 8 }}>
+          <input className="input grow" type="password" placeholder="sk-ant-…" value={key} onChange={(e) => setKey(e.target.value)} aria-label="Chiave API di Anthropic" autoComplete="off" />
+          <button className="btn primary" disabled={!key.trim()} onClick={() => void save(key)}>
+            Salva
+          </button>
+        </div>
+      )}
+    </Section>
   );
 }

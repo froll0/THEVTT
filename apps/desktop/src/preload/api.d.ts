@@ -57,6 +57,16 @@ export type UpdateCheck =
   | { state: 'error'; message: string };
 
 /** API exposed by the preload script as `window.thevtt`. Absent when running in a browser. */
+export interface AssistantRequest {
+  task: 'npc' | 'recap' | 'rules';
+  systemId: string;
+  input: string;
+  /** rules: the compendium entries the answer should come from */
+  context?: { title: string; text: string }[];
+}
+
+export type AssistantResult = { text: string; truncated?: boolean } | { error: string };
+
 export interface DesktopBridge {
   platform: string;
   window: {
@@ -92,6 +102,12 @@ export interface DesktopBridge {
     restore(): Promise<{ ok: true } | { error: string }>;
   };
   /** new versions of the app, from the project's releases */
+  /** the GM's assistant (Claude, with the GM's own API key) */
+  assistant: {
+    status(): Promise<{ configured: boolean }>;
+    setKey(key: string | null): Promise<{ configured: boolean }>;
+    ask(req: AssistantRequest): Promise<AssistantResult>;
+  };
   updates: {
     check(): Promise<UpdateCheck>;
     /** downloads and installs (the app then restarts), or opens the release page */

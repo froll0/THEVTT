@@ -36,6 +36,11 @@ const bridge: DesktopBridge = {
     inspect: (autoName) => ipcRenderer.invoke('backup:inspect', autoName),
     restore: () => ipcRenderer.invoke('backup:restore'),
   },
+  assistant: {
+    status: () => ipcRenderer.invoke('assistant:status'),
+    setKey: (key) => ipcRenderer.invoke('assistant:set-key', key),
+    ask: (req) => ipcRenderer.invoke('assistant:ask', req),
+  },
   updates: {
     check: () => ipcRenderer.invoke('update:check'),
     install: () => ipcRenderer.invoke('update:install'),
