@@ -1283,7 +1283,7 @@ kbd {
   padding: 0 4px;
   border-radius: 6px;
   background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--text);
+  color: var(--fg);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1387,7 +1387,7 @@ body.spectator-body {
   background: var(--bg-sunken, rgb(0 0 0 / 0.15));
 }
 .relations-map line {
-  stroke: var(--text-faint, #8e8e93);
+  stroke: var(--fg-faint);
   stroke-width: 1.4;
 }
 .relations-map .hidden-link line {
@@ -1395,7 +1395,7 @@ body.spectator-body {
   opacity: 0.6;
 }
 .relations-map text {
-  fill: var(--text);
+  fill: var(--fg);
   font-size: 9px;
 }
 .relations-map .rname {

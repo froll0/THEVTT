@@ -201,3 +201,45 @@ code {
 .hidden {
   display: none !important;
 }
+
+/* ---------- accessibility ---------- */
+.settings-sub {
+  margin: 18px 0 6px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+}
+html:root[data-contrast='high'][data-theme] {
+  --border: rgb(255 255 255 / 0.55);
+  --border-strong: rgb(255 255 255 / 0.85);
+}
+html:root[data-contrast='high'][data-theme='light'] {
+  --border: rgb(0 0 0 / 0.6);
+  --border-strong: rgb(0 0 0 / 0.9);
+}
+:root[data-contrast='high'] .faint,
+:root[data-contrast='high'] .muted {
+  opacity: 1;
+  color: var(--fg);
+}
+:root[data-contrast='high'] .glass {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--bg);
+}
+:root[data-contrast='high'] :focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

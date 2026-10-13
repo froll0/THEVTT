@@ -18,6 +18,12 @@ export interface Settings {
   density: Density;
   glass: boolean;
   reduceMotion: boolean;
+  /** colours that don't rely on red and green (hit points, alerts) */
+  colorblind: boolean;
+  /** stronger text and borders, no transparency */
+  highContrast: boolean;
+  /** what happens at the table is read out by screen readers */
+  announce: boolean;
   dockPosition: 'left' | 'right';
   /** direct WebRTC link with the GM/players instead of the server relay */
   directConnection: boolean;
@@ -53,6 +59,9 @@ export const DEFAULT_SETTINGS: Settings = {
   density: 'comfortable',
   glass: true,
   reduceMotion: false,
+  colorblind: false,
+  highContrast: false,
+  announce: true,
   dockPosition: 'right',
   directConnection: true,
   musicVolume: 0.6,
@@ -152,6 +161,8 @@ export function applySettings(s: Settings, prefersDark: boolean): void {
   root.dataset.theme = dark ? 'dark' : 'light';
   root.dataset.glass = String(s.glass);
   root.dataset.motion = s.reduceMotion ? 'reduce' : 'full';
+  root.dataset.contrast = s.highContrast ? 'high' : 'normal';
+  root.dataset.colorblind = String(!!s.colorblind);
   root.style.setProperty('--accent', s.accent);
   root.style.setProperty('--accent-fg', readableOn(s.accent));
   root.style.setProperty('--font', FONTS[s.font]);

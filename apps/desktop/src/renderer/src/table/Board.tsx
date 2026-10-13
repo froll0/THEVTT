@@ -3,6 +3,7 @@ import { exploredTexture, updateExplored } from './explored';
 import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
 import { drawBurst, type Burst } from './effects';
+import { BoardAnnouncer } from './Announcer';
 import { animatedProp, drawProp, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { TerrainLayer, terrainSample, terrainSeed } from './terrainRender';
 import { useEffect, useRef, useState } from 'react';
@@ -398,6 +399,7 @@ export function Board({
   const gesture = useRef<Gesture>({ kind: 'none' });
   const images = useRef(new Map<string, HTMLImageElement>());
   const videos = useRef(new Map<string, HTMLVideoElement>());
+  const sightMemo = useRef<{ state: unknown; me: string; sight: ReturnType<typeof sightFor> | null }>({ state: null, me: '', sight: null });
   const hover = useRef<string | null>(null);
   const dirty = useRef(true);
   /** where the pointer is (world px), for the placement preview */
@@ -459,9 +461,13 @@ export function Board({
 
   const user = useApp((s) => s.user?.id ?? '');
   const me = viewerId ?? user;
+  const readOnlyRef = useRef(!!readOnly);
+  readOnlyRef.current = !!readOnly;
   const { state, assets, pings, role, selectedTokenId, selectedPropId, selectedWallId, group, dispatch, select, selectProp, selectWall, setGroup, toggleInGroup } = useTable();
   const board = useSettings((s) => s.board);
   const reduceMotion = useSettings((s) => s.reduceMotion);
+  const colorblind = useSettings((s) => s.colorblind);
+  const announce = useSettings((s) => s.announce);
   /** spells landing: a flash on each area as it appears */
   const bursts = useRef<Burst[]>([]);
   const seenTemplates = useRef<Set<string> | null>(null);
@@ -494,8 +500,8 @@ export function Board({
   const clearTargets = useTable((s) => s.clearTargets);
   /** a cone or line with no caster on the map: its point, set by a first click */
   const areaOrigin = useRef<{ x: number; y: number } | null>(null);
-  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard, targets });
-  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard, targets };
+  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard, targets, colorblind });
+  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard, targets, colorblind };
   const hoverWall = useRef<string | null>(null);
   dirty.current = true;
 
@@ -585,6 +591,10 @@ export function Board({
 
       const W = L.scene.widthCells * CELL;
       const H = L.scene.heightCells * CELL;
+      // what the camera sees (world px, with a margin): on big maps the rest isn't drawn
+      const margin = 3 * CELL;
+      const view = { x0: cam.x - margin, y0: cam.y - margin, x1: cam.x + cw / cam.zoom + margin, y1: cam.y + ch / cam.zoom + margin };
+      const onScreen = (x: number, y: number, w: number, h: number) => x + w >= view.x0 && y + h >= view.y0 && x <= view.x1 && y <= view.y1;
       const still = image(L.scene.background);
       const moving = video(L.scene.background);
       const bg = still ? { el: still as CanvasImageSource, w: still.naturalWidth, h: still.naturalHeight } : moving;
@@ -710,6 +720,9 @@ export function Board({
       const tnow = performance.now() / 1000;
       for (const p of Object.values(L.state.props ?? {})) {
         if (p.sceneId !== L.scene.id) continue;
+        // a rotated prop reaches at most its diagonal
+        const reach = Math.max(p.w, p.h) * CELL;
+        if (!onScreen(p.x * CELL - reach / 2, p.y * CELL - reach / 2, reach * 2, reach * 2) && gesture.current.kind === 'none') continue;
         const pg = gesture.current;
         const inGroup = L.group.props.includes(p.id);
         const gd = pg.kind === 'group' && pg.moved && inGroup ? groupDelta(pg) : null;
@@ -990,6 +1003,9 @@ export function Board({
       }
 
       for (const t of tokens) {
+        // off screen (and not being dragged): nothing to draw; its aura still may reach in
+        const reachT = (t.size + 2 * (t.aura?.radius ?? 0) + 2) * CELL;
+        if (g.kind === 'none' && !onScreen(t.x * CELL - reachT / 2, t.y * CELL - reachT / 2, reachT + t.size * CELL, reachT + t.size * CELL)) continue;
         let px = t.x * CELL;
         let py = t.y * CELL;
         if (g.kind === 'drag' && g.tokenId === t.id) {
@@ -1153,8 +1169,19 @@ export function Board({
           const pct = Math.max(0, Math.min(1, t.hp.current / t.hp.max));
           ctx.fillStyle = 'rgba(0,0,0,0.6)';
           ctx.fillRect(cx - bw / 2, py + size - 8, bw, 6);
-          ctx.fillStyle = pct > 0.5 ? '#3fb67a' : pct > 0.25 ? '#e5a50a' : '#e5484d';
+          // colour-blind friendly: blue, orange, vermilion, and the numbers
+          ctx.fillStyle = L.colorblind ? (pct > 0.5 ? '#0072b2' : pct > 0.25 ? '#e69f00' : '#d55e00') : pct > 0.5 ? '#3fb67a' : pct > 0.25 ? '#e5a50a' : '#e5484d';
           ctx.fillRect(cx - bw / 2, py + size - 8, bw * pct, 6);
+          if (L.colorblind) {
+            ctx.font = `700 ${Math.max(9, size * 0.16)}px system-ui, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+            ctx.strokeText(`${t.hp.current}/${t.hp.max}`, cx, py + size - 9);
+            ctx.fillStyle = '#fff';
+            ctx.fillText(`${t.hp.current}/${t.hp.max}`, cx, py + size - 9);
+          }
         }
 
         const showName = L.board.tokenNames === 'always' || (L.board.tokenNames === 'hover' && (hover.current === t.id || t.id === L.selectedTokenId));
@@ -1247,7 +1274,9 @@ export function Board({
       if (L.scene.vision) {
         const bounds = { w: L.scene.widthCells, h: L.scene.heightCells };
         if (!L.isGm) {
-          const sight = sightFor(L.state, L.me);
+          // the same state and eyes: the same sight (it's worked out once per change, not per frame)
+          if (sightMemo.current.state !== L.state || sightMemo.current.me !== L.me) sightMemo.current = { state: L.state, me: L.me, sight: sightFor(L.state, L.me) };
+          const sight = sightMemo.current.sight!;
           const explored = exploredTexture(L.state.campaignId, L.scene.id);
           drawLighting(ctx, { cell: CELL, bounds, explored, segments: sight.segments, viewers: sight.viewers, lights: sight.lights, ambient: sight.ambient }, ctx.getTransform(), 1);
         } else if (L.options.lightPreview) {
@@ -1997,6 +2026,16 @@ export function Board({
         setSelectedTemplate(null);
         return;
       }
+      // the selected token walks with the arrow keys, one square at a time
+      const step = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+      if (step && L.selectedTokenId && L.state && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const t = L.state.tokens[L.selectedTokenId];
+        if (t && canControl(t, L.me, L.isGm) && !readOnlyRef.current) {
+          e.preventDefault();
+          dispatch({ type: 'token.move', tokenId: t.id, x: t.x + step[0]!, y: t.y + step[1]! });
+          return;
+        }
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && L.selectedTokenId && L.state) {
         const t = L.state.tokens[L.selectedTokenId];
         if (t && canControl(t, L.me, L.isGm)) {
@@ -2033,8 +2072,11 @@ export function Board({
         onPointerCancel={readOnly ? undefined : onPointerUp}
         onWheel={onWheel}
         onContextMenu={(e) => e.preventDefault()}
+        role="img"
+        aria-label={scene ? `Mappa: ${scene.name}` : 'Mappa'}
       />
       {scene?.weather && <WeatherLayer weather={scene.weather} intensity={scene.weatherIntensity ?? 0.6} />}
+      {announce && state && scene && <BoardAnnouncer />}
       {selectedTemplate && <div className="board-hint glass">Area selezionata · Canc per eliminarla</div>}
       {textDraft && (
         <input

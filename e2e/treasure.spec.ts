@@ -75,7 +75,7 @@ test('random tables, the party’s loot shared out, a shop: straight onto the sh
   await expect(G.getByRole('button', { name: '2d6+3' })).toBeVisible();
   await G.getByRole('button', { name: 'Tutti', exact: true }).click();
   await P.getByTitle('Note e dispense').click();
-  await P.getByText('Nuova nota').first().click();
+  await P.locator('.note-row', { hasText: 'Nuova nota' }).click();
   await P.locator('.inline-roll', { hasText: '2d6+3' }).click();
   await P.getByTitle('Chat e tiri').click();
   await expect(P.locator('.log')).toContainText('Nuova nota');

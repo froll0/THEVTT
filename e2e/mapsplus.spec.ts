@@ -115,6 +115,15 @@ test('a token flies, carries a trembling coloured light and an aura that shows w
   await inspector.getByLabel('Aura').selectOption('3');
   await expect(inspector).toContainText('Nessuno nell’aura');
 
+  // for screen readers: who is on the map and where; the arrow keys walk the token
+  const list = G.getByRole('list', { name: 'Token sulla mappa' });
+  const before = (await list.locator('li').first().textContent())!;
+  const col = Number(/colonna (\d+)/.exec(before)![1]);
+  await G.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await G.keyboard.press('ArrowRight');
+  await expect(list.locator('li').first()).toContainText(`colonna ${col + 1}`);
+  await expect(list.locator('li').first()).toContainText('di altezza');
+
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   await gm.app.close();
 });

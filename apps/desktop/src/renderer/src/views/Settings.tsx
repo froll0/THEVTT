@@ -126,8 +126,20 @@ function Appearance() {
         <Setting title="Pannelli traslucidi" hint="Sul tavolo">
           <Switch on={s.glass} onChange={(glass) => s.set({ glass })} />
         </Setting>
-        <Setting title="Riduci animazioni">
-          <Switch on={s.reduceMotion} onChange={(reduceMotion) => s.set({ reduceMotion })} />
+        <Setting title="Riduci animazioni" hint="Anche niente lampi degli incantesimi sulla mappa">
+          <Switch on={s.reduceMotion} onChange={(reduceMotion) => s.set({ reduceMotion })} label="Riduci animazioni" />
+        </Setting>
+      </div>
+      <h3 className="settings-sub">Accessibilità</h3>
+      <div className="list">
+        <Setting title="Colori per daltonici" hint="Punti ferita e avvisi senza rosso e verde, con i numeri sulle barre">
+          <Switch on={s.colorblind} onChange={(colorblind) => s.set({ colorblind })} label="Colori per daltonici" />
+        </Setting>
+        <Setting title="Contrasto alto" hint="Testi e bordi più marcati, niente trasparenze">
+          <Switch on={s.highContrast} onChange={(highContrast) => s.set({ highContrast })} label="Contrasto alto" />
+        </Setting>
+        <Setting title="Annunci per lettore di schermo" hint="Tiri, turni e chi c’è sulla mappa letti ad alta voce">
+          <Switch on={s.announce} onChange={(announce) => s.set({ announce })} label="Annunci per lettore di schermo" />
         </Setting>
       </div>
     </>
