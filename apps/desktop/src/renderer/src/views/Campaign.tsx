@@ -4,7 +4,9 @@ import { ArrowLeft, CalendarClock, Crown, ImagePlus, MoreHorizontal, Plus, X } f
 import { useEffect, useState } from 'react';
 import { ChatThread } from '../components/ChatThread';
 import { coverStyle } from '../components/Cards';
-import { RichEditor, RichView } from '../components/RichText';
+import { plainText, RichEditor, RichView } from '../components/RichText';
+import { recapForDiscord, toDiscord } from '../lib/discord';
+import { DiscordCard } from './DiscordCard';
 import { Avatar, Empty, Field, Modal, Popover, readImage, Section } from '../components/ui';
 import { useApp } from '../store/app';
 
@@ -274,6 +276,7 @@ export function CampaignView({ id }: { id: string }) {
               )}
             </div>
           )}
+          {isGm && <DiscordCard campaignId={campaign.id} />}
         </aside>
       </div>
 
@@ -382,6 +385,7 @@ function NextSession({ campaign, isGm }: { campaign: Campaign; isGm: boolean }) 
       async () => {
         upsertCampaign(await api.scheduleSession(campaign.id, iso));
         setEditing(false);
+        if (iso) void toDiscord(campaign.id, 'schedule', `📅 Prossima sessione di **${campaign.name}**: ${new Date(iso).toLocaleString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}`);
       },
       iso ? 'Sessione fissata: i giocatori ricevono un avviso' : 'Sessione annullata',
     );
@@ -473,6 +477,7 @@ function SessionRecaps({ campaign, isGm }: { campaign: Campaign; isGm: boolean }
     run(async () => {
       const e = editing!;
       const r = e.id ? await api.updateRecap(campaign.id, e.id, e) : await api.createRecap(campaign.id, e);
+      if (!e.id) void toDiscord(campaign.id, 'recaps', recapForDiscord(r.title, plainText(r.body)));
       setRecaps((list) => [r, ...(list ?? []).filter((x) => x.id !== r.id)].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       setEditing(null);
     }, 'Riassunto salvato');

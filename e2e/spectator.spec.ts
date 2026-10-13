@@ -9,6 +9,11 @@ test('the audience’s window: the map as the players see it, the turn order, no
   await G.reload();
   await nav(G, 'Campagne');
   await G.getByText('In diretta').click();
+  // the group's Discord channel: a webhook, and what goes there
+  await G.getByLabel('Webhook di Discord').fill('https://discord.com/api/webhooks/1/prova');
+  await expect(G.getByRole('switch', { name: 'I riassunti delle sessioni' })).toHaveAttribute('aria-checked', 'true');
+  await expect(G.getByRole('switch', { name: 'I tiri che vedono tutti' })).toHaveAttribute('aria-checked', 'false');
+  await G.getByLabel('Webhook di Discord').fill('');
   await G.getByRole('button', { name: 'Avvia sessione' }).click();
   await expect(G.getByTitle('Aggiungi token')).toBeVisible();
 

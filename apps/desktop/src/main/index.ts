@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import type { AssistantRequest, HostedServerConfig, HostedServerStatus, UpdateInfo } from '../preload/api';
 import { DEFAULT_RENDEZVOUS, newIdentity, normalizeCode, resolve as resolveCode, type GroupIdentity } from './group-code';
 import { DEFAULT_SERVER_CONFIG, HostedServer } from './hosted-server';
+import { postToDiscord } from './discord';
 import { askAssistant, assistantStatus, setAssistantKey } from './assistant';
 import { macBundlePath, macInstallScript, pickUpdate, RELEASES_API, type GithubRelease } from './updates';
 import { applyBackup, autoBackup, autoDir, BACKUP_EXT, createBackup, listAuto, readBackup, summarize, type BackupFile } from './backup';
@@ -95,6 +96,9 @@ ipcMain.handle('window:toggle-maximize', (e) => {
   else w.maximize();
 });
 ipcMain.handle('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close());
+
+// Discord: the GM's webhook (their own channel). From here, not the page: no CORS, and the address never reaches the players.
+ipcMain.handle('discord:post', (_e, url: string, content: string) => postToDiscord(url, content));
 
 // the audience's window: the map as the players see it, to stream or show on a second screen
 let spectatorWin: BrowserWindow | null = null;

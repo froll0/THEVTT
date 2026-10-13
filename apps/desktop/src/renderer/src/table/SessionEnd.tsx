@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { assistantHtml, isAnswer } from '../lib/assistant';
 import { bridge } from '../lib/platform';
-import { RichEditor } from '../components/RichText';
+import { recapForDiscord, toDiscord } from '../lib/discord';
+import { plainText, RichEditor } from '../components/RichText';
 import { Field, Modal } from '../components/ui';
 import { useApp } from '../store/app';
 
@@ -30,6 +31,7 @@ export function SessionEnd({ campaignId, systemId, digest, onDone, onCancel }: {
   };
   const publish = () => run(async () => {
     await api.createRecap(campaignId, { title, body });
+    void toDiscord(campaignId, 'recaps', recapForDiscord(title, plainText(body)));
     onDone();
   }, 'Riassunto pubblicato');
   return (

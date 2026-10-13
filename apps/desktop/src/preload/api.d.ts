@@ -79,6 +79,10 @@ export interface DesktopBridge {
     spectator(): Promise<void>;
     onMaximized(cb: (maximized: boolean) => void): () => void;
   };
+  /** messages to the GM's Discord channel, through a webhook */
+  discord: {
+    post(url: string, content: string): Promise<{ ok: true } | { error: string }>;
+  };
   /** local JSON storage in the user data folder */
   store: {
     read(key: string): Promise<unknown>;

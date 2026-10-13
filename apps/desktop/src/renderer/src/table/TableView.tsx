@@ -18,6 +18,7 @@ import { GroupSaveForm } from './Saves';
 import { QuestsPanel, RestPrompt, WorldClock } from './World';
 import { TreasurePanel } from './Treasure';
 import { useSpectatorFeed } from '../lib/spectator';
+import { useDiscordFeed } from '../lib/discord';
 import { EncountersPanel } from './Encounters';
 import { TravelPanel } from './Travel';
 import { AssistantPanel } from './Assistant';
@@ -86,6 +87,8 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const isGm = campaign?.gmId === user?.id;
   // the audience's window, if one is open, follows the game from here
   useSpectatorFeed(table.state, table.assets, isGm && !!bridge);
+  // the campaign's Discord channel hears what the GM chose
+  useDiscordFeed(table.state, campaign?.id ?? null, campaign?.name ?? '', isGm && !!bridge && !!table.state);
 
   // personal notes once written at the table move to the journal, which only their author reads
   const notesMap = table.state?.notes;

@@ -14,6 +14,9 @@ const bridge: DesktopBridge = {
       return () => ipcRenderer.removeListener('window:maximized', listener);
     },
   },
+  discord: {
+    post: (url, content) => ipcRenderer.invoke('discord:post', url, content),
+  },
   store: {
     read: (key) => ipcRenderer.invoke('store:read', key),
     write: (key, value) => ipcRenderer.invoke('store:write', key, value),
