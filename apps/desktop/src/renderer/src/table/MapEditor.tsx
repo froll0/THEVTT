@@ -31,7 +31,8 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Field, readImage, Switch } from '../components/ui';
+import { Field, readBackground, readImage, Switch } from '../components/ui';
+import { useApp } from '../store/app';
 import { useTable } from '../store/table';
 import type { ToolOptions } from './Board';
 import { MapGenerator } from './MapGenerator';
@@ -505,11 +506,17 @@ export function EditorPanel({ tool, options, setOptions }: { tool: EditorTool; o
         <ImagePlus size={14} /> {scene.background ? 'Cambia immagine di sfondo' : 'Immagine di sfondo'}
         <input
           type="file"
-          accept="image/*"
+          accept="image/*,video/webm,video/mp4"
           hidden
+          title="Un’immagine, o un breve video in loop per una mappa animata"
           onChange={async (e) => {
             const f = e.target.files?.[0];
-            if (f) dispatch({ type: 'asset.add', dataUrl: await readImage(f), attachTo: { sceneId: scene.id } });
+            if (!f) return;
+            try {
+              dispatch({ type: 'asset.add', dataUrl: await readBackground(f), attachTo: { sceneId: scene.id } });
+            } catch (err) {
+              useApp.getState().toast(err instanceof Error ? err.message : 'File illeggibile', 'error');
+            }
           }}
         />
       </label>

@@ -1,4 +1,4 @@
-import { describeRoll, sessionStats, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Weather, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
+import { describeRoll, sessionStats, tokensInAura, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Weather, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
@@ -12,7 +12,7 @@ import { tokenSpeed } from '../lib/combat';
 import { plainText, RichEditor, RichView } from '../components/RichText';
 import { BarChart3, Library, BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Minus, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Avatar, Field, readImage, Switch } from '../components/ui';
+import { Avatar, Field, readBackground, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
 import { useWindows } from '../store/windows';
@@ -748,11 +748,17 @@ export function ScenePanel() {
         <ImagePlus size={15} /> {active.background ? 'Cambia mappa' : 'Carica mappa'}
         <input
           type="file"
-          accept="image/*"
+          accept="image/*,video/webm,video/mp4"
           hidden
+          title="Un’immagine, o un breve video in loop per una mappa animata"
           onChange={async (e) => {
             const f = e.target.files?.[0];
-            if (f) dispatch({ type: 'asset.add', dataUrl: await readImage(f), attachTo: { sceneId: active.id } });
+            if (!f) return;
+            try {
+              dispatch({ type: 'asset.add', dataUrl: await readBackground(f), attachTo: { sceneId: active.id } });
+            } catch (err) {
+              useApp.getState().toast(err instanceof Error ? err.message : 'File illeggibile', 'error');
+            }
           }}
         />
       </label>
@@ -777,6 +783,13 @@ export function MapAlignment({ scene }: { scene: Scene }) {
   const src = scene.background ? assets[scene.background] : undefined;
   useEffect(() => {
     if (!src) return;
+    if (src.startsWith('data:video/')) {
+      // an animated map: its frame size
+      const v = document.createElement('video');
+      v.onloadedmetadata = () => setSize({ w: v.videoWidth, h: v.videoHeight });
+      v.src = src;
+      return;
+    }
     const img = new Image();
     img.onload = () => setSize({ w: img.naturalWidth, h: img.naturalHeight });
     img.src = src;
@@ -790,7 +803,7 @@ export function MapAlignment({ scene }: { scene: Scene }) {
         <span className="small" title="Se la mappa ha già una griglia disegnata, allineala a quella del tavolo">Griglia della mappa</span>
         <Switch on={px !== null} onChange={(on) => upd({ bgCellPx: on ? Math.round((size?.w ?? 1400) / scene.widthCells) : null })} />
       </div>
-      {src && (
+      {src && !src.startsWith('data:video/') && (
         <button className="btn sm" onClick={() => setCalibrating(true)} title="Clicca due angoli di un quadretto della mappa">
           Allinea con due clic
         </button>
@@ -1030,24 +1043,38 @@ function LightFields({ scene, light, onChange }: { scene: Scene; light: Light | 
     LIGHT_PRESETS.find((p) => (p.dim === 0 && !light) || (light && Math.abs(metresToCells(scene, p.bright) - light.bright) < 0.05 && Math.abs(metresToCells(scene, p.dim) - light.dim) < 0.05))?.id ??
     (light ? 'custom' : 'none');
   return (
-    <Field label="Luce">
-      <select
-        className="select"
-        value={preset}
-        onChange={(e) => {
-          const p = LIGHT_PRESETS.find((x) => x.id === e.target.value);
-          if (!p) return;
-          onChange(p.dim ? { bright: metresToCells(scene, p.bright), dim: metresToCells(scene, p.dim), ...(p.color ? { color: p.color } : {}) } : null);
-        }}
-      >
-        {LIGHT_PRESETS.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-        {preset === 'custom' && <option value="custom">Personalizzata</option>}
-      </select>
-    </Field>
+    <div className="col" style={{ gap: 6 }}>
+      <Field label="Luce">
+        <select
+          className="select"
+          value={preset}
+          onChange={(e) => {
+            const p = LIGHT_PRESETS.find((x) => x.id === e.target.value);
+            if (!p) return;
+            onChange(p.dim ? { bright: metresToCells(scene, p.bright), dim: metresToCells(scene, p.dim), ...(p.color ? { color: p.color } : {}), ...(p.flicker ? { flicker: true } : {}) } : null);
+          }}
+        >
+          {LIGHT_PRESETS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+          {preset === 'custom' && <option value="custom">Personalizzata</option>}
+        </select>
+      </Field>
+      {light && (
+        <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+          <label className="row small" style={{ gap: 6 }}>
+            <input type="color" aria-label="Colore della luce" value={light.color ?? '#ffe9a8'} onChange={(e) => onChange({ ...light, color: e.target.value })} />
+            Colore
+          </label>
+          <label className="row small" style={{ gap: 6 }}>
+            <Switch on={!!light.flicker} onChange={(v) => onChange({ ...light, flicker: v || undefined })} label="Luce che tremola" />
+            Tremola
+          </label>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1384,6 +1411,36 @@ export function TokenInspector({ token }: { token: Token }) {
           </div>
           {state.scenes[token.sceneId] && <LightFields scene={state.scenes[token.sceneId]!} light={token.light ?? null} onChange={(light) => upd({ light })} />}
           {state.scenes[token.sceneId] && <AuraFields scene={state.scenes[token.sceneId]!} aura={token.aura ?? null} onChange={(aura) => upd({ aura })} />}
+          {token.aura && (
+            <span className="faint tiny" aria-live="polite">
+              {(() => {
+                const inside = tokensInAura(token, Object.values(state.tokens), state.scenes[token.sceneId]?.cellDistance);
+                return inside.length ? `Nell’aura: ${inside.map((t) => t.name).join(', ')}` : 'Nessuno nell’aura';
+              })()}
+            </span>
+          )}
+          {state.scenes[token.sceneId] && (
+            <Field label={`Altezza (${state.scenes[token.sceneId]!.unit ?? 'ft'})`}>
+              <div className="row" style={{ gap: 4 }}>
+                <button className="btn ghost sm icon" aria-label="Più in basso" onClick={() => upd({ elevation: (token.elevation ?? 0) - state.scenes[token.sceneId]!.cellDistance })}>
+                  <Minus size={13} />
+                </button>
+                <input
+                  className="input"
+                  type="number"
+                  style={{ width: 80 }}
+                  step={state.scenes[token.sceneId]!.cellDistance}
+                  aria-label="Altezza da terra"
+                  title="Chi vola o sta su un rialzo: conta nelle distanze del righello"
+                  value={token.elevation ?? 0}
+                  onChange={(e) => upd({ elevation: Number(e.target.value) || 0 })}
+                />
+                <button className="btn ghost sm icon" aria-label="Più in alto" onClick={() => upd({ elevation: (token.elevation ?? 0) + state.scenes[token.sceneId]!.cellDistance })}>
+                  <Plus size={13} />
+                </button>
+              </div>
+            </Field>
+          )}
           {isGm && state.scenes[token.sceneId] && (
             <Field label={`Scurovisione (${state.scenes[token.sceneId]!.unit ?? 'ft'})`}>
               <input

@@ -1,7 +1,8 @@
-import { hexAt, hexCenter, hexCorners, hexDistance, hexesIn, freeZones, rangeBetween, zoneAt, zoneHops, blockingSegments, brushCells, copyPiece, ellipseCells, moveCost, pasteActions, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type MapPiece, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
+import { distance3d, tokensInAura, hexAt, hexCenter, hexCorners, hexDistance, hexesIn, freeZones, rangeBetween, zoneAt, zoneHops, blockingSegments, brushCells, copyPiece, ellipseCells, moveCost, pasteActions, emptyTerrain, EMPTY_TERRAIN, floodCells, lineCells, terrainKind, lineOfSight, paintCells, rectCells, lightSources, propCorners, sightFor, type AreaTemplate, type Drawing, type GameAction, type MapPiece, type Prop, type Scene, type TemplateShape, type Token, type Wall, type WallKind } from '@thevtt/shared';
 import { exploredTexture, updateExplored } from './explored';
 import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
+import { drawBurst, type Burst } from './effects';
 import { animatedProp, drawProp, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { TerrainLayer, terrainSample, terrainSeed } from './terrainRender';
 import { useEffect, useRef, useState } from 'react';
@@ -58,7 +59,7 @@ export interface ToolOptions {
 /** A light preset as placed by the light tool, in cells for a scene. */
 export function presetLight(scene: { cellDistance: number; unit?: 'm' | 'ft' }, id: string) {
   const p = LIGHT_PRESETS.find((l) => l.id === id) ?? LIGHT_PRESETS.find((l) => l.id === 'torch')!;
-  return { bright: metresToCells(scene, p.bright), dim: metresToCells(scene, p.dim), color: p.color };
+  return { bright: metresToCells(scene, p.bright), dim: metresToCells(scene, p.dim), color: p.color, ...(p.flicker ? { flicker: true } : {}) };
 }
 
 /** The side of a cell nearest to a point (cells): a door or a window fits there. */
@@ -390,6 +391,7 @@ export function Board({
   const wrapRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<Gesture>({ kind: 'none' });
   const images = useRef(new Map<string, HTMLImageElement>());
+  const videos = useRef(new Map<string, HTMLVideoElement>());
   const hover = useRef<string | null>(null);
   const dirty = useRef(true);
   /** where the pointer is (world px), for the placement preview */
@@ -452,6 +454,23 @@ export function Board({
   const me = useApp((s) => s.user?.id ?? '');
   const { state, assets, pings, role, selectedTokenId, selectedPropId, selectedWallId, group, dispatch, select, selectProp, selectWall, setGroup, toggleInGroup } = useTable();
   const board = useSettings((s) => s.board);
+  const reduceMotion = useSettings((s) => s.reduceMotion);
+  /** spells landing: a flash on each area as it appears */
+  const bursts = useRef<Burst[]>([]);
+  const seenTemplates = useRef<Set<string> | null>(null);
+  const templatesNow = state?.templates;
+  const sceneNow = state?.activeSceneId;
+  const seenScene = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const ids = Object.keys(templatesNow ?? {});
+    // the first state, or another scene: what is already there doesn't explode again
+    if (seenScene.current !== sceneNow) seenTemplates.current = null;
+    seenScene.current = sceneNow;
+    if (seenTemplates.current && !reduceMotion) {
+      for (const id of ids) if (!seenTemplates.current.has(id)) bursts.current.push({ t: templatesNow![id]!, at: performance.now() });
+    }
+    seenTemplates.current = new Set(ids);
+  }, [templatesNow, sceneNow, reduceMotion]);
   const isGm = role === 'gm';
   const editorSceneId = useTable((s) => s.editorSceneId);
   // the map editor may be working on a scene the players are not on
@@ -498,10 +517,29 @@ export function Board({
   useEffect(() => {
     let raf = 0;
     const accent = accentColor;
+    /** an animated map: the video plays muted in a loop, the board draws its frames */
+    const video = (id: string | null): { el: HTMLVideoElement; w: number; h: number } | null => {
+      if (!id) return null;
+      const src = live.current.assets[id];
+      if (!src?.startsWith('data:video/')) return null;
+      let v = videos.current.get(id);
+      if (!v) {
+        v = document.createElement('video');
+        v.muted = true;
+        v.loop = true;
+        v.playsInline = true;
+        v.autoplay = true;
+        v.onloadeddata = () => (dirty.current = true);
+        v.src = src;
+        void v.play().catch(() => undefined);
+        videos.current.set(id, v);
+      }
+      return v.readyState >= 2 && v.videoWidth ? { el: v, w: v.videoWidth, h: v.videoHeight } : null;
+    };
     const image = (id: string | null) => {
       if (!id) return null;
       const src = live.current.assets[id];
-      if (!src) return null;
+      if (!src || src.startsWith('data:video/')) return null;
       let img = images.current.get(id);
       if (!img) {
         img = new Image();
@@ -518,7 +556,11 @@ export function Board({
       const cam = cameraRef.current;
       const L = live.current;
       const animating =
-        L.pings.some((p) => performance.now() - p.at < 2000) || Object.values(L.state?.props ?? {}).some((p) => p.sceneId === L.scene?.id && animatedProp(p));
+        bursts.current.length > 0 ||
+        L.pings.some((p) => performance.now() - p.at < 2000) ||
+        !!(L.scene?.background && L.assets[L.scene.background]?.startsWith('data:video/')) ||
+        Object.values(L.state?.props ?? {}).some((p) => p.sceneId === L.scene?.id && (animatedProp(p) || (L.scene?.vision && p.light?.flicker))) ||
+        (!!L.scene?.vision && Object.values(L.state?.tokens ?? {}).some((t) => t.sceneId === L.scene?.id && t.light?.flicker));
       if (!canvas || !cam || !L.state || !L.scene || (!dirty.current && !animating)) return;
       dirty.current = false;
 
@@ -536,14 +578,16 @@ export function Board({
 
       const W = L.scene.widthCells * CELL;
       const H = L.scene.heightCells * CELL;
-      const bg = image(L.scene.background);
+      const still = image(L.scene.background);
+      const moving = video(L.scene.background);
+      const bg = still ? { el: still as CanvasImageSource, w: still.naturalWidth, h: still.naturalHeight } : moving;
       ctx.fillStyle = hexToRgba(L.board.gridColor, 0.03);
       ctx.fillRect(0, 0, W, H);
       if (bg) {
         // a map with its own grid is scaled so its squares match ours; otherwise it fills the scene
         const px = L.scene.bgCellPx;
-        if (px) ctx.drawImage(bg, (L.scene.bgOffsetX ?? 0) * CELL, (L.scene.bgOffsetY ?? 0) * CELL, (bg.naturalWidth / px) * CELL, (bg.naturalHeight / px) * CELL);
-        else ctx.drawImage(bg, 0, 0, W, H);
+        if (px) ctx.drawImage(bg.el, (L.scene.bgOffsetX ?? 0) * CELL, (L.scene.bgOffsetY ?? 0) * CELL, (bg.w / px) * CELL, (bg.h / px) * CELL);
+        else ctx.drawImage(bg.el, 0, 0, W, H);
       }
       // the painted map (while the GM paints, the stroke under way)
       const pg0 = gesture.current;
@@ -857,6 +901,10 @@ export function Board({
         haloStroke(ctx, tc, (t.id === L.selectedTemplate ? 3 : 2) / cam.zoom, cam.zoom);
         ctx.restore();
       }
+      if (bursts.current.length) {
+        const now = performance.now();
+        bursts.current = bursts.current.filter((b) => drawBurst(ctx, { ...b, t: { ...b.t, color: vivid(b.t.color) } }, CELL, now));
+      }
       const strokeLine = (pts: number[], color: string, width: number) => {
         if (pts.length < 4) return;
         ctx.beginPath();
@@ -920,6 +968,19 @@ export function Board({
       const tokens = Object.values(L.state.tokens)
         .filter((t) => t.sceneId === L.scene!.id && L.options.showTokens !== false)
         .sort((a, b) => b.size - a.size);
+
+      // the selected token's aura: who is inside it
+      const holder = L.selectedTokenId ? L.state.tokens[L.selectedTokenId] : undefined;
+      if (holder?.aura && holder.sceneId === L.scene.id) {
+        const ac = vivid(holder.aura.color);
+        for (const t of tokensInAura(holder, tokens, L.scene.cellDistance)) {
+          ctx.beginPath();
+          ctx.arc((t.x + t.size / 2) * CELL, (t.y + t.size / 2) * CELL, (t.size * CELL) / 2 + 3 / cam.zoom, 0, Math.PI * 2);
+          ctx.setLineDash([4 / cam.zoom, 3 / cam.zoom]);
+          haloStroke(ctx, ac, 2 / cam.zoom, cam.zoom);
+          ctx.setLineDash([]);
+        }
+      }
 
       for (const t of tokens) {
         let px = t.x * CELL;
@@ -1014,6 +1075,24 @@ export function Board({
             ctx.stroke();
           }
           ctx.restore();
+        }
+
+        if (t.elevation) {
+          // how high it is, at the bottom right of the token
+          const label = `${t.elevation > 0 ? '↑' : '↓'} ${String(Math.abs(t.elevation)).replace('.', ',')} ${L.scene.unit ?? 'ft'}`;
+          const fs = Math.max(10 / cam.zoom, r * 0.32);
+          ctx.font = `700 ${fs}px system-ui, sans-serif`;
+          const w = ctx.measureText(label).width + fs * 0.8;
+          const bx = cx + r * 0.35;
+          const by = cy + r * 0.62;
+          ctx.fillStyle = 'rgba(10,40,80,0.88)';
+          ctx.beginPath();
+          ctx.roundRect(bx - w / 2, by - fs * 0.7, w, fs * 1.4, fs * 0.5);
+          ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, bx, by + fs * 0.05);
         }
 
         if (t.conditions.length) {
@@ -1268,7 +1347,12 @@ export function Board({
         const hex = L.scene.grid === 'hex';
         const ha = hexAt(g.fx / CELL, g.fy / CELL);
         const hb = hexAt(g.tx / CELL, g.ty / CELL);
-        const cells = hex ? hexDistance(ha, hb) : Math.max(Math.abs(tx - fx), Math.abs(ty - fy));
+        const flat = hex ? hexDistance(ha, hb) : Math.max(Math.abs(tx - fx), Math.abs(ty - fy));
+        // a flying token at either end: its height counts too
+        const standing = (cx: number, cy: number) => Object.values(L.state!.tokens).find((t) => t.sceneId === L.scene!.id && cx >= t.x && cx < t.x + t.size && cy >= t.y && cy < t.y + t.size);
+        const ea = standing(fx + 0.5, fy + 0.5)?.elevation ?? 0;
+        const eb = standing(tx + 0.5, ty + 0.5)?.elevation ?? 0;
+        const cells = distance3d(L.scene, flat, ea, eb);
         const ca = hexCenter(ha);
         const cb = hexCenter(hb);
         const a = hex ? { x: ca.x * CELL, y: ca.y * CELL } : { x: (fx + 0.5) * CELL, y: (fy + 0.5) * CELL };
@@ -1293,7 +1377,7 @@ export function Board({
         const dist = Math.round(cells * L.scene.cellDistance * 10) / 10;
         const label = L.options.zones
           ? `${rangeBetween(sceneZones, { x: fx + 0.5, y: fy + 0.5 }, { x: tx + 0.5, y: ty + 0.5 })}${sceneZones.length ? '' : ` · ${cells} ${hex ? 'esagoni' : 'quadretti'}`}`
-          : `${String(dist).replace('.', ',')} ${unit}`;
+          : `${String(dist).replace('.', ',')} ${unit}${ea !== eb ? ` (con ${String(Math.abs(ea - eb)).replace('.', ',')} ${unit} di dislivello)` : ''}`;
         ctx.font = `700 ${14 / cam.zoom}px system-ui, sans-serif`;
         const w = ctx.measureText(label).width + 14 / cam.zoom;
         ctx.fillStyle = 'rgba(0,0,0,0.8)';

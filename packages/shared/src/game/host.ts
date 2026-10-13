@@ -144,7 +144,7 @@ function cleanDefenses(v: unknown): Defenses | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
-const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'conditionRounds', 'color', 'name', 'light', 'aura', 'used', 'pool'];
+const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'conditionRounds', 'color', 'name', 'light', 'aura', 'used', 'pool', 'elevation'];
 
 function cleanAura(a: unknown): { radius: number; color: string } | null {
   const v = a as { radius?: unknown; color?: unknown } | null;
@@ -161,7 +161,7 @@ function cleanLight(l: unknown): Light | null {
   const bright = Math.min(60, Math.max(0, Number(v.bright) || 0));
   const dim = Math.min(120, Math.max(bright, Number(v.dim) || 0));
   if (dim <= 0) return null;
-  return { bright, dim, ...(typeof v.color === 'string' ? { color: v.color.slice(0, 20) } : {}) };
+  return { bright, dim, ...(typeof v.color === 'string' ? { color: v.color.slice(0, 20) } : {}), ...(v.flicker ? { flicker: true } : {}) };
 }
 
 /** free positions: to the hundredth of a cell */
@@ -178,6 +178,8 @@ const playerShared = (shared: Note['shared']): Note['shared'] => (shared === 'pr
 /** what players can't do while the GM has paused the game */
 const PAUSE_BLOCKED = new Set<GameAction['type']>(['token.create', 'token.move', 'token.update', 'token.delete', 'ping', 'template.create', 'drawing.create', 'wall.update']);
 const IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,/;
+/** animated maps: a short video in a loop as the scene's background */
+const VIDEO_DATA_URL = /^data:video\/(webm|mp4);base64,/;
 const AUDIO_DATA_URL = /^data:audio\/(mpeg|mp3|ogg|wav|x-wav|webm|mp4|x-m4a|aac|flac);base64,/;
 const MAX_DRAWINGS = 500;
 
@@ -498,7 +500,7 @@ export class GameHost {
         // its pictures join the table's, under new ids
         const ids: Record<string, string> = {};
         for (const [key, url] of Object.entries(pkg.assets).slice(0, 300)) {
-          if (typeof url === 'string' && IMAGE_DATA_URL.test(url) && url.length <= MAX_ASSET_BYTES) ids[key] = this.addAsset(url);
+          if (typeof url === 'string' && ((IMAGE_DATA_URL.test(url) && url.length <= MAX_ASSET_BYTES) || (VIDEO_DATA_URL.test(url) && url.length <= MAX_AUDIO_BYTES))) ids[key] = this.addAsset(url);
         }
         const asset = (key: string | null | undefined) => (key && ids[key]) || null;
         const id = typeof action.id === 'string' && /^[A-Za-z0-9_-]{6,40}$/.test(action.id) && !s.scenes[action.id] ? action.id : newId();
@@ -542,7 +544,7 @@ export class GameHost {
         const ids: Record<string, string> = {};
         for (const [key, url] of Object.entries(pkg.assets).slice(0, 600)) {
           if (typeof url !== 'string') continue;
-          const ok = (IMAGE_DATA_URL.test(url) && url.length <= MAX_ASSET_BYTES) || (AUDIO_DATA_URL.test(url) && url.length <= MAX_AUDIO_BYTES);
+          const ok = (IMAGE_DATA_URL.test(url) && url.length <= MAX_ASSET_BYTES) || ((AUDIO_DATA_URL.test(url) || VIDEO_DATA_URL.test(url)) && url.length <= MAX_AUDIO_BYTES);
           if (ok) ids[key] = this.addAsset(url);
         }
         const asset = (key: string | null | undefined) => (key && ids[key]) || null;
@@ -822,6 +824,7 @@ export class GameHost {
         };
         const defenses = cleanDefenses(t.defenses);
         if (defenses) token.defenses = defenses;
+        if (Number(t.elevation)) token.elevation = Math.round(Math.min(9999, Math.max(-9999, Number(t.elevation))) * 10) / 10;
         if (isGm && t.legendary) {
           const max = clampInt(t.legendary.max, 0, 10);
           if (max > 0) token.legendary = { max, left: max };
@@ -916,6 +919,11 @@ export class GameHost {
         }
         if (patch.light !== undefined) t.light = cleanLight(patch.light);
         if (patch.aura !== undefined) t.aura = cleanAura(patch.aura);
+        if (patch.elevation !== undefined) {
+          const e = Math.round(Math.min(9999, Math.max(-9999, Number(patch.elevation) || 0)) * 10) / 10;
+          if (e) t.elevation = e;
+          else delete t.elevation;
+        }
         if (patch.darkvision !== undefined) t.darkvision = Math.min(60, Math.max(0, Number(patch.darkvision) || 0));
         if (patch.image !== undefined) {
           if (patch.image !== null && !this.assets[patch.image]) return { ok: false, reason: 'Immagine sconosciuta' };
@@ -1712,12 +1720,17 @@ export class GameHost {
       case 'asset.add': {
         const target = action.attachTo;
         const audio = AUDIO_DATA_URL.test(action.dataUrl);
+        const video = VIDEO_DATA_URL.test(action.dataUrl);
         if (!isGm) {
           // players: only a picture for one of their own notes
           const note = target && 'noteId' in target ? s.notes![target.noteId] : undefined;
           if (!note || note.authorId !== from) return { ok: false, reason: 'Solo il master può farlo' };
         }
-        if (audio) {
+        if (video) {
+          // only a scene's background moves
+          if (!isGm || !target || !('sceneId' in target)) return { ok: false, reason: 'I video vanno solo come sfondo di una scena' };
+          if (action.dataUrl.length > MAX_AUDIO_BYTES) return { ok: false, reason: 'Video troppo grande (max ~11MB)' };
+        } else if (audio) {
           if (!target || !('track' in target || 'sound' in target)) return { ok: false, reason: 'Formato non supportato' };
           if ('sound' in target && action.dataUrl.length > MAX_SOUND_BYTES) return { ok: false, reason: 'Effetto troppo grande (max ~2MB)' };
           if (action.dataUrl.length > MAX_AUDIO_BYTES) return { ok: false, reason: 'Brano troppo grande (max ~11MB)' };

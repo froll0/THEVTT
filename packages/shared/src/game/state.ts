@@ -79,6 +79,8 @@ export interface Light {
   bright: number;
   dim: number;
   color?: string;
+  /** a flame: it trembles */
+  flicker?: boolean;
 }
 
 /**
@@ -148,6 +150,8 @@ export interface Token {
   light?: Light | null;
   /** darkvision radius in cells */
   darkvision?: number;
+  /** how high it flies or stands, in the scene's unit (m or ft); 0 = on the ground */
+  elevation?: number;
   /** a circle around the token (paladin aura, spirit guardians…), radius in cells */
   aura?: { radius: number; color: string } | null;
   /** conditions that end by themselves: rounds left, counted at the start of the token's turns */
@@ -427,6 +431,27 @@ export interface Quest {
   /** the players know about it */
   visible: boolean;
   updatedAt: number;
+}
+
+/**
+ * Distance between two tokens in cells, height included: squares (or hexes)
+ * on the map, and the difference in height counts like one more axis.
+ */
+export function distance3d(scene: Pick<Scene, 'cellDistance'>, flat: number, elevationA = 0, elevationB = 0): number {
+  const up = Math.abs(elevationA - elevationB) / (scene.cellDistance || 1.5);
+  return Math.max(flat, Math.round(up));
+}
+
+/** Tokens within another's aura: edge to edge, squares counted like the ruler (height included). */
+export function tokensInAura(holder: Token, all: Token[], cellDistance = 1.5): Token[] {
+  if (!holder.aura || holder.aura.radius <= 0) return [];
+  const hc = { x: holder.x + holder.size / 2, y: holder.y + holder.size / 2 };
+  return all.filter((t) => {
+    if (t.id === holder.id || t.sceneId !== holder.sceneId) return false;
+    const gap = Math.max(Math.abs(t.x + t.size / 2 - hc.x), Math.abs(t.y + t.size / 2 - hc.y)) - holder.size / 2 - t.size / 2;
+    const up = Math.abs((t.elevation ?? 0) - (holder.elevation ?? 0)) / (cellDistance || 1.5);
+    return Math.max(gap, up) <= holder.aura!.radius + 0.01;
+  });
 }
 
 /** Day and time of the world's clock, and the light outside. */

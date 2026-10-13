@@ -201,6 +201,18 @@ export async function squareImage(file: File, side = 160): Promise<string> {
 }
 
 /** Reads an image file as a data URL, downscaling very large maps. */
+/** A scene's background: a picture, or a short video in a loop (an animated map). */
+export async function readBackground(file: File): Promise<string> {
+  if (!/^video\/(webm|mp4)$/.test(file.type)) return readImage(file);
+  if (file.size > 11 * 1024 * 1024) throw new Error('Video troppo grande: al massimo 11 MB (prova un .webm più corto)');
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = () => rej(new Error('Video illeggibile'));
+    r.readAsDataURL(file);
+  });
+}
+
 export async function readImage(file: File, maxSide = 4096, { opaque = false, quality = 0.9 } = {}): Promise<string> {
   const url = URL.createObjectURL(file);
   try {

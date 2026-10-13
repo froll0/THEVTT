@@ -87,3 +87,34 @@ test('a Dungeondraft map comes in with walls, doors and lights; its grid lined u
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   await gm.app.close();
 });
+
+test('a token flies, carries a trembling coloured light and an aura that shows who is inside', async () => {
+  const gm = await launchApp({ hostPort: 4616 });
+  const G = gm.page;
+  await register(G, { where: 'host', username: 'master', displayName: 'Marco' });
+  await apiCall(G, 'POST', '/campaigns', { name: 'Cieli', systemId: 'dnd5e-2024' });
+  await G.reload();
+  await nav(G, 'Campagne');
+  await G.getByText('Cieli').click();
+  await G.getByRole('button', { name: 'Avvia sessione' }).click();
+  await G.getByTitle('Aggiungi token').click();
+  const inspector = G.locator('.inspector');
+  await expect(inspector).toBeVisible();
+
+  // up in the air, two squares
+  await inspector.getByRole('button', { name: 'Più in alto' }).click();
+  await inspector.getByRole('button', { name: 'Più in alto' }).click();
+  await expect(inspector.getByLabel('Altezza da terra')).toHaveValue('3');
+
+  // a torch: it trembles by itself; its colour can change
+  await inspector.getByLabel('Luce').selectOption({ label: 'Torcia (6 m + 6 m)' });
+  await expect(inspector.getByRole('switch', { name: 'Luce che tremola' })).toHaveAttribute('aria-checked', 'true');
+  await inspector.getByLabel('Colore della luce').fill('#66ccff');
+
+  // an aura, and nobody in it yet
+  await inspector.getByLabel('Aura').selectOption('3');
+  await expect(inspector).toContainText('Nessuno nell’aura');
+
+  expect(gm.errors, gm.errors.join('\n')).toEqual([]);
+  await gm.app.close();
+});

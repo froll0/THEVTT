@@ -69,6 +69,14 @@ function cutLight(c: CanvasRenderingContext2D, l: LightSource, cell: number, bas
   c.fill();
 }
 
+/** A flame trembles: its reach breathes a little, each flame on its own beat. */
+export function flickered<T extends LightSource>(l: T, seconds: number): T {
+  if (!l.flicker) return l;
+  const seed = l.x * 12.9898 + l.y * 78.233;
+  const f = 1 + 0.05 * Math.sin(seconds * 6.1 + seed) + 0.035 * Math.sin(seconds * 13.7 + seed * 1.7) + 0.02 * Math.sin(seconds * 23.3 + seed * 2.3);
+  return { ...l, bright: l.bright * f, dim: l.dim * f };
+}
+
 let overlay: HTMLCanvasElement | null = null;
 
 /**
@@ -104,7 +112,8 @@ export function drawLighting(main: CanvasRenderingContext2D, input: LightingInpu
   }
   const key = wallsKey(segments, bounds);
   const base = AMBIENT_DARKNESS[ambient];
-  const litPolys = lights.map((l) => ({ l, poly: polygon(l, segments, bounds, key) }));
+  const now = performance.now() / 1000;
+  const litPolys = lights.map((l) => ({ l: flickered(l, now), poly: polygon(l, segments, bounds, key) }));
 
   for (const v of viewers) {
     const poly = polygon(v, segments, bounds, key);

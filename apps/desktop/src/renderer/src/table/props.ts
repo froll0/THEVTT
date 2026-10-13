@@ -597,10 +597,10 @@ export function drawProp(c: CanvasRenderingContext2D, p: Prop, cell: number, img
 export const animatedProp = (p: Prop) => !p.image && ['campfire', 'torch', 'brazier'].includes(p.kind);
 
 /** Light presets in metres (converted to cells with the scene's scale). */
-export const LIGHT_PRESETS: { id: string; name: string; bright: number; dim: number; color?: string }[] = [
+export const LIGHT_PRESETS: { id: string; name: string; bright: number; dim: number; color?: string; flicker?: boolean }[] = [
   { id: 'none', name: 'Nessuna', bright: 0, dim: 0 },
-  { id: 'candle', name: 'Candela (1,5 m + 1,5 m)', bright: 1.5, dim: 3, color: '#ffc46b' },
-  { id: 'torch', name: 'Torcia (6 m + 6 m)', bright: 6, dim: 12, color: '#ffb35c' },
+  { id: 'candle', name: 'Candela (1,5 m + 1,5 m)', bright: 1.5, dim: 3, color: '#ffc46b', flicker: true },
+  { id: 'torch', name: 'Torcia (6 m + 6 m)', bright: 6, dim: 12, color: '#ffb35c', flicker: true },
   { id: 'lamp', name: 'Lampada (4,5 m + 9 m)', bright: 4.5, dim: 13.5, color: '#ffd28a' },
   { id: 'lantern', name: 'Lanterna schermabile (9 m + 9 m)', bright: 9, dim: 18, color: '#ffd28a' },
   { id: 'bullseye', name: 'Lanterna a occhio di bue (18 m + 18 m)', bright: 18, dim: 36, color: '#ffd28a' },
