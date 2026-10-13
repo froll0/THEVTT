@@ -1,24 +1,26 @@
 ## Novità
 
-- **Warhammer, viaggi**: sulle mappe regionali del manuale il gruppo marcia giorno per giorno, con prove di Sopravvivenza, provviste e incontri lungo la strada.
-- **Warhammer, Talagaad e Tetri Presagi**: Talagaad è pronta come scena, divisa nei suoi quartieri. L'avvio guidato prepara uno dei tre Tetri Presagi con note e riferimenti alle pagine.
-- **Griglia esagonale**: ogni scena può usare quadretti o esagoni. Righello e token seguono la griglia scelta.
-- **Meteo sulla mappa**: pioggia, neve, nebbia, tempesta e altro, con l'intensità regolabile.
-- **Effetti sonori**: dodici suoni pronti (tuono, porta, spade, ruggito…) più quelli caricati dal master. Li sentono tutti al tavolo, anche con la macro `/suono`.
-- **Dispense rivelate a pezzi**: il master scopre l'immagine una parte alla volta. I giocatori non ricevono mai l'immagine intera.
-- **Statistiche della sessione**: in chat e nel riassunto finale ci sono i tiri di ogni giocatore, con critici, fallimenti e media del d20.
-- **Vista per il telefono**: chi gioca dal browser sul telefono trova la mappa a tutto schermo e i pannelli a scomparsa.
-- **Scheda stampabile**: il pulsante «Stampa» stampa la scheda intera, D&D o Warhammer.
-- **Import da D&D Beyond e Foundry**: un personaggio esportato da uno dei due entra con il suo file.
-- **Server sempre acceso**:
-  - Il server può girare da solo, anche con Docker, e servire i giocatori dal browser.
-  - Importa il backup dell'app del master.
-  - Istruzioni in `docs/SERVER.md`.
-- **Sistema libero, nuovi modelli**: Fate (con i dadi Fate), riserva di d10 alla Vampire, PbtA e Year Zero, oltre a d100 per Cthulhu.
-- **Assistente del master con Claude**:
-  - Risponde sulle regole, inventa PNG e scrive il racconto della sessione.
-  - Usa la tua chiave API di Anthropic, salvata cifrata su questo computer (Impostazioni → Assistente).
-- **Correzioni**:
-  - Le schede e il diario si aprono nello spazio libero della mappa e non coprono più pannelli e barre sugli schermi piccoli.
-  - Un giocatore che entrava mentre il master apriva la sessione poteva restare su «Mi siedo al tavolo…». Ora la richiesta viene ripetuta.
-  - L'interfaccia in inglese funziona anche su Windows.
+- **Mappe di Dungeondraft e Dungeon Alchemist**: un file .dd2vtt (o .uvtt) entra nella libreria di mappe con immagine, muri, porte e luci già al loro posto.
+- **Griglia allineata con due clic**: su una mappa importata clicchi due angoli di un quadretto (o di un blocco) e la griglia del tavolo si sovrappone a quella del disegno.
+- **Pacchetti avventura**: scene con le creature, incontri, note e dispense, missioni, musica, macro, tabelle, negozi e relazioni in un solo file, da riaprire in un'altra campagna o da passare a un altro master.
+- **Assistente, domande sulla campagna**: legge riassunti, diario, note, missioni e registro del tavolo, e risponde citando da dove viene ogni fatto.
+- **Mappa viva**:
+  - Torce e candele tremolano; ogni luce ha il suo colore.
+  - I token volano o salgono: l'altezza si vede sul token e il righello conta il dislivello.
+  - Lo sfondo di una scena può essere un breve video in loop (webm o mp4).
+  - Quando un'area d'incantesimo cade sulla mappa, tutti vedono un lampo del suo colore.
+  - Selezionando chi ha un'aura, si vede chi c'è dentro.
+- **Copertura automatica** negli attacchi D&D: muri, oggetti solidi e creature in mezzo danno mezza copertura (+2 CA), tre quarti (+5) o totale.
+- **Tabelle e tesoro**:
+  - Tabelle casuali del master, una voce per riga, da tirare con un clic o con /tabella.
+  - Bottino del gruppo: le monete si dividono sulle schede, gli oggetti presi finiscono nell'inventario.
+  - Negozi: i giocatori comprano e il prezzo esce dalla borsa sulla scheda.
+- **Tiri nel testo**: le formule scritte nelle note e dispense («2d6+3») si tirano con un clic.
+- **Chi è chi**: una mappa di PNG, fazioni e luoghi con i loro legami e il rapporto del gruppo con ogni fazione. I giocatori vedono quello che scoprono.
+- **Vista spettatore**: una seconda finestra con la mappa come la vedono i giocatori, l'iniziativa e l'ultimo tiro, da trasmettere o da mostrare su un secondo schermo.
+- **Discord**: il canale del gruppo riceve l'apertura del tavolo, la prossima sessione, i riassunti e, se vuoi, i tiri pubblici.
+- **Accessibilità**:
+  - Colori per daltonici e contrasto alto.
+  - Annunci per lettore di schermo.
+  - Token spostabili con le frecce.
+- **Prestazioni**: sulle mappe grandi si disegna solo la parte inquadrata.
