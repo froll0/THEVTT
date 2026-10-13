@@ -2,6 +2,7 @@ import type { Macro } from '../macros';
 import type { MapPackage } from './library';
 import type { AdventurePackage } from './adventure';
 import type { PartyLoot, RollTable, Shop } from './tables';
+import type { RelationLink, RelationNode } from './relations';
 import type { ExtendedTest, Maneuver, PoolCheck, Zone } from './pool';
 import type { AreaTemplate, ChatCard, Encounter, GameState, Note, Prop, Quest, Scene, Token, Travel, Wall } from './state';
 
@@ -191,6 +192,10 @@ export type GameAction =
   | { type: 'shop.delete'; shopId: string }
   /** a purchase (the buyer's app pays on their sheet and adds the item) */
   | { type: 'shop.buy'; shopId: string; itemId: string; qty?: number }
+  /** GM: who's who — a person, faction or place; a tie between two of them */
+  | { type: 'relation.node'; node: Partial<RelationNode> & { name: string } }
+  | { type: 'relation.link'; link: Partial<RelationLink> & { from: string; to: string } }
+  | { type: 'relation.delete'; id: string }
   /** GM: take back (or redo) their last change to the map */
   | { type: 'game.undo' }
   | { type: 'game.redo' }

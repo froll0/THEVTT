@@ -4,6 +4,7 @@ import type { Macro } from '../macros';
 import { tokenVisible, type Fog } from './fog';
 import { sightFor, tokenPoints } from './sight';
 import type { PartyLoot, RollTable, Shop } from './tables';
+import { visibleRelations, type Relations } from './relations';
 
 /**
  * Table state. It is owned and persisted by the GM's client (the host);
@@ -381,6 +382,8 @@ export interface GameState {
   loot?: PartyLoot;
   /** shops (players see the open ones) */
   shops?: Record<string, Shop>;
+  /** who's who: people, factions, places and their ties */
+  relations?: Relations;
 }
 
 /** A creature of a prepared encounter, as it will appear. */
@@ -569,6 +572,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     encounters: undefined,
     tables: Object.fromEntries(Object.entries(state.tables ?? {}).filter(([, t]) => t.shared)),
     shops: Object.fromEntries(Object.entries(state.shops ?? {}).filter(([, x]) => x.open)),
+    relations: visibleRelations(state.relations),
   });
 }
 

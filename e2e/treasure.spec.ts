@@ -80,6 +80,20 @@ test('random tables, the party’s loot shared out, a shop: straight onto the sh
   await P.getByTitle('Chat e tiri').click();
   await expect(P.locator('.log')).toContainText('Nuova nota');
 
+  // who's who: a faction the party now knows
+  await G.getByTitle('Missioni').click();
+  await G.getByRole('tab', { name: 'Chi è chi' }).click();
+  await G.getByRole('button', { name: 'Aggiungi persona, fazione o luogo' }).click();
+  const card = G.getByRole('group', { name: /Scheda di/ });
+  await card.getByLabel('Nome').fill('Gilda dei mercanti');
+  await card.getByLabel('Tipo').selectOption('fazione');
+  await card.getByRole('switch', { name: 'Visibile ai giocatori' }).click();
+  await card.getByLabel('Rapporto col gruppo').fill('2');
+  await P.getByTitle('Missioni').click();
+  await P.getByRole('tab', { name: 'Chi è chi' }).click();
+  await P.getByRole('button', { name: 'Gilda dei mercanti' }).click();
+  await expect(P.locator('.relation-card')).toContainText('Alleati');
+
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   expect(pl.errors, pl.errors.join('\n')).toEqual([]);
   await gm.app.close();

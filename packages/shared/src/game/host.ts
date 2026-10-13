@@ -4,6 +4,7 @@ import type { Ability, GameAction, HostToPlayer, PlayerToHost, TokenPatch } from
 import { emptyMask, paintRect, resizeMask } from './fog';
 import { isAdventurePackage } from './adventure';
 import { COVER_AC, COVER_LABEL, coverBetween } from './cover';
+import { standingLabel } from './relations';
 import { isMapPackage } from './library';
 import { BUILTIN_SOUNDS } from './sounds';
 import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
@@ -651,6 +652,54 @@ export class GameHost {
         this.system(`${who} compra ${qty > 1 ? `${qty} × ` : ''}${item.name} da ${shop.name}${price ? ` (${price})` : ''}`);
         break;
       }
+      case 'relation.node': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        s.relations ??= { nodes: {}, links: {} };
+        const n = action.node;
+        const old = n.id ? s.relations.nodes[n.id] : undefined;
+        if (!old && Object.keys(s.relations.nodes).length >= 300) return { ok: false, reason: 'Troppe voci' };
+        const id = old?.id ?? (typeof n.id === 'string' && /^[\w-]{1,40}$/.test(n.id) ? n.id : newId());
+        const kind = (['png', 'pg', 'fazione', 'luogo'] as const).find((k) => k === n.kind) ?? old?.kind ?? 'png';
+        const node = {
+          id,
+          name: String(n.name ?? old?.name ?? '').trim().slice(0, 80) || 'Senza nome',
+          kind,
+          note: String(n.note ?? old?.note ?? '').slice(0, 2000),
+          color: /^#[0-9a-f]{6}$/i.test(String(n.color)) ? String(n.color) : (old?.color ?? '#8e8e93'),
+          visible: n.visible !== undefined ? !!n.visible : (old?.visible ?? false),
+          ...(kind === 'fazione' ? { standing: clampInt(n.standing ?? old?.standing ?? 0, -3, 3) } : {}),
+        };
+        if (kind === 'fazione' && old?.kind === 'fazione' && node.visible && old.standing !== node.standing) {
+          this.system(`${node.name}: ora ${standingLabel(node.standing).toLowerCase()} verso il gruppo`);
+        }
+        s.relations.nodes[id] = node;
+        break;
+      }
+      case 'relation.link': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        s.relations ??= { nodes: {}, links: {} };
+        const l = action.link;
+        if (!s.relations.nodes[l.from] || !s.relations.nodes[l.to] || l.from === l.to) return { ok: false, reason: 'Legame tra voci inesistenti' };
+        const old = l.id ? s.relations.links[l.id] : undefined;
+        if (!old && Object.keys(s.relations.links).length >= 600) return { ok: false, reason: 'Troppi legami' };
+        const id = old?.id ?? newId();
+        s.relations.links[id] = { id, from: l.from, to: l.to, label: String(l.label ?? old?.label ?? '').slice(0, 80), visible: l.visible !== undefined ? !!l.visible : (old?.visible ?? false) };
+        break;
+      }
+      case 'relation.delete': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const r = s.relations;
+        if (!r) return { ok: false, reason: 'Voce inesistente' };
+        if (r.nodes[action.id]) {
+          delete r.nodes[action.id];
+          for (const [k, l] of Object.entries(r.links)) if (l.from === action.id || l.to === action.id) delete r.links[k];
+        } else if (r.links[action.id]) delete r.links[action.id];
+        else return { ok: false, reason: 'Voce inesistente' };
+        break;
+      }
       case 'adventure.import': {
         const denied = gmOnly();
         if (denied) return denied;
@@ -710,6 +759,16 @@ export class GameHost {
         for (const q of pkg.quests.slice(0, 100)) run({ type: 'quest.save', quest: { ...q, visible: false } });
         for (const t of (Array.isArray(pkg.tables) ? pkg.tables : []).slice(0, 100)) run({ type: 'table.save', table: { ...t, id: undefined } });
         for (const x of (Array.isArray(pkg.shops) ? pkg.shops : []).slice(0, 50)) run({ type: 'shop.save', shop: { ...x, id: undefined, open: false } });
+        if (pkg.relations && typeof pkg.relations === 'object') {
+          const ids: Record<string, string> = {};
+          for (const n of Object.values(pkg.relations.nodes ?? {}).slice(0, 300)) {
+            ids[n.id] = newId();
+            run({ type: 'relation.node', node: { ...n, id: ids[n.id], visible: false } });
+          }
+          for (const l of Object.values(pkg.relations.links ?? {}).slice(0, 600)) {
+            if (ids[l.from] && ids[l.to]) run({ type: 'relation.link', link: { from: ids[l.from]!, to: ids[l.to]!, label: l.label, visible: false } });
+          }
+        }
         const macros = (Array.isArray(pkg.macros) ? pkg.macros : []).map((m) => ({ ...m, id: newId() }));
         if (macros.length) run({ type: 'macros.set', macros: [...(s.macros ?? []), ...macros] });
         this.log({ kind: 'system', authorId: from, text: `Avventura «${String(pkg.name).slice(0, 80)}» aggiunta: ${Object.keys(scenes).length} scene, ${pkg.encounters.length} incontri, ${Object.keys(notes).length} note`, private: true });

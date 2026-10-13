@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Modal, Popover, Switch } from '../components/ui';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
+import { RelationsPanel } from './Relations';
 
 const START = 8 * 60;
 const STEPS: [string, number][] = [
@@ -157,8 +158,26 @@ const STATUS: Record<Quest['status'], string> = { active: 'In corso', done: 'Com
 export function QuestsPanel() {
   const { state, dispatch, role } = useTable();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [view, setView] = useState<'quests' | 'people'>('quests');
   const isGm = role === 'gm';
   if (!state) return null;
+  const switcher = (
+    <div className="seg" role="tablist" aria-label="Missioni o relazioni" style={{ alignSelf: 'flex-start' }}>
+      <button role="tab" aria-selected={view === 'quests'} className={view === 'quests' ? 'on' : ''} onClick={() => setView('quests')}>
+        Missioni
+      </button>
+      <button role="tab" aria-selected={view === 'people'} className={view === 'people' ? 'on' : ''} onClick={() => setView('people')}>
+        Chi è chi
+      </button>
+    </div>
+  );
+  if (view === 'people')
+    return (
+      <div className="panel-body col">
+        {switcher}
+        <RelationsPanel />
+      </div>
+    );
   const order = { active: 0, done: 1, failed: 2 } as const;
   const quests = Object.values(state.quests ?? {}).sort((a, b) => order[a.status] - order[b.status] || b.updatedAt - a.updatedAt);
   const open = quests.find((q) => q.id === openId);
@@ -172,6 +191,7 @@ export function QuestsPanel() {
 
   return (
     <div className="panel-body col">
+      {switcher}
       {isGm && (
         <button className="btn sm" onClick={create}>
           <Plus size={14} /> Nuova missione

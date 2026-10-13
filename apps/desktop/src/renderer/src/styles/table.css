@@ -1377,3 +1377,61 @@ body.spectator-body {
     transform: translate(-50%, 8px);
   }
 }
+
+/* ---------- who's who ---------- */
+.relations-map {
+  width: 100%;
+  max-height: 340px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sunken, rgb(0 0 0 / 0.15));
+}
+.relations-map line {
+  stroke: var(--text-faint, #8e8e93);
+  stroke-width: 1.4;
+}
+.relations-map .hidden-link line {
+  stroke-dasharray: 4 3;
+  opacity: 0.6;
+}
+.relations-map text {
+  fill: var(--text);
+  font-size: 9px;
+}
+.relations-map .rname {
+  font-size: 10px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+}
+.relations-map .rstanding {
+  fill: #fff;
+  font-weight: 800;
+  font-size: 11px;
+  pointer-events: none;
+}
+.relations-map .rnode {
+  cursor: pointer;
+}
+.relations-map .rnode circle,
+.relations-map .rnode rect {
+  stroke: rgb(0 0 0 / 0.5);
+  stroke-width: 2;
+}
+.relations-map .rnode.on circle,
+.relations-map .rnode.on rect {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.relations-map .rnode.secret {
+  opacity: 0.55;
+}
+.relation-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
