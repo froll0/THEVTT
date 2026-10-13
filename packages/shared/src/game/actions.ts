@@ -1,5 +1,6 @@
 import type { Macro } from '../macros';
 import type { MapPackage } from './library';
+import type { AdventurePackage } from './adventure';
 import type { ExtendedTest, Maneuver, PoolCheck, Zone } from './pool';
 import type { AreaTemplate, ChatCard, Encounter, GameState, Note, Prop, Quest, Scene, Token, Travel, Wall } from './state';
 
@@ -20,6 +21,8 @@ export type GameAction =
   | { type: 'terrain.set'; sceneId: string; terrain: string | null }
   /** a map from the library becomes a new scene (id: chosen by the GM's app, to open it right away) */
   | { type: 'scene.import'; pkg: MapPackage; id?: string; name?: string }
+  /** GM: a whole adventure joins the campaign: its scenes, encounters, notes, quests, music and macros */
+  | { type: 'adventure.import'; pkg: AdventurePackage }
   | { type: 'scene.activate'; sceneId: string }
   | { type: 'scene.delete'; sceneId: string }
   | { type: 'token.create'; token: Partial<Omit<Token, 'id'>> & { name: string } }

@@ -1234,3 +1234,20 @@ kbd {
   border: 2px dashed var(--accent);
   pointer-events: none;
 }
+
+.adventure-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev, transparent);
+}
+.adventure-card .btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+.adventure-card .warn {
+  color: var(--warn, #e0a030);
+}

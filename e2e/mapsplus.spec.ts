@@ -42,6 +42,48 @@ test('a Dungeondraft map comes in with walls, doors and lights; its grid lined u
   const field = ed.getByLabel('Pixel per casella');
   await expect.poll(async () => Math.abs(Number(await field.inputValue()) - 64)).toBeLessThan(1.5);
 
+  await G.getByRole('button', { name: 'Fine', exact: true }).click();
+
+  // the whole adventure into a file (the save dialog is skipped: the file is caught on its way out)
+  await G.evaluate(() => {
+    const w = window as unknown as { blob?: Blob; saved?: { name: string; text: string } };
+    const create = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = (b: Blob | MediaSource) => {
+      if (b instanceof Blob) w.blob = b;
+      return create(b);
+    };
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      const name = this.download;
+      void w.blob?.text().then((text) => (w.saved = { name, text }));
+    };
+  });
+  // the scenes tab may still be open from before
+  const advButton = G.getByRole('button', { name: 'Avventura: salva o apri' });
+  if (!(await advButton.isVisible())) await G.getByTitle('Scene').click();
+  await advButton.click();
+  const dlg = G.getByRole('dialog', { name: 'Avventura' });
+  await dlg.getByLabel('Nome dell’avventura').fill('La cripta di Varos');
+  await dlg.getByRole('button', { name: 'Salva il file' }).click();
+  const saved = await G.waitForFunction(() => (window as unknown as { saved?: { name: string; text: string } }).saved).then((h) => h.jsonValue());
+  expect(saved.name).toBe('La cripta di Varos.thevtt-adventure');
+  await dlg.getByRole('button', { name: 'Chiudi' }).click();
+
+  // another campaign opens it
+  await G.getByTitle('Chiudi la sessione').click();
+  await apiCall(G, 'POST', '/campaigns', { name: 'Altra campagna', systemId: 'dnd5e-2024' });
+  await G.reload();
+  await nav(G, 'Campagne');
+  await G.getByText('Altra campagna').click();
+  await G.getByRole('button', { name: 'Avvia sessione' }).click();
+  await G.getByTitle('Scene').click();
+  await G.getByRole('button', { name: 'Avventura: salva o apri' }).click();
+  const dlg2 = G.getByRole('dialog', { name: 'Avventura' });
+  await dlg2.getByLabel('Apri un’avventura da file').setInputFiles({ name: saved.name, mimeType: 'application/json', buffer: Buffer.from(saved.text) });
+  const card2 = dlg2.getByRole('group', { name: 'La cripta di Varos' });
+  await expect(card2).toContainText('2 scene');
+  await card2.getByRole('button', { name: 'Aggiungi alla campagna' }).click();
+  await expect(G.locator('.ini-row', { hasText: 'cripta' })).toBeVisible();
+
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   await gm.app.close();
 });

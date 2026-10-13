@@ -6,6 +6,7 @@ import { MapGenerator } from './MapGenerator';
 import { MapLibrary } from './MapLibrary';
 import { RevealEditor } from './Reveal';
 import { GridCalibration } from './GridCalibration';
+import { AdventureDialog } from './Adventure';
 import { useSheetTable } from './sheetTable';
 import { tokenSpeed } from '../lib/combat';
 import { plainText, RichEditor, RichView } from '../components/RichText';
@@ -604,6 +605,7 @@ export function ScenePanel() {
   const [newName, setNewName] = useState('');
   const [generating, setGenerating] = useState(false);
   const [library, setLibrary] = useState(false);
+  const [adventure, setAdventure] = useState(false);
   const setEditor = useTable((s) => s.setEditor);
   if (!state) return null;
   const active = state.scenes[state.activeSceneId]!;
@@ -618,6 +620,10 @@ export function ScenePanel() {
         <Library size={15} /> Libreria di mappe
       </button>
       {library && <MapLibrary sceneId={state.activeSceneId} onClose={() => setLibrary(false)} onUsed={(id) => setEditor(id)} />}
+      <button className="btn block" onClick={() => setAdventure(true)} title="Salva tutta l’avventura in un file, o aprine una">
+        <BookText size={15} /> Avventura: salva o apri
+      </button>
+      {adventure && <AdventureDialog onClose={() => setAdventure(false)} />}
       <div className="section-title">Scene</div>
       <div className="initiative">
         {Object.values(state.scenes).map((s) => (

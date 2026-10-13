@@ -2,6 +2,7 @@ import { cryptoRng, DiceError, roll, successes, type RollResult, type Rng } from
 import { newId } from '../id';
 import type { Ability, GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
 import { emptyMask, paintRect, resizeMask } from './fog';
+import { isAdventurePackage } from './adventure';
 import { isMapPackage } from './library';
 import { BUILTIN_SOUNDS } from './sounds';
 import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
@@ -529,6 +530,68 @@ export class GameHost {
             background: asset(sc.background),
           },
         });
+        break;
+      }
+      case 'adventure.import': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const pkg = action.pkg;
+        if (!isAdventurePackage(pkg)) return { ok: false, reason: 'Questa avventura non si può leggere' };
+        type Single = Exclude<GameAction, { type: 'game.undo' } | { type: 'game.redo' } | { type: 'batch' }>;
+        const run = (a: Single) => this.apply(from, a);
+        const ids: Record<string, string> = {};
+        for (const [key, url] of Object.entries(pkg.assets).slice(0, 600)) {
+          if (typeof url !== 'string') continue;
+          const ok = (IMAGE_DATA_URL.test(url) && url.length <= MAX_ASSET_BYTES) || (AUDIO_DATA_URL.test(url) && url.length <= MAX_AUDIO_BYTES);
+          if (ok) ids[key] = this.addAsset(url);
+        }
+        const asset = (key: string | null | undefined) => (key && ids[key]) || null;
+        const scenes: Record<string, string> = {};
+        for (const sc of pkg.scenes.slice(0, 60)) {
+          const id = newId();
+          run({ type: 'scene.import', pkg: sc.map, id });
+          if (s.scenes[id]) scenes[sc.key] = id;
+        }
+        const notes: Record<string, string> = {};
+        for (const n of pkg.notes.slice(0, 300)) {
+          const id = newId();
+          s.notes![id] = { id, title: String(n.title ?? '').slice(0, 120) || 'Nota', body: String(n.body ?? '').slice(0, 100_000), image: asset(n.image), shared: 'private', authorId: from, updatedAt: this.now() };
+          notes[n.key] = id;
+        }
+        const tracks: Record<string, string> = {};
+        s.music ??= emptyMusic();
+        for (const t of pkg.tracks.slice(0, 100)) {
+          const a = asset(t.asset);
+          if (!a) continue;
+          const id = newId();
+          s.music.tracks.push({ id, name: String(t.name ?? '').slice(0, 120) || 'Brano', asset: a });
+          tracks[t.key] = id;
+        }
+        for (const x of (Array.isArray(pkg.sounds) ? pkg.sounds : []).slice(0, 40)) {
+          const a = asset(x.asset);
+          if (a) s.sounds = [...(s.sounds ?? []), { id: newId(), name: String(x.name ?? '').slice(0, 60) || 'Effetto', asset: a }].slice(-40);
+        }
+        s.encounters ??= {};
+        for (const e of pkg.encounters.slice(0, 100)) {
+          if (Object.keys(s.encounters).length >= 100) break;
+          const id = newId();
+          s.encounters[id] = {
+            id,
+            name: String(e.name ?? '').slice(0, 80) || 'Incontro',
+            chapter: String(e.chapter ?? '').slice(0, 80),
+            sceneId: (e.scene && scenes[e.scene]) || null,
+            tokens: (Array.isArray(e.tokens) ? e.tokens : []).slice(0, 60).map((t) => ({ ...structuredClone(t), image: asset(t.image) })),
+            trackId: (e.track && tracks[e.track]) || null,
+            noteId: (e.note && notes[e.note]) || null,
+            text: String(e.text ?? '').slice(0, 4000),
+            initiative: e.initiative !== false,
+          };
+        }
+        // the quests wait until the GM shows them
+        for (const q of pkg.quests.slice(0, 100)) run({ type: 'quest.save', quest: { ...q, visible: false } });
+        const macros = (Array.isArray(pkg.macros) ? pkg.macros : []).map((m) => ({ ...m, id: newId() }));
+        if (macros.length) run({ type: 'macros.set', macros: [...(s.macros ?? []), ...macros] });
+        this.log({ kind: 'system', authorId: from, text: `Avventura «${String(pkg.name).slice(0, 80)}» aggiunta: ${Object.keys(scenes).length} scene, ${pkg.encounters.length} incontri, ${Object.keys(notes).length} note`, private: true });
         break;
       }
       case 'macros.set': {
