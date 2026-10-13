@@ -7,6 +7,7 @@ const bridge: DesktopBridge = {
     minimize: () => ipcRenderer.invoke('window:minimize'),
     toggleMaximize: () => ipcRenderer.invoke('window:toggle-maximize'),
     close: () => ipcRenderer.invoke('window:close'),
+    spectator: () => ipcRenderer.invoke('window:spectator'),
     onMaximized: (cb) => {
       const listener = (_: unknown, v: boolean) => cb(v);
       ipcRenderer.on('window:maximized', listener);

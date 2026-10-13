@@ -572,6 +572,20 @@ export function viewFor(state: GameState, userId: string): GameState {
   });
 }
 
+export const SPECTATOR_ID = '__spettatore__';
+
+/**
+ * What an audience watching the game sees (a stream, a screen in the room):
+ * everything the players see together, nothing of the GM's. As if one more
+ * player owned every player's token.
+ */
+export function spectatorView(state: GameState): GameState {
+  const tokens: Record<string, Token> = {};
+  for (const [id, t] of Object.entries(state.tokens)) tokens[id] = t.ownerIds.length ? { ...t, ownerIds: [...t.ownerIds, SPECTATOR_ID] } : t;
+  // (it stays among the owners in this view: dynamic vision draws from their eyes)
+  return viewFor({ ...state, tokens, log: state.log.filter((l) => !l.private && !l.blind) }, SPECTATOR_ID);
+}
+
 /** Asset ids referenced by a (filtered) state. */
 export function referencedAssets(state: GameState): Set<string> {
   const ids = new Set<string>();

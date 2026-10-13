@@ -75,6 +75,8 @@ export interface DesktopBridge {
     minimize(): Promise<void>;
     toggleMaximize(): Promise<void>;
     close(): Promise<void>;
+    /** opens (or brings forward) the audience's window: the map as the players see it */
+    spectator(): Promise<void>;
     onMaximized(cb: (maximized: boolean) => void): () => void;
   };
   /** local JSON storage in the user data folder */

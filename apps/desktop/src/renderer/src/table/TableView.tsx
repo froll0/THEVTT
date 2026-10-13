@@ -1,6 +1,6 @@
 import { POOL_CHECKS, rotatePiece, sessionDigest, type PoolCheck, type SessionDigest } from '@thevtt/shared';
 import { getSystem, warhammer } from '@thevtt/systems';
-import { Coins, Clapperboard, Route, Sparkles, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { MonitorPlay, Coins, Clapperboard, Route, Sparkles, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -17,6 +17,7 @@ import { CallControls, CallTiles, type CallPerson } from './Call';
 import { GroupSaveForm } from './Saves';
 import { QuestsPanel, RestPrompt, WorldClock } from './World';
 import { TreasurePanel } from './Treasure';
+import { useSpectatorFeed } from '../lib/spectator';
 import { EncountersPanel } from './Encounters';
 import { TravelPanel } from './Travel';
 import { AssistantPanel } from './Assistant';
@@ -83,6 +84,8 @@ export function TableView({ campaignId }: { campaignId: string }) {
   // windows belong to this table
   useEffect(() => closeAll, [campaignId, closeAll]);
   const isGm = campaign?.gmId === user?.id;
+  // the audience's window, if one is open, follows the game from here
+  useSpectatorFeed(table.state, table.assets, isGm && !!bridge);
 
   // personal notes once written at the table move to the journal, which only their author reads
   const notesMap = table.state?.notes;
@@ -287,6 +290,11 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 aria-label={state.paused ? 'Riprendi il gioco' : 'Pausa gioco'}
               >
                 {state.paused ? <Play size={14} /> : <Pause size={14} />} {state.paused && 'Riprendi il gioco'}
+              </button>
+            )}
+            {isGm && bridge && (
+              <button className="btn ghost sm icon" onClick={() => void bridge!.window.spectator()} title="Vista spettatore: la mappa come la vedono i giocatori, in una finestra da trasmettere o da mettere su un secondo schermo" aria-label="Vista spettatore">
+                <MonitorPlay size={15} />
               </button>
             )}
             <button className="btn ghost sm icon" onClick={() => setShowKeys(true)} title="Scorciatoie da tastiera (?)" aria-label="Scorciatoie da tastiera">

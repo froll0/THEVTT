@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { Spectator } from './views/Spectator';
 import './styles/base.css';
 import './styles/components.css';
 import './styles/table.css';
@@ -12,6 +13,6 @@ import '@fontsource-variable/inter/opsz.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {location.hash === '#spectator' ? <Spectator /> : <App />}
   </StrictMode>,
 );

@@ -95,6 +95,28 @@ ipcMain.handle('window:toggle-maximize', (e) => {
   else w.maximize();
 });
 ipcMain.handle('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close());
+
+// the audience's window: the map as the players see it, to stream or show on a second screen
+let spectatorWin: BrowserWindow | null = null;
+ipcMain.handle('window:spectator', () => {
+  if (spectatorWin && !spectatorWin.isDestroyed()) {
+    spectatorWin.show();
+    spectatorWin.focus();
+    return;
+  }
+  spectatorWin = new BrowserWindow({
+    width: 1280,
+    height: 720,
+    title: 'TheVTT – vista spettatore',
+    backgroundColor: '#000000',
+    autoHideMenuBar: true,
+    webPreferences: { preload: join(__dirname, '../preload/index.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, backgroundThrottling: false },
+  });
+  spectatorWin.setMenuBarVisibility(false);
+  spectatorWin.on('closed', () => (spectatorWin = null));
+  if (devUrl) void spectatorWin.loadURL(`${devUrl}#spectator`);
+  else void spectatorWin.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'spectator' });
+});
 ipcMain.handle('store:read', (_e, key: string) => readJson(join(dataDir(), `${safeName(key)}.json`)));
 ipcMain.handle('store:write', (_e, key: string, value: unknown) => writeJson(join(dataDir(), `${safeName(key)}.json`), value));
 ipcMain.handle('app:info', () => ({ version: app.getVersion(), dataDir: dataDir() }));

@@ -379,10 +379,16 @@ export function Board({
   cameraRef,
   onPickTerrain,
   onCopied,
+  viewerId,
+  readOnly,
 }: {
   tool: Tool;
   options: ToolOptions;
   cameraRef: React.RefObject<Camera | null>;
+  /** whose eyes the map is drawn with (the audience's window); the user's own otherwise */
+  viewerId?: string;
+  /** only to look at: zoom with the wheel, nothing else */
+  readOnly?: boolean;
   onPickTerrain?: (code: string) => void;
   /** a piece of map was copied: the copy tool turns to pasting it */
   onCopied?: () => void;
@@ -451,7 +457,8 @@ export function Board({
     dispatch({ type: 'drawing.create', sceneId: live.current.scene?.id, points: [d.x, d.y], color: drawColor(L), width: L.options.drawWidth >= 0.16 ? 0.9 : L.options.drawWidth >= 0.08 ? 0.55 : 0.38, text: d.value });
   };
 
-  const me = useApp((s) => s.user?.id ?? '');
+  const user = useApp((s) => s.user?.id ?? '');
+  const me = viewerId ?? user;
   const { state, assets, pings, role, selectedTokenId, selectedPropId, selectedWallId, group, dispatch, select, selectProp, selectWall, setGroup, toggleInGroup } = useTable();
   const board = useSettings((s) => s.board);
   const reduceMotion = useSettings((s) => s.reduceMotion);
@@ -2012,18 +2019,18 @@ export function Board({
           : cursor;
 
   return (
-    <div ref={wrapRef} className="board" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
+    <div ref={wrapRef} className="board" onDragOver={(e) => e.preventDefault()} onDrop={readOnly ? undefined : onDrop}>
       <canvas
         ref={canvasRef}
         style={{ cursor: gesture.current.kind === 'pan' ? 'grabbing' : toolCursor }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
+        onPointerDown={readOnly ? undefined : onPointerDown}
+        onPointerMove={readOnly ? undefined : onPointerMove}
         onPointerLeave={() => {
           hoverWorld.current = null;
           dirty.current = true;
         }}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerUp={readOnly ? undefined : onPointerUp}
+        onPointerCancel={readOnly ? undefined : onPointerUp}
         onWheel={onWheel}
         onContextMenu={(e) => e.preventDefault()}
       />

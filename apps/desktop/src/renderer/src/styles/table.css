@@ -1295,3 +1295,85 @@ kbd {
   align-items: center;
   gap: 4px;
 }
+
+/* ---------- the audience's window ---------- */
+body.spectator-body {
+  background: #000;
+}
+.spectator {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+}
+.spectator-board {
+  position: absolute;
+  inset: 0;
+}
+.spectator-title {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-weight: 700;
+  pointer-events: none;
+}
+.spectator-ini {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  border-radius: 12px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  pointer-events: none;
+}
+.spectator-ini li {
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+.spectator-ini li.now {
+  background: var(--accent);
+  font-weight: 700;
+}
+.spectator-roll {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: rgb(0 0 0 / 0.65);
+  color: #fff;
+  pointer-events: none;
+  animation: spectator-in 0.3s ease-out;
+}
+.spectator-roll b {
+  font-size: 1.4rem;
+}
+.spectator-paused,
+.spectator-wait {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #ddd;
+  background: rgb(0 0 0 / 0.6);
+}
+@keyframes spectator-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}

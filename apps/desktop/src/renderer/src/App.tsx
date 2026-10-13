@@ -18,7 +18,7 @@ import { HomeView } from './views/Home';
 import { JournalView } from './views/JournalView';
 import { SettingsView } from './views/Settings';
 
-function useThemeSync() {
+export function useThemeSync() {
   const settings = useSettings();
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
