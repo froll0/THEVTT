@@ -1,4 +1,4 @@
-import { describePackage, isMapPackage, MAP_FILE_EXT, newId, type MapPackage } from '@thevtt/shared';
+import { describePackage, fromUniversalVtt, isMapPackage, isUniversalVtt, MAP_FILE_EXT, newId, type MapPackage } from '@thevtt/shared';
 import { renderPackage } from '../table/sceneImage';
 import { localStore } from './platform';
 
@@ -61,14 +61,48 @@ export function mapFile(pkg: MapPackage): { href: string; name: string } {
   return { href: URL.createObjectURL(blob), name: `${pkg.name}.${MAP_FILE_EXT}` };
 }
 
-/** Reads a map file (from another GM, or from a backup of one's own). */
+/** The pictures of a map made elsewhere can be huge: past this they are made lighter. */
+const MAX_PICTURE = 9 * 1024 * 1024;
+
+async function lighter(dataUrl: string): Promise<string> {
+  if (dataUrl.length <= MAX_PICTURE) return dataUrl;
+  const img = new Image();
+  img.src = dataUrl;
+  await img.decode();
+  // big maps lose a little size first, then quality
+  let scale = Math.min(1, 8192 / Math.max(img.width, img.height));
+  for (let q = 0.88; ; q -= 0.12, scale *= 0.85) {
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale);
+    c.height = Math.round(img.height * scale);
+    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+    const out = c.toDataURL('image/jpeg', Math.max(0.5, q));
+    if (out.length <= MAX_PICTURE || q < 0.5) return out;
+  }
+}
+
+/** Reads a map file: one of ours (from another GM, or a backup), or a Universal VTT one (Dungeondraft, Dungeon Alchemist…). */
 export async function readMapFile(file: File): Promise<MapPackage> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await file.text());
   } catch {
-    throw new Error('Il file non è una mappa di TheVTT');
+    throw new Error('Il file non è una mappa che TheVTT sa leggere');
   }
-  if (!isMapPackage(parsed)) throw new Error('Il file non è una mappa di TheVTT');
-  return parsed;
+  if (isMapPackage(parsed)) return parsed;
+  if (isUniversalVtt(parsed)) {
+    const pkg = fromUniversalVtt(parsed, file.name.replace(/\.[^.]+$/, '') || 'Mappa');
+    const map = pkg.assets.map;
+    if (map) {
+      // the picture is drawn at its own size: if it shrinks, its grid shrinks with it
+      const small = await lighter(map);
+      if (small !== map && pkg.scene.bgCellPx) {
+        const [a, b] = await Promise.all([map, small].map(async (u) => { const i = new Image(); i.src = u; await i.decode(); return i.width; }));
+        pkg.scene.bgCellPx = Math.round(pkg.scene.bgCellPx * (b! / a!) * 100) / 100;
+      }
+      pkg.assets.map = small;
+    }
+    return pkg;
+  }
+  throw new Error('Il file non è una mappa che TheVTT sa leggere');
 }

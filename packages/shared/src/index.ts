@@ -13,6 +13,7 @@ export * from './game/pool';
 export * from './game/digest';
 export * from './game/sounds';
 export * from './game/hex';
+export * from './game/uvtt';
 export * from './macros';
 export * from './game/actions';
 export * from './game/host';

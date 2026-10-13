@@ -154,9 +154,9 @@ export function MapLibrary({ sceneId, onClose, onUsed }: { sceneId: string; onCl
             <Search size={14} />
             <input className="input" placeholder="Cerca una mappa" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cerca una mappa" />
           </label>
-          <label className="btn" title={`Aggiungi mappe ricevute da altri master (file .${MAP_FILE_EXT})`}>
+          <label className="btn" title={`Aggiungi mappe ricevute da altri master (file .${MAP_FILE_EXT}) o fatte con Dungeondraft, Dungeon Alchemist e simili (.dd2vtt, .uvtt)`}>
             <Upload size={14} /> Importa file
-            <input type="file" accept={`.${MAP_FILE_EXT},.json,application/json`} multiple hidden onChange={(e) => void importFiles(e.target.files).then(() => (e.target.value = ''))} aria-label="Importa mappe da file" />
+            <input type="file" accept={`.${MAP_FILE_EXT},.dd2vtt,.uvtt,.df2vtt,.json,application/json`} multiple hidden onChange={(e) => void importFiles(e.target.files).then(() => (e.target.value = ''))} aria-label="Importa mappe da file" />
           </label>
         </div>
         {maps && !maps.length && (

@@ -5,6 +5,7 @@ import { ConditionIcon } from '../components/ConditionIcon';
 import { MapGenerator } from './MapGenerator';
 import { MapLibrary } from './MapLibrary';
 import { RevealEditor } from './Reveal';
+import { GridCalibration } from './GridCalibration';
 import { useSheetTable } from './sheetTable';
 import { tokenSpeed } from '../lib/combat';
 import { plainText, RichEditor, RichView } from '../components/RichText';
@@ -776,12 +777,29 @@ export function MapAlignment({ scene }: { scene: Scene }) {
   }, [src]);
   const upd = (patch: Partial<Scene>) => dispatch({ type: 'scene.update', sceneId: scene.id, patch });
   const px = scene.bgCellPx ?? null;
+  const [calibrating, setCalibrating] = useState(false);
   return (
     <div className="col" style={{ gap: 6 }}>
       <div className="row between">
         <span className="small" title="Se la mappa ha già una griglia disegnata, allineala a quella del tavolo">Griglia della mappa</span>
         <Switch on={px !== null} onChange={(on) => upd({ bgCellPx: on ? Math.round((size?.w ?? 1400) / scene.widthCells) : null })} />
       </div>
+      {src && (
+        <button className="btn sm" onClick={() => setCalibrating(true)} title="Clicca due angoli di un quadretto della mappa">
+          Allinea con due clic
+        </button>
+      )}
+      {calibrating && src && (
+        <GridCalibration
+          src={src}
+          onClose={() => setCalibrating(false)}
+          onDone={(r) => {
+            setCalibrating(false);
+            const fit = size ? { widthCells: Math.ceil(size.w / r.px), heightCells: Math.ceil(size.h / r.px) } : {};
+            upd({ bgCellPx: r.px, bgOffsetX: r.offsetX, bgOffsetY: r.offsetY, ...fit });
+          }}
+        />
+      )}
       {px !== null && (
         <>
           <div className="row">

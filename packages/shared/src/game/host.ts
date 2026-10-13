@@ -165,7 +165,8 @@ function cleanLight(l: unknown): Light | null {
 
 /** free positions: to the hundredth of a cell */
 const fine = (v: unknown, min: number, max: number) => Math.min(max, Math.max(min, Math.round((Number(v) || 0) * 100) / 100));
-const coord = (v: unknown, max: number) => Math.min(max, Math.max(0, Math.round((Number(v) || 0) * 2) / 2));
+// walls drawn by hand land on half cells; imported maps (Dungeondraft…) follow their curves more finely
+const coord = (v: unknown, max: number) => Math.min(max, Math.max(0, Math.round((Number(v) || 0) * 20) / 20));
 const MAX_ASSET_BYTES = 12 * 1024 * 1024;
 const MAX_SOUND_BYTES = 3 * 1024 * 1024;
 /** audio travels to every player, through the relay too (16MB per message): ~11MB files */

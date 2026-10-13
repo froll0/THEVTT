@@ -1199,3 +1199,38 @@ kbd {
   border-radius: var(--r-lg, 12px);
   background: var(--bg-sunken, rgba(127, 127, 127, 0.08));
 }
+
+/* ---------- grid calibration ---------- */
+.calibrate-view {
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sunken, #0003);
+}
+.calibrate-frame {
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+}
+.calibrate-frame img {
+  display: block;
+  max-width: 100%;
+  cursor: crosshair;
+  user-select: none;
+}
+.calibrate-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px #000a;
+  pointer-events: none;
+}
+.calibrate-box {
+  position: absolute;
+  border: 2px dashed var(--accent);
+  pointer-events: none;
+}
