@@ -58,11 +58,13 @@ export type UpdateCheck =
 
 /** API exposed by the preload script as `window.thevtt`. Absent when running in a browser. */
 export interface AssistantRequest {
-  task: 'npc' | 'recap' | 'rules';
+  task: 'npc' | 'recap' | 'rules' | 'campaign';
   systemId: string;
   input: string;
-  /** rules: the compendium entries the answer should come from */
+  /** rules: the compendium entries the answer should come from; campaign: what the table remembers */
   context?: { title: string; text: string }[];
+  /** campaign: its name */
+  campaign?: string;
 }
 
 export type AssistantResult = { text: string; truncated?: boolean } | { error: string };

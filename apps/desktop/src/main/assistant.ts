@@ -58,10 +58,27 @@ Crea un PNG a partire dall'idea del master. Scrivi, con questi titoli in grasset
     case 'recap':
       return `${base}
 Il master ti dà la bozza del riassunto di una sessione, ricavata dal registro del tavolo (chat, tiri, eventi). Riscrivila come un racconto breve in prosa, al passato, in terza persona, da leggere ai giocatori all'inizio della sessione successiva: 2-4 paragrafi. Usa solo i fatti della bozza; non inventare eventi, nomi o esiti. Ignora le statistiche dei tiri, a meno che un tiro non abbia deciso qualcosa.`;
+    case 'campaign':
+      return `${base}
+Il master ti fa una domanda sulla sua campagna${req.campaign ? ` («${req.campaign}»)` : ''}: chi è un personaggio, cosa è successo, cosa è stato promesso, quali fili restano aperti. Rispondi usando solo i documenti della campagna che ti passa (riassunti, diario, note, missioni, registro del tavolo) e indica tra parentesi il titolo del documento da cui viene ogni fatto. Se i documenti non lo dicono, rispondi che non risulta e suggerisci dove potrebbe essere annotato. Non inventare fatti.`;
     case 'rules':
       return `${base}
 Rispondi alla domanda sulle regole usando prima di tutto i brani del compendio che il master ti passa, citando il titolo della voce da cui viene ogni regola. Se i brani non bastano, dillo chiaramente e indica cosa controllare nel manuale. Non inventare numeri o regole.`;
   }
+}
+
+type Content = string | { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }[];
+
+function userContent(req: AssistantRequest): Content {
+  if (req.task === 'campaign') {
+    const docs = (req.context ?? []).map((c) => `<documento titolo="${c.title.replace(/"/g, "'")}">\n${c.text}\n</documento>`).join('\n\n');
+    // the campaign's documents first and cached: more questions in a row cost much less
+    return [
+      { type: 'text', text: `Documenti della campagna:\n\n${docs || '(nessun documento)'}`, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: `Domanda: ${req.input}` },
+    ];
+  }
+  return userText(req);
 }
 
 function userText(req: AssistantRequest): string {
@@ -85,9 +102,9 @@ export async function askAssistant(req: AssistantRequest, opts: { fetch?: typeof
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       // quick table help: answers in seconds, deeper only for rules
-      output_config: { effort: req.task === 'rules' ? 'medium' : 'low' },
+      output_config: { effort: req.task === 'rules' || req.task === 'campaign' ? 'medium' : 'low' },
       system: system(req),
-      messages: [{ role: 'user', content: userText(req) }],
+      messages: [{ role: 'user', content: userContent(req) }],
     });
     if (response.stop_reason === 'refusal') return { error: 'L’assistente non può rispondere a questa richiesta.' };
     const text = response.content

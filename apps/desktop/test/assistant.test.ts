@@ -10,7 +10,7 @@ vi.mock('electron', () => ({
 }));
 
 const { askAssistant, assistantStatus, setAssistantKey } = await import('../src/main/assistant');
-const { assistantHtml, rulesContext } = await import('../src/renderer/src/lib/assistant');
+const { assistantHtml, campaignMemory, rulesContext } = await import('../src/renderer/src/lib/assistant');
 
 const reply = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'request-id': 'req_1' } });
@@ -53,5 +53,41 @@ describe('the GM’s assistant', () => {
       { id: 'b', category: 'Regole', title: 'Afferrato', text: 'Velocità 0…', render: () => null },
     ];
     expect(rulesContext(entries, 'Cosa succede a un personaggio prono?').map((x) => x.title)).toEqual(['Prono']);
+  });
+
+  it('answers about the campaign from what the table remembers, documents cached', async () => {
+    let body: any = null;
+    const fetch = (async (_url: string, init: RequestInit) => {
+      body = JSON.parse(String(init.body));
+      return reply({ id: 'msg_2', type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [{ type: 'text', text: 'Il bestiame del mulino (Riassunto: Sessione 3).' }], stop_reason: 'end_turn', stop_details: null, usage: { input_tokens: 10, output_tokens: 20 } });
+    }) as unknown as typeof globalThis.fetch;
+    const strip = (h: string) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const state = {
+      campaignName: 'Cronache',
+      notes: { n1: { title: 'Il borgomastro', body: '<p>Vuole il mulino libero dai lupi</p>', updatedAt: 3 } },
+      quests: { q1: { title: 'I lupi del mulino', description: '', status: 'active', objectives: [{ text: 'Trova la tana', done: true }] } },
+      log: [
+        { kind: 'chat', authorName: 'Giulia', text: 'Promettiamo di tornare', ts: 5 },
+        { kind: 'roll', authorName: 'Giulia', text: '17', ts: 6 },
+      ],
+      tokens: { t1: { name: 'Lupo', characterId: null }, t2: { name: 'Elara', characterId: 'c1' } },
+      encounters: {},
+    };
+    const docs = campaignMemory({ state, recaps: [{ title: 'Sessione 3', body: '<p>Il borgomastro promette il bestiame</p>', createdAt: '2026-01-01' }], journal: [], plain: strip }, 'cosa ha promesso il borgomastro?');
+    expect(docs.map((d) => d.title)).toEqual(['Missione (in corso): I lupi del mulino', 'Nota: Il borgomastro', 'Riassunto: Sessione 3', 'Creature e PNG sulla mappa', 'Registro del tavolo (ultime righe)']);
+    expect(docs.find((d) => d.title.startsWith('Missione'))!.text).toContain('[fatto] Trova la tana');
+    // the dice stay out of the log; players' characters out of the NPCs
+    expect(docs.at(-1)!.text).toContain('Giulia: Promettiamo di tornare');
+    expect(docs.at(-1)!.text).not.toContain('17');
+    expect(docs.find((d) => d.title.startsWith('Creature'))!.text).toBe('Lupo');
+
+    const r = await askAssistant({ task: 'campaign', systemId: 'dnd5e-2024', input: 'Cosa ha promesso il borgomastro?', context: docs, campaign: 'Cronache' }, { fetch });
+    expect(r).toMatchObject({ text: 'Il bestiame del mulino (Riassunto: Sessione 3).' });
+    expect(body.system).toContain('«Cronache»');
+    expect(body.output_config).toEqual({ effort: 'medium' });
+    const [documents, question] = body.messages[0].content;
+    expect(documents.cache_control).toEqual({ type: 'ephemeral' });
+    expect(documents.text).toContain('<documento titolo="Riassunto: Sessione 3">');
+    expect(question.text).toBe('Domanda: Cosa ha promesso il borgomastro?');
   });
 });
