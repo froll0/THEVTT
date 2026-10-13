@@ -9,7 +9,7 @@ import { GridCalibration } from './GridCalibration';
 import { AdventureDialog } from './Adventure';
 import { useSheetTable } from './sheetTable';
 import { tokenSpeed } from '../lib/combat';
-import { plainText, RichEditor, RichView } from '../components/RichText';
+import { INLINE_DICE, plainText, RichEditor, RichView } from '../components/RichText';
 import { BarChart3, Library, BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Minus, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, Field, readBackground, readImage, Switch } from '../components/ui';
@@ -1022,9 +1022,24 @@ function NoteEditor({ note, canEdit, onBack, image }: { note: Note; canEdit: boo
         )
       )}
       {canEdit ? (
-        <RichEditor className="note-body" value={body} onChange={setBody} placeholder="Scrivi qui…" ariaLabel="Testo della nota" />
+        <>
+          <RichEditor className="note-body" value={body} onChange={setBody} placeholder="Scrivi qui…" ariaLabel="Testo della nota" />
+          {(() => {
+            // the dice written in the note, ready to roll while writing it
+            const found = [...new Set([...plainText(body).matchAll(INLINE_DICE)].map((m) => m[1]!.replace(/\s+/g, '')))].slice(0, 8);
+            return found.length ? (
+              <div className="row wrap" style={{ gap: 4 }} aria-label="Tiri nella nota">
+                {found.map((f) => (
+                  <button key={f} className="chip inline-roll-chip" onClick={() => dispatch({ type: 'roll', formula: f, label: title || 'Nota', private: isGm })} title={isGm ? 'Tira di nascosto' : 'Tira'}>
+                    <Dices size={12} /> {f}
+                  </button>
+                ))}
+              </div>
+            ) : null;
+          })()}
+        </>
       ) : (
-        <RichView className="selectable note-read" value={note.body} />
+        <RichView className="selectable note-read" value={note.body} onRoll={(formula) => dispatch({ type: 'roll', formula, label: note.title, private: isGm })} />
       )}
       {zoom && image && (
         <div className="lightbox" onClick={() => setZoom(false)}>

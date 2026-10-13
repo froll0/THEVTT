@@ -27,6 +27,8 @@ export type MacroStep =
   | { kind: 'initiative'; modifier: number | null }
   /** GM: a sound effect for everyone */
   | { kind: 'sound'; name: string }
+  /** a roll on one of the table's random tables */
+  | { kind: 'table'; name: string; private?: boolean }
   | { kind: 'error'; line: number; text: string; message: string };
 
 /** The questions a macro asks before running, in order, each once. */
@@ -106,6 +108,10 @@ export function parseMacro(expanded: string): MacroStep[] {
       if (!Number.isFinite(n)) return err('Il modificatore dell’iniziativa è un numero, per esempio /iniziativa +2');
       return void steps.push({ kind: 'initiative', modifier: Math.round(n) });
     }
+    if (['tabella', 'table', 'gtabella'].includes(cmd)) {
+      if (!rest) return err('Manca la tabella, per esempio /tabella Incontri nel bosco');
+      return void steps.push({ kind: 'table', name: rest, private: cmd === 'gtabella' });
+    }
     if (['suono', 'sfx', 'sound'].includes(cmd)) {
       if (!rest) return err('Manca il suono, per esempio /suono tuono');
       return void steps.push({ kind: 'sound', name: rest });
@@ -130,6 +136,8 @@ export function describeStep(s: MacroStep): string {
       return s.modifier === null ? 'Aggiunge i token selezionati all’iniziativa (col loro bonus)' : `Aggiunge i token selezionati all’iniziativa con ${s.modifier >= 0 ? '+' : ''}${s.modifier}`;
     case 'sound':
       return `Fa sentire a tutti «${s.name}» (solo il master)`;
+    case 'table':
+      return `Tira sulla tabella «${s.name}»${s.private ? ' di nascosto' : ''}`;
     case 'error':
       return `Riga ${s.line}: ${s.message}`;
   }

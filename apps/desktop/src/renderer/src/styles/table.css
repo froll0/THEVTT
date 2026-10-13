@@ -1251,3 +1251,47 @@ kbd {
 .adventure-card .warn {
   color: var(--warn, #e0a030);
 }
+
+/* ---------- tables, loot, shops ---------- */
+.treasure .seg {
+  align-self: flex-start;
+}
+.treasure-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  background: var(--bg-elev, rgb(255 255 255 / 0.03));
+  border: 1px solid var(--border);
+}
+.treasure-shop {
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+}
+.treasure-shop > .row b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* dice written in a text, clickable */
+.rt-view.with-rolls .inline-roll {
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rt-view.with-rolls .inline-roll:hover {
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.inline-roll-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

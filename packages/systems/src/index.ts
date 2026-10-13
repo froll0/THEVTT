@@ -7,6 +7,7 @@ export * from './types';
 export * as dnd5e from './dnd5e-2024';
 export * as warhammer from './wtow';
 export * as free from './libero';
+export * from './money';
 
 const registry = new Map<string, GameSystem<any>>();
 

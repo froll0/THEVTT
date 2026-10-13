@@ -3,6 +3,7 @@ import type { RollResult } from '../dice';
 import type { Macro } from '../macros';
 import { tokenVisible, type Fog } from './fog';
 import { sightFor, tokenPoints } from './sight';
+import type { PartyLoot, RollTable, Shop } from './tables';
 
 /**
  * Table state. It is owned and persisted by the GM's client (the host);
@@ -374,6 +375,12 @@ export interface GameState {
   encounters?: Record<string, Encounter>;
   /** the last rest the GM called: each player spends their hit dice */
   rest?: { id: string; kind: 'short' | 'long' };
+  /** the GM's random tables (players see the shared ones) */
+  tables?: Record<string, RollTable>;
+  /** what the party found and hasn't shared out yet */
+  loot?: PartyLoot;
+  /** shops (players see the open ones) */
+  shops?: Record<string, Shop>;
 }
 
 /** A creature of a prepared encounter, as it will appear. */
@@ -560,6 +567,8 @@ export function viewFor(state: GameState, userId: string): GameState {
     history: undefined,
     quests: Object.fromEntries(Object.entries(state.quests ?? {}).filter(([, q]) => q.visible)),
     encounters: undefined,
+    tables: Object.fromEntries(Object.entries(state.tables ?? {}).filter(([, t]) => t.shared)),
+    shops: Object.fromEntries(Object.entries(state.shops ?? {}).filter(([, x]) => x.open)),
   });
 }
 

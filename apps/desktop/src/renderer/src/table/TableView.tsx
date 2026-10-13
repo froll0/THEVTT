@@ -1,6 +1,6 @@
 import { POOL_CHECKS, rotatePiece, sessionDigest, type PoolCheck, type SessionDigest } from '@thevtt/shared';
 import { getSystem, warhammer } from '@thevtt/systems';
-import { Clapperboard, Route, Sparkles, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { Coins, Clapperboard, Route, Sparkles, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -16,6 +16,7 @@ import { PROP_KINDS } from './props';
 import { CallControls, CallTiles, type CallPerson } from './Call';
 import { GroupSaveForm } from './Saves';
 import { QuestsPanel, RestPrompt, WorldClock } from './World';
+import { TreasurePanel } from './Treasure';
 import { EncountersPanel } from './Encounters';
 import { TravelPanel } from './Travel';
 import { AssistantPanel } from './Assistant';
@@ -31,7 +32,7 @@ import { Journal } from '../components/Journal';
 
 const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
 
-type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'encounters' | 'travel' | 'assistant' | 'scene' | 'notes' | 'quests' | 'music' | 'rules';
+type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'encounters' | 'travel' | 'assistant' | 'scene' | 'notes' | 'quests' | 'treasure' | 'music' | 'rules';
 
 export function TableView({ campaignId }: { campaignId: string }) {
   const { campaigns, user, go, status } = useApp();
@@ -232,6 +233,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     { id: 'scene', label: 'Scene', icon: MapIcon, gm: true },
     { id: 'notes', label: 'Note e dispense', icon: NotebookPen },
     { id: 'quests', label: 'Missioni', icon: ListChecks },
+    { id: 'treasure', label: 'Tabelle e tesoro', icon: Coins },
     { id: 'music', label: 'Musica', icon: Music, gm: true },
     ...(bridge ? [{ id: 'assistant' as const, label: 'Assistente', icon: Sparkles, gm: true }] : []),
     { id: 'rules', label: 'Compendio', icon: Library },
@@ -566,6 +568,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 {tab === 'scene' && isGm && <ScenePanel />}
                 {tab === 'notes' && <NotesPanel />}
                 {tab === 'quests' && <QuestsPanel />}
+                {tab === 'treasure' && <TreasurePanel />}
                 {tab === 'music' && isGm && <MusicPanel />}
                 {tab === 'rules' && (
                   <div className="panel-body">

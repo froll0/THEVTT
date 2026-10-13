@@ -1,6 +1,7 @@
 import type { Macro } from '../macros';
 import type { MapPackage } from './library';
 import type { AdventurePackage } from './adventure';
+import type { PartyLoot, RollTable, Shop } from './tables';
 import type { ExtendedTest, Maneuver, PoolCheck, Zone } from './pool';
 import type { AreaTemplate, ChatCard, Encounter, GameState, Note, Prop, Quest, Scene, Token, Travel, Wall } from './state';
 
@@ -34,7 +35,7 @@ export type GameAction =
   | { type: 'roll'; formula: string; label?: string; private?: boolean; blind?: boolean }
   | { type: 'card'; card: ChatCard; private?: boolean }
   /** an attack against each target: d20+bonus against its AC; on a hit the damage is applied (doubled dice on a 20) */
-  | { type: 'attack'; attackerId?: string | null; targetIds: string[]; name: string; bonus: number; damage: string; damageType?: string; mode?: 'normal' | 'adv' | 'dis' }
+  | { type: 'attack'; attackerId?: string | null; targetIds: string[]; name: string; bonus: number; damage: string; damageType?: string; mode?: 'normal' | 'adv' | 'dis'; /** false: no automatic cover */ cover?: boolean }
   /**
    * Success-pool attack (Warhammer: the Old World): attacker's pool against each
    * target's Protezione, ties to the attacker; damage = weapon + successes over
@@ -176,6 +177,20 @@ export type GameAction =
   /** GM: a quest, new or changed */
   | { type: 'quest.save'; quest: Partial<Omit<Quest, 'updatedAt'>> & { title: string } }
   | { type: 'quest.delete'; questId: string }
+  /** GM: a random table, new or changed */
+  | { type: 'table.save'; table: Partial<RollTable> & { name: string } }
+  | { type: 'table.delete'; tableId: string }
+  /** a roll on a table (players: only the shared ones); private: only the roller and the GM see it */
+  | { type: 'table.roll'; tableId: string; private?: boolean }
+  /** GM: the party's loot as it is now */
+  | { type: 'loot.set'; loot: PartyLoot; note?: string }
+  /** someone takes an item of the loot (their app puts it on their sheet) */
+  | { type: 'loot.take'; itemId: string; qty?: number }
+  /** GM: a shop, new or changed */
+  | { type: 'shop.save'; shop: Partial<Shop> & { name: string } }
+  | { type: 'shop.delete'; shopId: string }
+  /** a purchase (the buyer's app pays on their sheet and adds the item) */
+  | { type: 'shop.buy'; shopId: string; itemId: string; qty?: number }
   /** GM: take back (or redo) their last change to the map */
   | { type: 'game.undo' }
   | { type: 'game.redo' }

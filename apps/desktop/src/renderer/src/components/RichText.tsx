@@ -1,6 +1,8 @@
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { TableKit } from '@tiptap/extension-table';
-import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
+import { EditorContent, Extension, useEditor, useEditorState, type Editor } from '@tiptap/react';
+import { Plugin } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { StarterKit } from '@tiptap/starter-kit';
 import {
   Bold,
@@ -166,11 +168,51 @@ export function RichEditor({
 }
 
 /** Rich text for reading. */
-export function RichView({ value, className = '' }: { value: string; className?: string }) {
-  const editor = useEditor({ extensions: extensions(), content: toHtml(value), editable: false, editorProps: { attributes: { class: 'rt-content' } } });
+/** Dice written in a text: «2d6+3», «1d20 - 1», «d8». */
+export const INLINE_DICE = /(?<![\w])(\d{0,2}d(?:2|3|4|6|8|10|12|20|100)(?:\s*[+-]\s*\d{1,3})?)(?![\w])/gi;
+
+/** Marks the dice formulas of a text, so they can be clicked and rolled. */
+const InlineDice = Extension.create({
+  name: 'inlineDice',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          decorations(state) {
+            const marks: Decoration[] = [];
+            state.doc.descendants((node, pos) => {
+              if (!node.isText || !node.text) return;
+              for (const m of node.text.matchAll(INLINE_DICE)) {
+                const from = pos + m.index!;
+                marks.push(Decoration.inline(from, from + m[0].length, { class: 'inline-roll', 'data-formula': m[1]!.replace(/\s+/g, ''), title: 'Clicca per tirare' }));
+              }
+            });
+            return DecorationSet.create(state.doc, marks);
+          },
+        },
+      }),
+    ];
+  },
+});
+
+/**
+ * Rich text, read only. With `onRoll`, the dice written in it («2d6+3»)
+ * become buttons that roll them.
+ */
+export function RichView({ value, className = '', onRoll }: { value: string; className?: string; onRoll?: (formula: string) => void }) {
+  const editor = useEditor({ extensions: onRoll ? [...extensions(), InlineDice] : extensions(), content: toHtml(value), editable: false, editorProps: { attributes: { class: 'rt-content' } } });
   useEffect(() => {
     if (editor && !editor.isDestroyed) editor.commands.setContent(toHtml(value), { emitUpdate: false });
   }, [editor, value]);
   if (!editor) return null;
-  return <EditorContent editor={editor} className={`rt-view ${className}`} />;
+  return (
+    <EditorContent
+      editor={editor}
+      className={`rt-view ${onRoll ? 'with-rolls' : ''} ${className}`}
+      onClick={(e) => {
+        const el = (e.target as HTMLElement).closest('.inline-roll') as HTMLElement | null;
+        if (el?.dataset.formula && onRoll) onRoll(el.dataset.formula);
+      }}
+    />
+  );
 }

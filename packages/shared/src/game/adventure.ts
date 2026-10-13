@@ -1,6 +1,7 @@
 import type { Macro } from '../macros';
 import { isMapPackage, packScene, type MapPackage } from './library';
 import type { Encounter, GameState, Quest } from './state';
+import type { RollTable, Shop } from './tables';
 
 /**
  * A whole adventure in one file: its scenes (with their creatures), the
@@ -22,6 +23,9 @@ export interface AdventurePackage {
   encounters: (Omit<Encounter, 'id' | 'sceneId' | 'trackId' | 'noteId' | 'launchedAt'> & { scene: string | null; track: string | null; note: string | null })[];
   quests: Omit<Quest, 'id' | 'updatedAt'>[];
   macros: Omit<Macro, 'id'>[];
+  /** random tables and shops (added later: older files have none) */
+  tables?: Omit<RollTable, 'id'>[];
+  shops?: Omit<Shop, 'id'>[];
   /** pictures and audio of notes, tracks, sounds and encounters, by key */
   assets: Record<string, string>;
 }
@@ -62,6 +66,8 @@ export function packAdventure(state: GameState, assets: Record<string, string>, 
     })),
     quests: Object.values(state.quests ?? {}).map(({ id: _id, updatedAt: _u, ...q }) => structuredClone(q)),
     macros: (state.macros ?? []).map(({ id: _id, ...m }) => ({ ...m })),
+    tables: Object.values(state.tables ?? {}).map(({ id: _id, ...t }) => structuredClone(t)),
+    shops: Object.values(state.shops ?? {}).map(({ id: _id, ...x }) => ({ ...structuredClone(x), open: false })),
     assets: used,
   };
 }

@@ -71,6 +71,8 @@ export function runMacro(
   const isGm = ctx.state.gmId === ctx.me;
   const mine = targets.filter((t) => isGm || t.ownerIds.includes(ctx.me));
   if (steps.some((s) => s.kind === 'hp' || s.kind === 'condition' || s.kind === 'initiative') && !mine.length) return 'Seleziona prima uno o più token sulla mappa';
+  const tableOf = (name: string) => Object.values(ctx.state.tables ?? {}).find((t) => t.name.toLowerCase() === name.toLowerCase());
+  for (const s of steps) if (s.kind === 'table' && !tableOf(s.name)) return `Tabella sconosciuta: «${s.name}»`;
   for (const s of steps) {
     if (s.kind !== 'sound') continue;
     if (!isGm) return 'Solo il master fa sentire i suoni';
@@ -90,6 +92,8 @@ export function runMacro(
         else if (s.rounds) rounds[name] = s.rounds;
         ctx.dispatch({ type: 'token.update', tokenId: t.id, patch: { conditions: has ? t.conditions.filter((c) => c !== name) : [...t.conditions, name], conditionRounds: rounds } });
       }
+    } else if (s.kind === 'table') {
+      ctx.dispatch({ type: 'table.roll', tableId: tableOf(s.name)!.id, private: s.private });
     } else if (s.kind === 'sound') {
       ctx.dispatch({ type: 'sfx.play', sound: findSound(ctx.state.sounds ?? [], s.name)!.id });
     } else if (s.kind === 'initiative') {

@@ -3,6 +3,7 @@ import { newId } from '../id';
 import type { Ability, GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
 import { emptyMask, paintRect, resizeMask } from './fog';
 import { isAdventurePackage } from './adventure';
+import { COVER_AC, COVER_LABEL, coverBetween } from './cover';
 import { isMapPackage } from './library';
 import { BUILTIN_SOUNDS } from './sounds';
 import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
@@ -534,6 +535,122 @@ export class GameHost {
         });
         break;
       }
+      case 'table.save': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const t = action.table;
+        s.tables ??= {};
+        const old = t.id ? s.tables[t.id] : undefined;
+        if (!old && Object.keys(s.tables).length >= 100) return { ok: false, reason: 'Troppe tabelle' };
+        const entries = (Array.isArray(t.entries) ? t.entries : (old?.entries ?? []))
+          .slice(0, 200)
+          .map((e) => ({ min: clampInt(e.min, 0, 1000), max: clampInt(Math.max(Number(e.max) || 0, Number(e.min) || 0), 0, 1000), text: String(e.text ?? '').slice(0, 500) }))
+          .filter((e) => e.text.trim());
+        const formula = String(t.formula ?? old?.formula ?? `1d${Math.max(1, entries.length)}`).slice(0, 30);
+        try {
+          roll(formula, () => 0.5);
+        } catch {
+          return { ok: false, reason: 'Formula della tabella non valida' };
+        }
+        const id = old?.id ?? (typeof t.id === 'string' && /^[\w-]{1,40}$/.test(t.id) ? t.id : newId());
+        s.tables[id] = { id, name: String(t.name ?? old?.name ?? 'Tabella').trim().slice(0, 80) || 'Tabella', formula, entries, shared: t.shared !== undefined ? !!t.shared : (old?.shared ?? false) };
+        break;
+      }
+      case 'table.delete': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!s.tables?.[action.tableId]) return { ok: false, reason: 'Tabella inesistente' };
+        delete s.tables[action.tableId];
+        break;
+      }
+      case 'table.roll': {
+        const t = s.tables?.[action.tableId];
+        if (!t || (!isGm && !t.shared)) return { ok: false, reason: 'Tabella inesistente' };
+        const r = roll(t.formula, this.rng);
+        const entry = t.entries.find((e) => r.total >= e.min && r.total <= e.max);
+        this.log({ kind: 'card', authorId: from, text: entry?.text ?? '—', private: !!action.private, roll: r, card: { title: t.name, subtitle: `${t.formula}: ${r.total}`, body: entry?.text ?? 'Nessuna voce per questo numero' } });
+        break;
+      }
+      case 'loot.set': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const l = action.loot;
+        s.loot = {
+          coins: Object.fromEntries(
+            Object.entries(l?.coins ?? {})
+              .slice(0, 10)
+              .map(([k, v]) => [String(k).slice(0, 12), clampInt(v, 0, 10_000_000)])
+              .filter(([, v]) => (v as number) > 0),
+          ),
+          items: (Array.isArray(l?.items) ? l.items : []).slice(0, 200).map((i) => ({
+            id: typeof i.id === 'string' && /^[\w-]{1,40}$/.test(i.id) ? i.id : newId(),
+            name: String(i.name ?? '').slice(0, 120) || 'Oggetto',
+            qty: clampInt(i.qty ?? 1, 1, 9999),
+            ...(i.note ? { note: String(i.note).slice(0, 300) } : {}),
+          })),
+        };
+        if (action.note) this.system(String(action.note).slice(0, 300));
+        break;
+      }
+      case 'loot.take': {
+        const loot = s.loot;
+        const item = loot?.items.find((i) => i.id === action.itemId);
+        if (!loot || !item) return { ok: false, reason: 'Oggetto già preso' };
+        const qty = clampInt(action.qty ?? item.qty, 1, item.qty);
+        item.qty -= qty;
+        if (item.qty <= 0) loot.items = loot.items.filter((i) => i.id !== item.id);
+        const who = s.players[from]?.displayName ?? (isGm ? 'Il master' : 'Qualcuno');
+        this.system(`${who} prende ${qty > 1 ? `${qty} × ` : ''}${item.name} dal bottino`);
+        break;
+      }
+      case 'shop.save': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const x = action.shop;
+        s.shops ??= {};
+        const old = x.id ? s.shops[x.id] : undefined;
+        if (!old && Object.keys(s.shops).length >= 50) return { ok: false, reason: 'Troppi negozi' };
+        const id = old?.id ?? (typeof x.id === 'string' && /^[\w-]{1,40}$/.test(x.id) ? x.id : newId());
+        const wasOpen = !!old?.open;
+        s.shops[id] = {
+          id,
+          name: String(x.name ?? old?.name ?? 'Negozio').trim().slice(0, 80) || 'Negozio',
+          description: String(x.description ?? old?.description ?? '').slice(0, 1000),
+          open: x.open !== undefined ? !!x.open : wasOpen,
+          items: (Array.isArray(x.items) ? x.items : (old?.items ?? [])).slice(0, 200).map((i) => ({
+            id: typeof i.id === 'string' && /^[\w-]{1,40}$/.test(i.id) ? i.id : newId(),
+            name: String(i.name ?? '').slice(0, 120) || 'Merce',
+            price: Object.fromEntries(Object.entries(i.price ?? {}).slice(0, 6).map(([k, v]) => [String(k).slice(0, 12), Math.max(0, Math.round((Number(v) || 0) * 100) / 100)])),
+            stock: i.stock === null || i.stock === undefined ? null : clampInt(i.stock, 0, 9999),
+            ...(i.note ? { note: String(i.note).slice(0, 300) } : {}),
+          })),
+        };
+        if (s.shops[id]!.open && !wasOpen) this.system(`Aperto: ${s.shops[id]!.name}`);
+        break;
+      }
+      case 'shop.delete': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        if (!s.shops?.[action.shopId]) return { ok: false, reason: 'Negozio inesistente' };
+        delete s.shops[action.shopId];
+        break;
+      }
+      case 'shop.buy': {
+        const shop = s.shops?.[action.shopId];
+        if (!shop || (!isGm && !shop.open)) return { ok: false, reason: 'Il negozio è chiuso' };
+        const item = shop.items.find((i) => i.id === action.itemId);
+        if (!item) return { ok: false, reason: 'Merce inesistente' };
+        const qty = clampInt(action.qty ?? 1, 1, 999);
+        if (item.stock !== null && item.stock < qty) return { ok: false, reason: 'Non ce n’è abbastanza' };
+        if (item.stock !== null) item.stock -= qty;
+        const who = s.players[from]?.displayName ?? (isGm ? 'Il master' : 'Qualcuno');
+        const price = Object.entries(item.price)
+          .filter(([, v]) => v > 0)
+          .map(([k, v]) => `${Math.round(v * qty * 100) / 100} ${k}`)
+          .join(' + ');
+        this.system(`${who} compra ${qty > 1 ? `${qty} × ` : ''}${item.name} da ${shop.name}${price ? ` (${price})` : ''}`);
+        break;
+      }
       case 'adventure.import': {
         const denied = gmOnly();
         if (denied) return denied;
@@ -591,6 +708,8 @@ export class GameHost {
         }
         // the quests wait until the GM shows them
         for (const q of pkg.quests.slice(0, 100)) run({ type: 'quest.save', quest: { ...q, visible: false } });
+        for (const t of (Array.isArray(pkg.tables) ? pkg.tables : []).slice(0, 100)) run({ type: 'table.save', table: { ...t, id: undefined } });
+        for (const x of (Array.isArray(pkg.shops) ? pkg.shops : []).slice(0, 50)) run({ type: 'shop.save', shop: { ...x, id: undefined, open: false } });
         const macros = (Array.isArray(pkg.macros) ? pkg.macros : []).map((m) => ({ ...m, id: newId() }));
         if (macros.length) run({ type: 'macros.set', macros: [...(s.macros ?? []), ...macros] });
         this.log({ kind: 'system', authorId: from, text: `Avventura «${String(pkg.name).slice(0, 80)}» aggiunta: ${Object.keys(scenes).length} scene, ${pkg.encounters.length} incontri, ${Object.keys(notes).length} note`, private: true });
@@ -1075,14 +1194,22 @@ export class GameHost {
         const name = String(action.name ?? 'Attacco').slice(0, 60);
         const type = action.damageType ? ` ${String(action.damageType).slice(0, 30)}` : '';
         for (const t of targets) {
+          // walls, solid scenery and creatures in the way: cover from the attacker on the map
+          const cover = attacker && action.cover !== false ? coverBetween(s, attacker, t) : 'none';
+          if (cover === 'total') {
+            this.log({ kind: 'system', authorId: from, text: `${name} → ${t.name}: copertura totale, non si può colpire`.slice(0, 160), private: t.hidden });
+            continue;
+          }
+          const ac = t.ac == null ? null : t.ac + COVER_AC[cover];
           const r = roll(`${d20}${bonus >= 0 ? '+' : ''}${bonus}`, this.rng);
           const die = r.parts[0]?.type === 'dice' ? r.parts[0].rolls.find((x) => !x.dropped)?.value : undefined;
           const crit = die === 20;
-          const hit = crit || (die !== 1 && (t.ac == null || r.total >= t.ac));
+          const hit = crit || (die !== 1 && (ac == null || r.total >= ac));
           // the target's AC stays the GM's: players read hit or miss
-          const verdict = crit ? 'colpo critico!' : hit ? (t.ac == null ? 'CA sconosciuta' : 'colpito') : die === 1 ? '1 naturale, mancato' : 'mancato';
+          const verdict = crit ? 'colpo critico!' : hit ? (ac == null ? 'CA sconosciuta' : 'colpito') : die === 1 ? '1 naturale, mancato' : 'mancato';
+          const why = cover !== 'none' ? ` (${COVER_LABEL[cover]}, +${COVER_AC[cover]} CA)` : '';
           const hidden = t.hidden;
-          this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `${name} → ${t.name}: ${verdict}`.slice(0, 120), roll: r, private: hidden });
+          this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `${name} → ${t.name}: ${verdict}${why}`.slice(0, 160), roll: r, private: hidden });
           if (!hit) continue;
           const formula = crit ? action.damage.replace(/(\d*)d(\d+)/gi, (_, n: string, sides: string) => `${(Number(n) || 1) * 2}d${sides}`) : action.damage;
           const dr = roll(formula, this.rng);

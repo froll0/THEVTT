@@ -65,6 +65,13 @@ describe('macros', () => {
 });
 
 describe('sound effects', () => {
+  it('/tabella rolls on one of the table’s random tables', () => {
+    expect(parseMacro('/tabella Incontri nel bosco')).toEqual([{ kind: 'table', name: 'Incontri nel bosco', private: false }]);
+    expect(parseMacro('/gtabella Voci')).toEqual([{ kind: 'table', name: 'Voci', private: true }]);
+    expect(parseMacro('/tabella')[0]).toMatchObject({ kind: 'error' });
+    expect(describeStep({ kind: 'table', name: 'Voci', private: true })).toBe('Tira sulla tabella «Voci» di nascosto');
+  });
+
   it('/suono finds a built-in or the GM’s own sound by name', async () => {
     const { parseMacro, findSound } = await import('../src');
     expect(parseMacro('/suono tuono')).toEqual([{ kind: 'sound', name: 'tuono' }]);
