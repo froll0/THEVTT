@@ -6,6 +6,7 @@ export default defineConfig({
   timeout: 180_000,
   expect: { timeout: 15_000 },
   workers: 1,
-  reporter: [['list']],
+  // on CI the failures also become annotations on the run, readable without the logs
+  reporter: process.env.CI ? [['list'], ['github']] : [['list']],
   use: { actionTimeout: 20_000 },
 });
