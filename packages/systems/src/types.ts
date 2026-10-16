@@ -25,6 +25,8 @@ export interface TokenDefaults {
   darkvision?: number;
   /** damage types it resists, ignores or suffers double from */
   defenses?: { resist?: string[]; immune?: string[]; vulnerable?: string[] };
+  /** Nimble: Wounds for the host (NimbleToken in @thevtt/shared) */
+  nimble?: { wounds?: { current: number; max: number } };
   /** success-pool systems: Resilienza, Protezione and wounds for the host (PoolStats in @thevtt/shared) */
   pool?: {
     type: 'pg' | 'Servitore' | 'Bruto' | 'Campione' | 'Mostruosità';
@@ -65,6 +67,8 @@ export interface GameSystem<TCharacter = unknown> {
   tokenDefaults(character: TCharacter): TokenDefaults;
   /** the character with its hit points as the token on the map has them */
   withHp?(character: TCharacter, current: number): TCharacter;
+  /** Nimble: the character with the Wounds its token now has */
+  withWounds?(character: TCharacter, wounds: number): TCharacter;
   /** conditions offered by the token menu */
   conditions: string[];
   /** what each condition does, for tooltips */

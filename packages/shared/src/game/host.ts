@@ -6,6 +6,7 @@ import { isAdventurePackage } from './adventure';
 import { COVER_AC, COVER_LABEL, coverBetween } from './cover';
 import { standingLabel } from './relations';
 import { cleanCalendar, dateOf, eventsBetween } from './calendar';
+import { actionsFromInitiative, addDisadvantage, damageVsArmor, type NimbleToken } from './nimble';
 import { isMapPackage } from './library';
 import { BUILTIN_SOUNDS } from './sounds';
 import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
@@ -124,6 +125,8 @@ export interface GameHostOptions {
   saveBonus?: (token: Token, ability: Ability) => number | null;
   /** a character's sheet with the hit points its token now has (null: leave it) */
   withHp?: (character: TableCharacter, current: number) => unknown;
+  /** Nimble: a character's sheet with the Wounds its token now has (null: leave it) */
+  withWounds?: (character: TableCharacter, wounds: number) => unknown;
   /** success-pool systems: what a total on the wounds table means */
   woundResult?: (total: number) => { name: string; text: string; conditions?: string[]; dead?: boolean };
   /** success-pool systems: the character's sheet with a new wound written on it (null: leave it) */
@@ -148,7 +151,25 @@ function cleanDefenses(v: unknown): Defenses | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
-const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'conditionRounds', 'color', 'name', 'light', 'aura', 'used', 'pool', 'elevation'];
+const PLAYER_TOKEN_FIELDS: ReadonlyArray<keyof TokenPatch> = ['hp', 'conditions', 'conditionRounds', 'color', 'name', 'light', 'aura', 'used', 'pool', 'elevation', 'nimble'];
+
+/** Nimble token stats from anyone: only what makes sense. Players change only their actions. */
+function cleanNimble(raw: unknown, old: NimbleToken | undefined, isGm: boolean): NimbleToken | undefined {
+  const n = (raw ?? {}) as NimbleToken;
+  if (!raw) return isGm ? undefined : old;
+  const out: NimbleToken = isGm ? {} : { ...(old ?? {}) };
+  if (isGm) {
+    if (n.armor === 'M' || n.armor === 'H') out.armor = n.armor;
+    if (n.minion) out.minion = true;
+    if (n.wounds) out.wounds = { current: Math.max(0, Math.min(30, Math.round(Number(n.wounds.current) || 0))), max: Math.max(1, Math.min(30, Math.round(Number(n.wounds.max) || 6))) };
+    if (n.attacks !== undefined) out.attacks = Math.max(0, Math.min(20, Math.round(Number(n.attacks) || 0)));
+  } else if (n.wounds && old?.wounds) {
+    // their own sheet's Wounds follow to the token
+    out.wounds = { current: Math.max(0, Math.min(old.wounds.max, Math.round(Number(n.wounds.current) || 0))), max: old.wounds.max };
+  }
+  if (n.actions !== undefined) out.actions = Math.max(0, Math.min(6, Math.round(Number(n.actions) || 0)));
+  return out;
+}
 
 function cleanAura(a: unknown): { radius: number; color: string } | null {
   const v = a as { radius?: unknown; color?: unknown } | null;
@@ -1038,6 +1059,9 @@ export class GameHost {
           if (max > 0) token.legendary = { max, left: max };
         }
         if (isGm && Array.isArray(t.lair) && t.lair.length) token.lair = t.lair.slice(0, 10).map((x) => String(x).slice(0, 60));
+        // players place their own hero: Wounds come from the sheet
+        const nb = cleanNimble(t.nimble, undefined, true);
+        if (nb) token.nimble = isGm ? nb : { wounds: nb.wounds };
         const pool = cleanPoolStats(t.pool);
         if (pool) {
           token.pool = pool;
@@ -1105,6 +1129,11 @@ export class GameHost {
         // a condition taken off takes its timer with it
         if (t.conditionRounds) for (const k of Object.keys(t.conditionRounds)) if (!t.conditions.includes(k)) delete t.conditionRounds[k];
         if (patch.moved !== undefined && isGm) t.moved = Math.max(0, Number(patch.moved) || 0);
+        if (patch.nimble !== undefined) {
+          const n = cleanNimble(patch.nimble, t.nimble, isGm);
+          if (n) t.nimble = n;
+          else delete t.nimble;
+        }
         if (patch.defenses !== undefined) {
           const d = cleanDefenses(patch.defenses);
           if (d) t.defenses = d;
@@ -1141,6 +1170,7 @@ export class GameHost {
           const before = t.hp?.current;
           t.hp = patch.hp === null ? null : { current: clampInt(patch.hp.current, -999, 9999), max: clampInt(patch.hp.max, 0, 9999) };
           if (t.hp && before !== undefined && t.hp.current < before) this.concentration(t, before - t.hp.current, from);
+          if (t.hp && before !== undefined && t.hp.current !== before) this.nimbleHp(t, before, from);
           if (t.hp && t.hp.current !== before) this.hpChanged(t);
         }
         if (patch.x !== undefined || patch.y !== undefined) {
@@ -1326,6 +1356,80 @@ export class GameHost {
           this.log({ kind: 'roll', authorId: from, text: `${dr.total}`, label: `${name} · danni${type} → ${t.name}${d.note ? ` (${d.note}: ${d.amount})` : ''}`.slice(0, 160), roll: dr, private: hidden });
           if (t.hp) this.hurt(t, d.amount, from);
         }
+        break;
+      }
+      case 'nimble.attack': {
+        const attacker = action.attackerId ? s.tokens[action.attackerId] : undefined;
+        if (!isGm && attacker && !attacker.ownerIds.includes(from)) return { ok: false, reason: 'Non controlli questo token' };
+        const targets = (Array.isArray(action.targetIds) ? action.targetIds : [])
+          .slice(0, 30)
+          .map((id) => s.tokens[id])
+          .filter((t): t is Token => !!t && t.id !== attacker?.id);
+        let formula = String(action.formula ?? '').slice(0, 120);
+        try {
+          roll(formula, () => 1);
+        } catch (e) {
+          return { ok: false, reason: e instanceof DiceError ? e.message : 'Danni non validi' };
+        }
+        const name = String(action.name ?? 'Attacco').slice(0, 60);
+        const type = action.damageType ? String(action.damageType).slice(0, 30) : undefined;
+        // rushed: every attack after the first in one's own turn has one more disadvantage
+        const cur = s.initiative.round > 0 ? s.initiative.entries[s.initiative.turn] : undefined;
+        if (attacker?.nimble && !action.area && cur?.tokenId === attacker.id) {
+          const done = attacker.nimble.attacks ?? 0;
+          formula = addDisadvantage(formula, done);
+          attacker.nimble = { ...attacker.nimble, attacks: done + 1 };
+        }
+        const rushed = formula !== action.formula ? ' (affrettato)' : '';
+        const apply = (t: Token, r: RollResult) => {
+          const vulnerable = !!type && !!t.defenses?.vulnerable?.some((x) => x.toLowerCase().replace(/^da\s+/, '') === type.toLowerCase());
+          let amount = damageVsArmor(r, t.nimble?.armor, !!action.ignoreArmor || (vulnerable && !!t.nimble?.armor));
+          // unarmoured and vulnerable: double (resistance halves, immunity stops it)
+          const d = damageAfter(vulnerable && t.nimble?.armor ? { ...t.defenses, vulnerable: [] } : t.defenses, amount, type);
+          amount = d.amount;
+          const armorNote = t.nimble?.armor && !r.crit && !action.ignoreArmor && !vulnerable ? ` (armatura ${t.nimble.armor === 'H' ? 'pesante' : 'media'})` : '';
+          if (t.nimble?.minion && amount > 0) {
+            this.log({ kind: 'system', authorId: from, text: `${name} → ${t.name}: gregario abbattuto`, private: t.hidden });
+            if (t.hp) this.hurt(t, t.hp.current, from, !!r.crit);
+            return;
+          }
+          if (t.characterId && t.hp) {
+            // a hero chooses: take it or Defend
+            this.log({ kind: 'system', authorId: from, text: `${name} → ${t.name}: ${amount} danni${type ? ` ${type}` : ''}${d.note ? ` (${d.note})` : ''} — subire o difendersi?`, private: t.hidden, pending: { tokenId: t.id, amount, armor: t.ac ?? 0, crit: !!r.crit } });
+            return;
+          }
+          this.log({ kind: 'system', authorId: from, text: `${name} → ${t.name}: ${amount} danni${type ? ` ${type}` : ''}${armorNote}${d.note ? ` (${d.note})` : ''}`, private: t.hidden });
+          if (t.hp) this.hurt(t, amount, from, !!r.crit);
+        };
+        const verdict = (r: RollResult) => (r.miss ? 'mancato!' : r.crit ? 'critico!' : '');
+        if (action.area || !targets.length) {
+          const r = roll(formula, this.rng);
+          this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `${name}${targets.length ? ` → ${targets.map((t) => t.name).join(', ')}` : ''}${rushed}${action.area ? '' : verdict(r) ? `: ${verdict(r)}` : ''}`.slice(0, 160), roll: r });
+          // an area never misses nor crits
+          const area = action.area ? { ...r, miss: false, crit: false } : r;
+          for (const t of targets) apply(t, area);
+          break;
+        }
+        for (const t of targets) {
+          const r = roll(formula, this.rng);
+          this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `${name} → ${t.name}${rushed}${verdict(r) ? `: ${verdict(r)}` : ''}`.slice(0, 160), roll: r, private: t.hidden });
+          if (!r.miss) apply(t, r);
+        }
+        break;
+      }
+      case 'nimble.take': {
+        const e = s.log.find((x) => x.id === action.entryId);
+        const p = e?.pending;
+        if (!e || !p) return { ok: false, reason: 'Niente da subire' };
+        if (p.done) return { ok: false, reason: 'Già fatto' };
+        const t = s.tokens[p.tokenId];
+        if (!t) return { ok: false, reason: 'Token inesistente' };
+        if (!isGm && !t.ownerIds.includes(from)) return { ok: false, reason: 'Non è il tuo eroe' };
+        const amount = action.defend ? Math.max(0, p.amount - p.armor) : p.amount;
+        if (action.defend && t.nimble) t.nimble = { ...t.nimble, actions: Math.max(0, (t.nimble.actions ?? 3) - 1) };
+        e.pending = { ...p, done: action.defend ? 'defended' : 'taken' };
+        this.log({ kind: 'system', authorId: from, text: action.defend ? `${t.name} si difende: ${p.amount} − ${p.armor} = ${amount} danni` : `${t.name} subisce ${amount} danni`, private: t.hidden });
+        this.hurt(t, amount, from, !!p.crit);
         break;
       }
       case 'pool.attack': {
@@ -1550,11 +1654,17 @@ export class GameHost {
         let value = action.value;
         // a whole side acts together: the players' first
         if (action.side) value = action.side === 'players' ? 2 : 1;
+        // Nimble: the monsters act after the heroes, and don't roll
+        else if (token?.nimble && !token.characterId && (value === undefined || !isGm)) value = 0;
         else if (value === undefined || !isGm) {
           const mod = clampInt(action.modifier ?? 0, -20, 20);
           const r = roll(`1d20${mod >= 0 ? '+' : ''}${mod}`, this.rng);
           value = r.total;
-          this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `Iniziativa · ${action.name}`, roll: r, private: !!token?.hidden });
+          // Nimble: the roll says how many actions the hero starts with
+          const nat20 = r.parts[0]?.type === 'dice' && r.parts[0].rolls.some((d) => !d.dropped && d.value === 20);
+          const actions = token?.nimble && token.characterId ? actionsFromInitiative(r.total, nat20) : 0;
+          if (actions) token!.nimble = { ...token!.nimble, actions };
+          this.log({ kind: 'roll', authorId: from, text: `${r.total}`, label: `Iniziativa · ${action.name}${actions ? ` · ${actions} ${actions === 1 ? 'azione' : 'azioni'}` : ''}`, roll: r, private: !!token?.hidden });
         }
         const entries = s.initiative.entries.filter((e) => !(action.tokenId && e.tokenId === action.tokenId));
         entries.push({ id: newId(), name: action.name.slice(0, 60), value: clampInt(value, -99, 99), tokenId: action.tokenId ?? null });
@@ -2400,6 +2510,8 @@ export class GameHost {
 
   /** The end of a token's turn: fire, bleeding, a hazard it stays in. */
   private endTurn(from: string, t: Token): void {
+    // Nimble: all 3 actions come back at the end of one's turn
+    if (t.nimble && t.characterId) t.nimble = { ...t.nimble, actions: 3 };
     if (!t.pool || t.conditions.includes('Morto')) return;
     if (t.conditions.includes('In Fiamme')) this.poolCheck(from, t, 'Tempra', { label: 'In Fiamme', grade: 2 });
     if (t.conditions.includes('Ferito Gravemente')) {
@@ -2420,12 +2532,54 @@ export class GameHost {
     if (z?.hazard && z.hazardEach) this.hazard(from, t, z);
   }
 
-  private hurt(t: Token, amount: number, from: string): void {
+  private hurt(t: Token, amount: number, from: string, crit = false): void {
     if (!t.hp || amount <= 0) return;
+    const before = t.hp.current;
     t.hp = { ...t.hp, current: Math.max(0, t.hp.current - amount) };
     this.concentration(t, amount, from);
+    this.lastDamage = amount;
+    this.nimbleHp(t, before, from, crit);
+    this.lastDamage = 0;
     this.hpChanged(t);
   }
+
+  /**
+   * Nimble: Bloodied at half HP; a hero dropping to 0 takes a Wound and is
+   * Dying; hurt while Dying, 2 Wounds (3 on a crit); dead at the maximum.
+   */
+  private nimbleHp(t: Token, before: number, from: string, crit = false): void {
+    if (!t.nimble || !t.hp) return;
+    const now = t.hp.current;
+    const has = (c: string) => t.conditions.includes(c);
+    const set = (c: string, on: boolean) => {
+      if (on && !has(c)) t.conditions = [...t.conditions, c];
+      if (!on && has(c)) t.conditions = t.conditions.filter((x) => x !== c);
+    };
+    set('Sanguinante', now > 0 && now <= Math.floor(t.hp.max / 2));
+    const w = t.nimble.wounds;
+    if (!w) return;
+    let gained = 0;
+    if (before > 0 && now === 0) gained = 1;
+    else if (before === 0 && now === 0 && this.lastDamage > 0) gained = crit ? 3 : 2;
+    set('Morente', now === 0);
+    if (now === 0) set('Concentrato', false);
+    if (!gained) return;
+    const current = Math.min(w.max, w.current + gained);
+    t.nimble = { ...t.nimble, wounds: { ...w, current } };
+    const dead = current >= w.max;
+    this.log({ kind: 'system', authorId: from, text: `${t.name}: +${gained} ${gained === 1 ? 'Ferita' : 'Ferite'} (${current}/${w.max})${dead ? ' — muore' : now === 0 ? ' — Morente' : ''}`, private: t.hidden });
+    const ch = t.characterId ? this._state.characters[t.characterId] : undefined;
+    if (ch && this.opts.withWounds) {
+      const data = this.opts.withWounds(ch, current);
+      if (data !== null && data !== undefined) {
+        ch.data = data;
+        this.opts.onCharacterChange?.(ch);
+      }
+    }
+  }
+
+  /** the last damage dealt through hurt() (Nimble: damage while Dying) */
+  private lastDamage = 0;
 
   /** Hit points that changed with an action, in the fight's log. */
   private recordCombat(from: string, action: GameAction, before: Map<string, number | undefined>, round: number): void {
@@ -2485,6 +2639,7 @@ export class GameHost {
   /** The start of a token's turn: its movement is fresh, its timed conditions tick down. */
   private startTurn(t: Token): void {
     t.moved = 0;
+    if (t.nimble) t.nimble = { ...t.nimble, attacks: 0 };
     if (t.pool) t.zonesMoved = 0;
     delete t.maneuver;
     // action, bonus action and reaction come back; so do legendary actions

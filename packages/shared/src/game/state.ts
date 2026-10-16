@@ -6,6 +6,7 @@ import { sightFor, tokenPoints } from './sight';
 import type { PartyLoot, RollTable, Shop } from './tables';
 import { visibleRelations, type Relations } from './relations';
 import type { Calendar } from './calendar';
+import type { NimbleToken } from './nimble';
 
 /**
  * Table state. It is owned and persisted by the GM's client (the host);
@@ -177,6 +178,8 @@ export interface Token {
   lair?: string[];
   /** success-pool systems: Resilienza, Protezione and wounds (see pool.ts) */
   pool?: PoolStats;
+  /** Nimble: monster armour, minions, heroes' Wounds and actions (see nimble.ts) */
+  nimble?: NimbleToken;
 }
 
 export interface Defenses {
@@ -322,6 +325,8 @@ export interface LogEntry {
   speaker?: { name: string; image: string | null };
   /** a whisper: only these people, the author and the GM read it */
   to?: string[];
+  /** Nimble: damage waiting for a hero to take it or Defend (their reaction) */
+  pending?: { tokenId: string; amount: number; armor: number; crit?: boolean; done?: 'taken' | 'defended' };
 }
 
 export interface TablePlayer {

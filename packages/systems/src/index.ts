@@ -2,11 +2,13 @@ import type { GameSystem } from './types';
 import { dnd5e2024 } from './dnd5e-2024';
 import { wtow } from './wtow';
 import { libero } from './libero';
+import { nimble } from './nimble';
 
 export * from './types';
 export * as dnd5e from './dnd5e-2024';
 export * as warhammer from './wtow';
 export * as free from './libero';
+export * as nimbleRules from './nimble';
 export * from './money';
 export * from './progress';
 
@@ -26,4 +28,5 @@ export function listSystems(): GameSystem<any>[] {
 
 registerSystem(dnd5e2024);
 registerSystem(wtow);
+registerSystem(nimble);
 registerSystem(libero);

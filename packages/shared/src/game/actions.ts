@@ -38,6 +38,13 @@ export type GameAction =
    */
   | { type: 'chat'; text: string; private?: boolean; as?: string; to?: string[] }
   /** blind: only the GM sees the result */
+  /**
+   * Nimble: an attack rolled with the Primary Die (`2d6n+3`). Monsters take it
+   * after their armour; heroes get to Defend first. `area`: one roll for all.
+   */
+  | { type: 'nimble.attack'; attackerId?: string | null; targetIds: string[]; name: string; formula: string; damageType?: string; area?: boolean; ignoreArmor?: boolean }
+  /** Nimble: a hero takes the damage waiting in the chat, or Defends (−Armour, 1 action) */
+  | { type: 'nimble.take'; entryId: string; defend: boolean }
   /** one's own 3D dice: colours and finish (null: back to the player colour) */
   | { type: 'dice.skin'; skin: DiceSkin | null }
   | { type: 'roll'; formula: string; label?: string; private?: boolean; blind?: boolean }

@@ -646,6 +646,7 @@ export function SheetWindow({ characterId, width, placeAt }: { characterId: stri
         darkvision: d.darkvision && state.scenes[state.activeSceneId] ? metresToCells(state.scenes[state.activeSceneId]!, d.darkvision) : 0,
         defenses: d.defenses,
         pool: d.pool,
+        nimble: d.nimble,
       },
     });
   };
@@ -666,6 +667,8 @@ export function SheetWindow({ characterId, width, placeAt }: { characterId: stri
           const d = system.tokenDefaults(data);
           for (const t of Object.values(state.tokens)) {
             if (t.characterId === selected.id && d.hp) dispatch({ type: 'token.update', tokenId: t.id, patch: { hp: d.hp } });
+            // Nimble: the Wounds on the sheet follow to the token
+            if (t.characterId === selected.id && d.nimble?.wounds && t.nimble?.wounds?.current !== d.nimble.wounds.current) dispatch({ type: 'token.update', tokenId: t.id, patch: { nimble: { ...t.nimble, wounds: d.nimble.wounds } } });
             // success pools: Resilienza, Protezione and wounds follow the sheet
             if (t.characterId === selected.id && d.pool) {
               const pool = mergePool(t.pool, d.pool);

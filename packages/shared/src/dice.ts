@@ -9,6 +9,15 @@
  * `5d6h5` counts those showing 5 or more instead.
  *
  * Fudge dice (Fate): `4dF` rolls four dice showing −1, 0 or +1.
+ *
+ * Nimble attacks: `2d6n+3` rolls the damage, and the leftmost die is the
+ * Primary Die: a 1 misses (the whole attack is worth nothing), its maximum is a
+ * crit and it explodes (rolled again and added, again on the maximum). Flags
+ * after `n`: `a2` advantage 2 (two more dice, the two lowest dropped), `d1`
+ * disadvantage 1 (the highest dropped; ties drop from the left), `v` Vicious
+ * (one more die every time crit damage is rolled), `x` can't crit.
+ * `dd6` is a d66 (two d6: tens and ones; `dd6a1` with advantage), never misses
+ * or crits; likewise `dd4` and `dd8`.
  */
 
 export type Rng = (sides: number) => number;
@@ -32,6 +41,8 @@ export interface DieRoll {
   success?: boolean;
   /** the first result, when the die was rolled again (Gloriosa / Tetra) */
   was?: number;
+  /** Nimble: a die added by an exploding crit or by Vicious */
+  extra?: 'crit' | 'vicious';
 }
 
 export type RollPart =
@@ -51,6 +62,10 @@ export type RollPart =
       nines?: number;
       /** Fudge dice: values are −1, 0, +1 */
       fudge?: boolean;
+      /** Nimble attack: the Primary Die's first result, missed or crit (how many explosions) */
+      nimble?: { primary: number; miss: boolean; crits: number };
+      /** d44/d66/d88: the dice read as tens and ones */
+      tens?: boolean;
     }
   | { type: 'const'; sign: 1 | -1; value: number };
 
@@ -58,6 +73,25 @@ export interface RollResult {
   formula: string;
   total: number;
   parts: RollPart[];
+  /** Nimble: the Primary Die came up 1, the attack does nothing */
+  miss?: boolean;
+  /** Nimble: the Primary Die came up its maximum */
+  crit?: boolean;
+}
+
+const NIMBLE = /^(\d*)d(\d+)n((?:[ad]\d+|v|x)*)$/i;
+const TENS = /^dd(4|6|8)(?:a(\d+))?$/i;
+
+/** n extra dice, the lowest (or highest) dropped; ties drop from the left */
+function dropExtra(rolls: DieRoll[], n: number, highest: boolean): void {
+  for (let k = 0; k < n; k++) {
+    let at = -1;
+    rolls.forEach((r, i) => {
+      if (r.dropped) return;
+      if (at < 0 || (highest ? r.value > rolls[at]!.value : r.value < rolls[at]!.value)) at = i;
+    });
+    if (at >= 0) rolls[at]!.dropped = true;
+  }
 }
 
 export class DiceError extends Error {}
@@ -84,6 +118,51 @@ export function roll(formula: string, rng: Rng = cryptoRng): RollResult {
       const rolls: DieRoll[] = Array.from({ length: count }, () => ({ value: rng(3) - 2, dropped: false }));
       const subtotal = rolls.reduce((s, r) => s + r.value, 0);
       parts.push({ type: 'dice', sign, count, sides: 3, modifier: 'F', rolls, subtotal, fudge: true });
+      total += sign * subtotal;
+      continue;
+    }
+    const nb = NIMBLE.exec(body);
+    if (nb) {
+      const count = nb[1] ? Number(nb[1]) : 1;
+      const sides = Number(nb[2]);
+      if (count < 1 || count > MAX_DICE) throw new DiceError(`Numero di dadi fuori limite (1-${MAX_DICE})`);
+      if (sides < 2 || sides > MAX_SIDES) throw new DiceError(`Facce fuori limite (2-${MAX_SIDES})`);
+      const flags = nb[3]!.toLowerCase();
+      const adv = [...flags.matchAll(/a(\d+)/g)].reduce((n, x) => n + Number(x[1]), 0);
+      const dis = [...flags.matchAll(/d(\d+)/g)].reduce((n, x) => n + Number(x[1]), 0);
+      // each advantage cancels a disadvantage
+      const net = Math.max(-20, Math.min(20, adv - dis));
+      const vicious = flags.includes('v');
+      const noCrit = flags.includes('x');
+      const rolls: DieRoll[] = Array.from({ length: count + Math.abs(net) }, () => ({ value: rng(sides), dropped: false }));
+      dropExtra(rolls, Math.abs(net), net < 0);
+      const primary = rolls.find((r) => !r.dropped)!;
+      const miss = primary.value === 1;
+      let crits = 0;
+      if (!miss && !noCrit && primary.value === sides) {
+        // exploding: again on every maximum, a Vicious die each time
+        let last = sides;
+        while (last === sides && crits < 50) {
+          crits++;
+          last = rng(sides);
+          rolls.push({ value: last, dropped: false, extra: 'crit' });
+          if (vicious) rolls.push({ value: rng(sides), dropped: false, extra: 'vicious' });
+        }
+      }
+      const subtotal = rolls.reduce((t, r) => t + (r.dropped ? 0 : r.value), 0);
+      parts.push({ type: 'dice', sign, count, sides, modifier: `n${flags}`, rolls, subtotal, nimble: { primary: primary.value, miss, crits } });
+      total += sign * subtotal;
+      continue;
+    }
+    const td = TENS.exec(body);
+    if (td) {
+      const sides = Number(td[1]);
+      const adv = Number(td[2] ?? 0);
+      const rolls: DieRoll[] = Array.from({ length: 2 + Math.min(adv, 10) }, () => ({ value: rng(sides), dropped: false }));
+      dropExtra(rolls, Math.min(adv, 10), false);
+      const kept = rolls.filter((r) => !r.dropped);
+      const subtotal = kept[0]!.value * 10 + kept[1]!.value;
+      parts.push({ type: 'dice', sign, count: 2, sides, modifier: `dd${sides}`, rolls, subtotal, tens: true });
       total += sign * subtotal;
       continue;
     }
@@ -155,6 +234,12 @@ export function roll(formula: string, rng: Rng = cryptoRng): RollResult {
     parts.push({ type: 'dice', sign, count, sides, modifier: op ? `${op}${m[4]}` : undefined, rolls, subtotal });
     total += sign * subtotal;
   }
+  // a Nimble attack: the Primary Die (of the first attack term) decides
+  const first = parts.find((p) => p.type === 'dice' && p.nimble);
+  if (first && first.type === 'dice' && first.nimble) {
+    if (first.nimble.miss) return { formula: clean, total: 0, parts, miss: true };
+    return { formula: clean, total: Math.max(0, total), parts, crit: first.nimble.crits > 0 };
+  }
   return { formula: clean, total, parts };
 }
 
@@ -166,7 +251,8 @@ export function describeRoll(r: RollResult): string {
       if (p.type === 'const') return `${sign}${p.value}`;
       if (p.fudge) return `${sign}[${p.rolls.map((d) => (d.value > 0 ? '+' : d.value < 0 ? '−' : '0')).join(' ')}]`;
       if (p.target !== undefined) return `${sign}[${p.rolls.map((d) => `${d.was !== undefined ? `${d.was}→` : ''}${d.value}${d.success ? '✓' : ''}`).join(', ')}]`;
-      return `${sign}[${p.rolls.map((d) => (d.dropped ? `~${d.value}~` : String(d.value))).join(', ')}]`;
+      if (p.tens) return `${sign}[${p.rolls.map((d) => (d.dropped ? `~${d.value}~` : String(d.value))).join('')}]`;
+      return `${sign}[${p.rolls.map((d) => (d.dropped ? `~${d.value}~` : d.extra === 'crit' ? `💥${d.value}` : d.extra === 'vicious' ? `+${d.value}` : String(d.value))).join(', ')}]`;
     })
     .join(' ');
 }

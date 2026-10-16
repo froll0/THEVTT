@@ -19,6 +19,7 @@ export * from './game/cover';
 export * from './game/tables';
 export * from './game/relations';
 export * from './game/calendar';
+export * from './game/nimble';
 export * from './macros';
 export * from './game/actions';
 export * from './game/host';
