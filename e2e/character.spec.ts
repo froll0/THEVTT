@@ -48,6 +48,8 @@ test('builds a wizard with the guided flow, casts and levels up', async () => {
   await next();
   await expect(page.getByText('Personaggio pronto')).toBeVisible();
   await page.getByRole('button', { name: /^Salva$/ }).click();
+  // the save says how it went (an error shows here instead)
+  await expect(page.locator('.toast').last()).toHaveText(/Personaggio salvato/, { timeout: 30_000 });
 
   // sheet
   await expect(page.getByRole('button', { name: 'Modifica scelte' })).toBeVisible();
