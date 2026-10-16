@@ -1566,3 +1566,67 @@ body.spectator-body {
   font-style: italic;
   color: var(--fg-muted, inherit);
 }
+
+/* the campaign's calendar */
+.calendar {
+  gap: 10px;
+}
+.cal-grid {
+  display: grid;
+  gap: 4px;
+}
+.cal-head {
+  text-align: center;
+  padding-bottom: 2px;
+}
+.cal-day {
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 4px 5px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.cal-day:hover {
+  background: var(--bg-sunken, rgba(127, 127, 127, 0.08));
+}
+.cal-day.past {
+  opacity: 0.6;
+}
+.cal-day.today {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.cal-day.on {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.cal-ev {
+  border-radius: 4px;
+  padding: 0 4px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.cal-ev.secret {
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+}
+.cal-details {
+  gap: 6px;
+  padding: var(--s3);
+  border-radius: var(--r-lg, 12px);
+  background: var(--bg-sunken, rgba(127, 127, 127, 0.08));
+}
+@media (max-width: 560px) {
+  .cal-day {
+    min-height: 40px;
+  }
+  .cal-ev {
+    display: none;
+  }
+}

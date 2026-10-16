@@ -1,10 +1,11 @@
 import { mergePool, newId, roll, worldTime, type GameAction, type Quest } from '@thevtt/shared';
 import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
-import { BedDouble, ChevronLeft, Clock, Coffee, Dices, Eye, EyeOff, Moon, Plus, Sun, Sunrise, Trash2, X } from 'lucide-react';
+import { BedDouble, CalendarDays, ChevronLeft, Clock, Coffee, Dices, Eye, EyeOff, Moon, Plus, Sun, Sunrise, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Popover, Switch } from '../components/ui';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
+import { CalendarView, useWorldDate } from './CalendarView';
 import { RelationsPanel } from './Relations';
 
 const START = 8 * 60;
@@ -25,6 +26,8 @@ export function WorldClock() {
   const t = worldTime(minutes);
   const [day, setDay] = useState(String(t.day));
   const [clock, setClock] = useState(t.clock);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const { calendar, date } = useWorldDate();
   // the fields follow the clock as it moves on
   useEffect(() => {
     setDay(String(t.day));
@@ -33,13 +36,21 @@ export function WorldClock() {
   // players see it once the GM has started the clock
   if (!world && !isGm) return null;
   const Icon = t.light === 'bright' ? Sun : t.light === 'dim' ? Sunrise : Moon;
-  const label = `Giorno ${t.day} · ${t.clock}`;
+  const label = date && calendar ? `${date.day} ${calendar.months[date.month]!.name} · ${t.clock}` : `Giorno ${t.day} · ${t.clock}`;
+  const full = date && calendar ? `${calendar.weekdays[date.weekday]} ${date.label}, ore ${t.clock}` : label;
   const chip = (toggle?: () => void) => (
-    <button className="badge world-chip" data-light={t.light} onClick={toggle} title={`${label}, ${t.part}`} aria-label={`Ora del mondo: ${label}`}>
+    <button className="badge world-chip" data-light={t.light} onClick={toggle} title={`${full}, ${t.part}`} aria-label={`Ora del mondo: ${label}`}>
       <Icon size={11} /> {label}
     </button>
   );
-  if (!isGm) return chip();
+  const calendarModal = showCalendar && <CalendarView onClose={() => setShowCalendar(false)} />;
+  if (!isGm)
+    return (
+      <>
+        {chip(calendar ? () => setShowCalendar(true) : undefined)}
+        {calendarModal}
+      </>
+    );
   // the whole party rests: every sheet at the table gets its long rest, every token its hit points
   const longRest = () => {
     const st = useTable.getState().state;
@@ -81,6 +92,8 @@ export function WorldClock() {
     dispatch({ type: 'time.set', minutes: (d - 1) * 1440 + Math.max(0, Math.min(23, h!)) * 60 + Math.max(0, Math.min(59, m!)) });
   };
   return (
+    <>
+    {calendarModal}
     <Popover
       align="left"
       width={280}
@@ -96,6 +109,10 @@ export function WorldClock() {
             </b>
             <span className="faint small">{t.part}</span>
           </div>
+          {date && <span className="small">{full}</span>}
+          <button className="btn ghost sm" onClick={() => setShowCalendar(true)} style={{ alignSelf: 'flex-start' }}>
+            <CalendarDays size={13} /> {calendar ? 'Calendario' : 'Scegli un calendario'}
+          </button>
           <div className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
             {STEPS.map(([name, n]) => (
               <button key={n} className="chip" onClick={() => dispatch({ type: 'time.advance', minutes: n })}>
@@ -149,6 +166,7 @@ export function WorldClock() {
         </div>
       )}
     </Popover>
+    </>
   );
 }
 

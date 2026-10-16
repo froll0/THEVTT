@@ -5,6 +5,7 @@ import { emptyMask, paintRect, resizeMask } from './fog';
 import { isAdventurePackage } from './adventure';
 import { COVER_AC, COVER_LABEL, coverBetween } from './cover';
 import { standingLabel } from './relations';
+import { cleanCalendar, dateOf, eventsBetween } from './calendar';
 import { isMapPackage } from './library';
 import { BUILTIN_SOUNDS } from './sounds';
 import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
@@ -842,8 +843,23 @@ export class GameHost {
         s.world = { minutes };
         const a = worldTime(before);
         const b = worldTime(minutes);
-        if (a.light !== b.light || b.day !== a.day) this.system(`Giorno ${b.day}, ore ${b.clock}: ${b.part}`);
+        const cal = s.calendar;
+        if (a.light !== b.light || b.day !== a.day) this.system(`${cal ? dateOf(cal, b.day - 1).label : `Giorno ${b.day}`}, ore ${b.clock}: ${b.part}`);
+        // festivals and the GM's events the clock just passed
+        if (cal) {
+          for (const e of eventsBetween(cal, before, minutes)) {
+            const text = `📅 ${e.name}${e.note ? `: ${e.note}` : ''}`;
+            if (e.visible) this.system(text);
+            else this.log({ kind: 'system', authorId: s.gmId, text, private: true });
+          }
+        }
         this.daylight();
+        break;
+      }
+      case 'calendar.set': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        s.calendar = action.calendar ? cleanCalendar(action.calendar) : null;
         break;
       }
       case 'quest.save': {

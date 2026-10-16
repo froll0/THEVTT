@@ -1,4 +1,5 @@
 import type { Macro } from '../macros';
+import type { Calendar } from './calendar';
 import type { MapPackage } from './library';
 import type { AdventurePackage } from './adventure';
 import type { PartyLoot, RollTable, Shop } from './tables';
@@ -181,6 +182,8 @@ export type GameAction =
   /** GM: the world's clock moves on (or is set) */
   | { type: 'time.advance'; minutes: number }
   | { type: 'time.set'; minutes: number }
+  /** GM: the campaign's calendar (null: none, just day numbers) */
+  | { type: 'calendar.set'; calendar: Calendar | null }
   /** GM: a quest, new or changed */
   | { type: 'quest.save'; quest: Partial<Omit<Quest, 'updatedAt'>> & { title: string } }
   | { type: 'quest.delete'; questId: string }

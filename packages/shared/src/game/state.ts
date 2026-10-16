@@ -5,6 +5,7 @@ import { tokenVisible, type Fog } from './fog';
 import { sightFor, tokenPoints } from './sight';
 import type { PartyLoot, RollTable, Shop } from './tables';
 import { visibleRelations, type Relations } from './relations';
+import type { Calendar } from './calendar';
 
 /**
  * Table state. It is owned and persisted by the GM's client (the host);
@@ -382,6 +383,8 @@ export interface GameState {
   macros?: Macro[];
   /** the world's clock: minutes since the first morning of the campaign */
   world?: { minutes: number };
+  /** the campaign's calendar over the world's clock */
+  calendar?: Calendar | null;
   /** quests: players see those the GM made visible */
   quests?: Record<string, Quest>;
   /** a journey under way (Warhammer: the days on the road and their Hazards) */
@@ -611,6 +614,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     tables: Object.fromEntries(Object.entries(state.tables ?? {}).filter(([, t]) => t.shared)),
     shops: Object.fromEntries(Object.entries(state.shops ?? {}).filter(([, x]) => x.open)),
     relations: visibleRelations(state.relations),
+    calendar: state.calendar ? { ...state.calendar, events: state.calendar.events.filter((e) => e.visible) } : state.calendar,
   });
 }
 

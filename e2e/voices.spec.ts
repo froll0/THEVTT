@@ -59,6 +59,29 @@ test('speaking as an NPC, whispers between players, the fight in numbers', async
   await fight.getByRole('button', { name: 'Mostra i numeri in chat' }).click();
   await expect(P.locator('.log')).toContainText('Lo scontro in numeri');
 
+  // a calendar: a hidden ambush on day 2 reaches only the GM when the clock gets there
+  await G.getByRole('button', { name: /Ora del mondo/ }).click();
+  await G.getByRole('button', { name: 'Scegli un calendario' }).click();
+  const cal = G.getByRole('dialog', { name: 'Calendario della campagna' });
+  await cal.getByRole('button', { name: 'Fantasy: dodici mesi da trenta giorni' }).click();
+  await cal.getByRole('button', { name: 'Usa questo calendario' }).click();
+  await expect(cal.getByText('Germoglio 1492 E.C.')).toBeVisible();
+  await cal.getByRole('button', { name: /^2 Germoglio/ }).click();
+  await cal.getByLabel('Nome dell’evento').fill('Agguato al ponte');
+  await cal.getByLabel('Ora dell’evento').fill('07:00');
+  await cal.getByRole('button', { name: 'Aggiungi' }).click();
+  await expect(cal.getByRole('button', { name: /^2 Germoglio: Agguato al ponte/ })).toBeVisible();
+  await G.keyboard.press('Escape');
+  await expect(cal).toHaveCount(0);
+  if (!(await G.getByRole('button', { name: '+1 giorno' }).isVisible())) await G.getByRole('button', { name: /Ora del mondo/ }).click();
+  await G.getByRole('button', { name: '+1 giorno' }).click();
+  await G.keyboard.press('Escape');
+  await G.getByTitle('Chat e tiri').click();
+  await expect(G.locator('.log')).toContainText('📅 Agguato al ponte');
+  await expect(P.locator('.log')).toContainText('2 Germoglio 1492 E.C.');
+  await expect(P.locator('.log')).not.toContainText('Agguato');
+  await expect(P.getByRole('button', { name: /Ora del mondo: 2 Germoglio/ })).toBeVisible();
+
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   expect(pl.errors, pl.errors.join('\n')).toEqual([]);
   await pl.app.close();
