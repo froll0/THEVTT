@@ -10,6 +10,8 @@ describe('web client', () => {
     mkdirSync(join(root, 'assets'));
     writeFileSync(join(root, 'index.html'), '<!doctype html><title>TheVTT</title>');
     writeFileSync(join(root, 'assets', 'app.js'), 'console.log(1)');
+    writeFileSync(join(root, 'manifest.webmanifest'), '{"name":"TheVTT"}');
+    writeFileSync(join(root, 'sw.js'), '');
     const { app } = await buildApp({ dbPath: ':memory:', webRoot: root });
     try {
       expect((await app.inject('/')).headers.location).toBe('/play/');
@@ -20,6 +22,10 @@ describe('web client', () => {
       const js = await app.inject('/play/assets/app.js');
       expect(js.headers['content-type']).toContain('javascript');
       expect(js.headers['cache-control']).toContain('immutable');
+      // installable: the manifest and the worker
+      expect((await app.inject('/play/manifest.webmanifest')).headers['content-type']).toContain('manifest+json');
+      const sw = await app.inject('/play/sw.js');
+      expect(sw.headers['cache-control']).toBe('no-cache');
       expect((await app.inject('/play/..%2F..%2Fetc%2Fpasswd')).statusCode).toBe(404);
       expect((await app.inject('/play/missing.js')).statusCode).toBe(404);
       // the API still needs a login

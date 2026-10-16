@@ -367,6 +367,8 @@ app.whenReady().then(async () => {
   });
   // a copy of yesterday's data, before anything changes today
   await autoBackup(app.getPath('userData'), app.getVersion()).catch(() => null);
+  // left open for days (an always-on server): still one copy a day
+  setInterval(() => void autoBackup(app.getPath('userData'), app.getVersion()).catch(() => null), 3 * 3600_000).unref();
   serverConfig = sanitize({ ...DEFAULT_SERVER_CONFIG, ...((await readJson(serverConfigFile())) as Partial<HostedServerConfig> | null) });
   if (serverConfig.enabled) void hosted.start(serverConfig);
   createWindow();

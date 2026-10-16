@@ -140,8 +140,43 @@ export async function listAuto(userData: string): Promise<AutoBackup[]> {
   return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-/** One backup a day at most, the last `keep` kept. Returns the file made, if any. */
-export async function autoBackup(userData: string, appVersion: string, keep = 7, now = new Date()): Promise<string | null> {
+/** How many automatic backups to keep: the last days, then one a week, then one a month. */
+export interface Rotation {
+  daily: number;
+  weekly: number;
+  monthly: number;
+}
+export const DEFAULT_ROTATION: Rotation = { daily: 7, weekly: 4, monthly: 6 };
+
+const weekOf = (d: Date) => {
+  // Monday-based week number since the epoch: enough to tell weeks apart
+  const day = Math.floor(d.getTime() / 86400_000);
+  return Math.floor((day + 3) / 7);
+};
+
+/** Which backups (newest first) the rotation keeps. */
+export function rotationKeeps(list: AutoBackup[], r: Rotation): Set<string> {
+  const keep = new Set<string>(list.slice(0, r.daily).map((b) => b.name));
+  const pick = (key: (d: Date) => string | number, n: number) => {
+    const seen = new Set<string | number>();
+    for (const b of list) {
+      const k = key(new Date(b.createdAt));
+      if (seen.has(k)) continue;
+      if (seen.size >= n) break;
+      seen.add(k);
+      keep.add(b.name);
+    }
+  };
+  pick(weekOf, r.weekly);
+  pick((d) => d.toISOString().slice(0, 7), r.monthly);
+  return keep;
+}
+
+/**
+ * One backup a day at most; older ones thin out (a week's worth, then one a
+ * week, then one a month). Returns the file made, if any.
+ */
+export async function autoBackup(userData: string, appVersion: string, keep: number | Rotation = DEFAULT_ROTATION, now = new Date()): Promise<string | null> {
   const hasData = (await exists(join(userData, DB_FILE))) || (await exists(join(userData, DATA_DIR)));
   if (!hasData) return null;
   const list = await listAuto(userData);
@@ -151,6 +186,9 @@ export async function autoBackup(userData: string, appVersion: string, keep = 7,
   const stamp = now.toISOString().slice(0, 16).replace(/[:T]/g, '-');
   const file = join(dir, `auto-${stamp}.${BACKUP_EXT}`);
   await writeFile(file, await createBackup(userData, appVersion, now));
-  for (const old of (await listAuto(userData)).slice(keep)) await rm(join(dir, old.name), { force: true });
+  const rotation = typeof keep === 'number' ? { daily: keep, weekly: 0, monthly: 0 } : keep;
+  const all = await listAuto(userData);
+  const kept = rotationKeeps(all, rotation);
+  for (const old of all) if (!kept.has(old.name)) await rm(join(dir, old.name), { force: true });
   return file;
 }

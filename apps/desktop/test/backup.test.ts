@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { applyBackup, autoBackup, createBackup, listAuto, readBackup, summarize } from '../src/main/backup';
+import { applyBackup, autoBackup, createBackup, listAuto, readBackup, rotationKeeps, summarize } from '../src/main/backup';
 
 function fakeProfile() {
   const dir = mkdtempSync(join(tmpdir(), 'thevtt-backup-'));
@@ -60,5 +60,20 @@ describe('backups', () => {
     for (const n of [2, 3]) expect(await autoBackup(dir, '0.6.0', 2, day(n))).toBeTruthy();
     const list = await listAuto(dir);
     expect(list.map((b) => b.createdAt.slice(0, 10))).toEqual(['2026-10-03', '2026-10-02']);
+  });
+
+  it('thins old backups out: the last days, one a week, one a month', () => {
+    // a backup every day for 120 days, newest first
+    const list = Array.from({ length: 120 }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 9, 1) - i * 86400_000);
+      return { name: `b${i}`, createdAt: d.toISOString(), bytes: 1 };
+    });
+    const kept = rotationKeeps(list, { daily: 7, weekly: 4, monthly: 4 });
+    const days = list.filter((b) => kept.has(b.name)).map((b) => b.createdAt.slice(0, 10));
+    expect(days.slice(0, 7)).toEqual(list.slice(0, 7).map((b) => b.createdAt.slice(0, 10)));
+    // one per month for four months, some weeks in between
+    expect(new Set(days.map((d) => d.slice(0, 7))).size).toBe(4);
+    expect(kept.size).toBeLessThanOrEqual(15);
+    expect(kept.size).toBeGreaterThan(8);
   });
 });

@@ -2038,7 +2038,7 @@ Sostituisce i dati di questo PC; quelli di adesso vengono messi da parte ⇒ Rep
 Scegli il file… ⇒ Choose the file…
 Backup automatici ⇒ Automatic backups
 Apri cartella ⇒ Open folder
-Uno al giorno, all’avvio dell’app; tengo gli ultimi sette. Servono se qualcosa va storto su questo PC: per cambiare computer usa il backup qui sopra. ⇒ One a day, when the app starts; I keep the last seven. They help if something goes wrong on this PC: to change computer use the backup above.
+Uno al giorno (anche se l’app resta aperta); tengo quelli dell’ultima settimana, poi uno a settimana per un mese e uno al mese per sei mesi. Servono se qualcosa va storto su questo PC: per cambiare computer usa il backup qui sopra. ⇒ One a day (even if the app stays open); I keep the last week's, then one a week for a month and one a month for six months. They help if something goes wrong on this PC: to change computer use the backup above.
 Ancora nessuno: il primo viene fatto al prossimo avvio. ⇒ None yet: the first is made at the next launch.
 Ripristinare questo backup? ⇒ Restore this backup?
 Ripristina e riavvia ⇒ Restore and restart

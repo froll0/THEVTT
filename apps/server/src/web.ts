@@ -7,6 +7,7 @@ const TYPES: Record<string, string> = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json',
+  '.webmanifest': 'application/manifest+json',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -34,6 +35,8 @@ export function webClient(app: FastifyInstance, root: string) {
       const type = TYPES[extname(file).toLowerCase()] ?? 'application/octet-stream';
       // index.html changes with every version; the hashed assets never do
       reply.header('cache-control', rel.startsWith('assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
+      // the installable app's worker looks after the whole client
+      if (rel === 'sw.js') reply.header('service-worker-allowed', '/play/');
       return reply.type(type).send(body);
     } catch {
       return reply.code(404).send({ error: 'not_found', message: 'File non trovato' });

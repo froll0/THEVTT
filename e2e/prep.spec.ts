@@ -27,6 +27,9 @@ test('a player from the browser, in English; encounters launched in one click; t
   await B.waitForLoadState('domcontentloaded');
   await B.evaluate(() => localStorage.setItem('thevtt:settings', JSON.stringify({ state: { language: 'en' }, version: 0 })));
   await B.reload();
+  // installable as an app: the manifest and the worker are there
+  await expect.poll(() => B.evaluate(async () => !!(await navigator.serviceWorker.getRegistration('/play/')))).toBe(true);
+  expect(await B.evaluate(() => document.querySelector('link[rel=manifest]')?.getAttribute('href'))).toBe('./manifest.webmanifest');
   // in English, and nothing to choose about servers
   await expect(B.getByRole('button', { name: 'Create account' })).toBeVisible();
   await expect(B.getByText('Where do you play?')).toHaveCount(0);

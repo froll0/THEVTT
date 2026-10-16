@@ -535,7 +535,7 @@ function BackupSettings() {
           </button>
         }
       >
-        <p className="muted small">Uno al giorno, all’avvio dell’app; tengo gli ultimi sette. Servono se qualcosa va storto su questo PC: per cambiare computer usa il backup qui sopra.</p>
+        <p className="muted small">Uno al giorno (anche se l’app resta aperta); tengo quelli dell’ultima settimana, poi uno a settimana per un mese e uno al mese per sei mesi. Servono se qualcosa va storto su questo PC: per cambiare computer usa il backup qui sopra.</p>
         {auto.length ? (
           <div className="list">
             {auto.map((b) => (
