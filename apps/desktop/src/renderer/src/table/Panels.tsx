@@ -42,6 +42,34 @@ function Who({ e, author }: { e: LogEntry; author?: UserPublic }) {
   );
 }
 
+/** Nimble: a hero hit by a monster takes the damage or Defends (their reaction). */
+function PendingDamage({ e, meId }: { e: LogEntry; meId: string }) {
+  const state = useTable((s) => s.state);
+  const dispatch = useTable((s) => s.dispatch);
+  const p = e.pending!;
+  const t = state?.tokens[p.tokenId];
+  const canAct = !!t && !p.done && (state?.gmId === meId || t.ownerIds.includes(meId));
+  return (
+    <div className="log-system pending-damage col" role="group" aria-label={`Danni a ${t?.name ?? ''}`}>
+      <span>{e.text}</span>
+      {p.done ? (
+        <span className="faint tiny">{p.done === 'defended' ? 'Si è difeso' : 'Subiti'}</span>
+      ) : canAct ? (
+        <span className="row" style={{ gap: 6, justifyContent: 'center' }}>
+          <button className="btn sm" onClick={() => dispatch({ type: 'nimble.take', entryId: e.id, defend: true })} title="Reazione: costa 1 azione, toglie la tua Armatura dai danni">
+            Difenditi (−{p.armor}): {Math.max(0, p.amount - p.armor)}
+          </button>
+          <button className="btn ghost sm" onClick={() => dispatch({ type: 'nimble.take', entryId: e.id, defend: false })}>
+            Subisci {p.amount}
+          </button>
+        </span>
+      ) : (
+        <span className="faint tiny">in attesa di {t?.name ?? 'chi è colpito'}</span>
+      )}
+    </div>
+  );
+}
+
 function LogLine({
   e,
   meId,
@@ -61,6 +89,7 @@ function LogLine({
   /** selected token that this roll can be applied to */
   target?: { name: string; apply: (delta: number) => void };
 }) {
+  if (e.kind === 'system' && e.pending) return <PendingDamage e={e} meId={meId} />;
   if (e.kind === 'system') return <div className="log-system">{e.text}</div>;
   const mine = e.authorId === meId;
   if (e.kind === 'card' && e.card) {
@@ -336,6 +365,7 @@ export function InitiativePanel() {
   const myTurn = !!current?.tokenId && !!state.tokens[current.tokenId]?.ownerIds.includes(meId);
   // success-pool systems: sides, one Action each
   const sides = getSystem(state.systemId)?.table === 'pool';
+  const nimbleTable = state.systemId === 'nimble';
   const sideOf = (t: Token) => (t.characterId || t.ownerIds.length ? 'players' : 'enemies') as 'players' | 'enemies';
 
   return (
@@ -369,7 +399,26 @@ export function InitiativePanel() {
                   ))}
                 </span>
               )}
-              {ini.round > 0 && t && (isGm || t.ownerIds.includes(meId)) && (
+              {nimbleTable && ini.round > 0 && t?.nimble && t.characterId && (isGm || t.ownerIds.includes(meId)) && (
+                <span className="ini-economy" role="group" aria-label={`Azioni di ${e.name}`}>
+                  {[0, 1, 2].map((k) => {
+                    const left = t.nimble!.actions ?? 3;
+                    return (
+                      <button
+                        key={k}
+                        className={k < left ? '' : 'spent'}
+                        aria-pressed={k >= left}
+                        aria-label={`Azione ${k + 1}`}
+                        title={`Azioni rimaste: ${left}/3`}
+                        onClick={() => dispatch({ type: 'token.update', tokenId: t.id, patch: { nimble: { ...t.nimble, actions: k < left ? k : k + 1 } } })}
+                      >
+                        {k + 1}
+                      </button>
+                    );
+                  })}
+                </span>
+              )}
+              {!nimbleTable && ini.round > 0 && t && (isGm || t.ownerIds.includes(meId)) && (
                 <span className="ini-economy" role="group" aria-label={`Azioni di ${e.name}`}>
                   {(sides
                     ? ([['action', 'A', 'Azione']] as const)
@@ -1711,6 +1760,16 @@ export function TokenInspector({ token }: { token: Token }) {
                     dispatch({ type: 'pool.attack', attackerId: token.id, targetIds: targets, ...a });
                     return true;
                   }}
+                  onNimbleAttack={
+                    system?.id === 'nimble'
+                      ? (a) => {
+                          const targets = useTable.getState().targets.filter((id) => id !== token.id);
+                          if (!targets.length) return false;
+                          dispatch({ type: 'nimble.attack', attackerId: token.id, targetIds: targets, ...a });
+                          return true;
+                        }
+                      : undefined
+                  }
                 />
               </div>
             </details>

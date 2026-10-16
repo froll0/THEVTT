@@ -2280,3 +2280,48 @@ collegarsi a internet come una qualsiasi pagina web. ⇒ connect to the internet
 Estensione «{0}» aggiunta: attivala quando vuoi ⇒ Extension "{0}" added: turn it on when you like
 Estensione troppo grande (max 200 kB) ⇒ Extension too large (max 200 kB)
 Dall’estensione «{0}» ⇒ From the extension "{0}"
+# Nimble
+Eroe ⇒ Hero
+Dadi Vita ⇒ Hit Dice
+Mana ⇒ Mana
+Spazi ⇒ Slots
+Risorse di classe ⇒ Class resources
+Riposo sul campo ⇒ Field Rest
+Riposo sicuro ⇒ Safe Rest
+Prossimi tiri: ⇒ Next rolls:
+Azioni e reazioni ⇒ Actions and reactions
+Incantesimi di utilità ⇒ Utility spells
+Sottoclasse ⇒ Subclass
+Motivazione ⇒ Motivation
+Correzioni a mano ⇒ Manual adjustments
+Background ⇒ Background
+Eroe pronto ⇒ Hero ready
+Scontro ⇒ Encounter
+Metti tutti sulla mappa ⇒ Put them all on the map
+Tutte le famiglie ⇒ All families
+Gregari ⇒ Minions
+Leggendari ⇒ Legendary
+Cerca un mostro… ⇒ Search a monster…
+Nessun mostro trovato. ⇒ No monster found.
+A caso ⇒ Random
+Libera ⇒ Free
+Oggetto libero… ⇒ Custom item…
+Aggiungi dalla lista… ⇒ Add from the list…
+Zaino vuoto. ⇒ Empty pack.
+Scudi ⇒ Shields
+Accampati ⇒ Make camp
+Tira i danni ⇒ Roll damage
+Stirpi comuni ⇒ Common ancestries
+Stirpi esotiche ⇒ Exotic ancestries
+Glossario ⇒ Glossary
+Creare mostri ⇒ Monster building
+Equipaggiamento della classe ⇒ Class gear
+50 monete d’oro ⇒ 50 gold pieces
+Nello zaino ⇒ In the pack
+Privilegi di classe ⇒ Class features
+Nuovi privilegi ⇒ New features
+Livello {0} ⇒ Level {0}
+Ferite {0} ⇒ Wounds {0}
+Grado {0} ⇒ Tier {0}
+Aggiungi un dono… ⇒ Add a boon…
+Aggiungi un incantesimo di utilità… ⇒ Add a utility spell…

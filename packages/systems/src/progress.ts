@@ -1,5 +1,6 @@
 import * as dnd from './dnd5e-2024/rules';
 import * as free from './libero';
+import * as nimble from './nimble/rules';
 import * as wtow from './wtow/rules';
 
 /** Experience points needed for each level (2024 rules): index = level. */
@@ -20,7 +21,7 @@ export function canLevelUp(data: unknown): boolean {
 }
 
 /**
- * The GM rewards the party: points of experience (or, in D&D, a milestone:
+ * The GM rewards the party: points of experience (or, in D&D and Nimble, a milestone:
  * one more level). Returns the sheet and a line for the chat.
  */
 export function award(systemId: string, data: unknown, reward: { xp?: number; milestone?: boolean }): { data: unknown; note: string } {
@@ -34,6 +35,16 @@ export function award(systemId: string, data: unknown, reward: { xp?: number; mi
     c.xp = (c.xp ?? 0) + xp;
     const reach = levelForXp(c.xp);
     return { data: c, note: `+${xp} PE (${c.xp})${reach > c.level ? ` · può salire al livello ${c.level + 1}` : ''}` };
+  }
+  if (systemId === 'nimble') {
+    // Nimble levels by milestone: the points go in the notes
+    const c = nimble.normalize(data);
+    if (reward.milestone) {
+      c.milestone = c.level < 20;
+      return { data: c, note: c.level < 20 ? `può salire al livello ${c.level + 1}` : 'è già al livello massimo' };
+    }
+    c.notes = `${c.notes}${c.notes ? '\n' : ''}Esperienza: +${xp}`;
+    return { data: c, note: `+${xp} esperienza` };
   }
   if (systemId === 'wtow') {
     const c = wtow.normalize(data);

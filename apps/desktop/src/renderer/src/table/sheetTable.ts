@@ -70,6 +70,13 @@ export function useSheetTable(characterId: string): SheetTable | undefined {
       table.dispatch({ type: 'pool.spell', casterId: caster?.id ?? null, targetIds: targets.map((t) => t.id), ...a });
       return true;
     },
+    nimbleAttack: (a) => {
+      const attacker = own();
+      const targets = targetsFor(attacker?.id);
+      if (!targets.length) return false;
+      table.dispatch({ type: 'nimble.attack', attackerId: attacker?.id ?? null, targetIds: targets.map((t) => t.id), ...a, name: `${state.characters[characterId]?.name ?? ''} · ${a.name}`.slice(0, 60) });
+      return true;
+    },
     rollFor: (formula, label) => {
       const full = `${state.characters[characterId]?.name ?? ''} · ${label}`.slice(0, 120);
       const since = Date.now() - 2000;

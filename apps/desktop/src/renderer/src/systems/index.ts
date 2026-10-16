@@ -10,6 +10,10 @@ import { wtowCompendium } from './wtow/Compendium';
 import { WtowSheet } from './wtow/Sheet';
 import { WTOW_MAPS } from './wtow/maps';
 import { FreeBuilder, FreeSheet } from './libero/Sheet';
+import { NimbleBestiary, NimbleStatBlock } from './nimble/Bestiary';
+import { NimbleBuilder } from './nimble/Builder';
+import { nimbleCompendium } from './nimble/Compendium';
+import { NimbleSheet } from './nimble/Sheet';
 
 export interface BuilderProps<T = any> {
   value: T;
@@ -55,6 +59,8 @@ export interface SheetTable {
   poolAttack?(a: PoolAttack): boolean;
   /** a spell on the marked (or selected) tokens; false when nobody is targeted */
   poolSpell?(a: PoolSpell): boolean;
+  /** Nimble: an attack with the Primary Die against the marked (or selected) tokens; false when nobody is targeted */
+  nimbleAttack?(a: { name: string; formula: string; damageType?: string; area?: boolean; ignoreArmor?: boolean }): boolean;
   /** roll in the chat and read the result back (null if it doesn't come back in time) */
   rollFor?(formula: string, label: string): Promise<RollResult | null>;
   /** the character's token on the current map: its conditions live there during play */
@@ -109,6 +115,8 @@ export interface StatBlockProps {
   onRoll: (formula: string, label: string) => void;
   /** success-pool systems: the creature attacks the marked tokens (false: nobody marked) */
   onAttack?: (a: PoolAttack) => boolean;
+  /** Nimble: the monster attacks the marked tokens with the Primary Die (false: nobody marked) */
+  onNimbleAttack?: (a: { name: string; formula: string; damageType?: string }) => boolean;
 }
 
 /** One page of the rules compendium. */
@@ -165,6 +173,15 @@ const uis: Record<string, SystemUi> = {
     monsterInitiative: () => 0,
     compendium: wtowCompendium,
     maps: WTOW_MAPS,
+  },
+  nimble: {
+    Builder: NimbleBuilder,
+    Sheet: NimbleSheet,
+    Bestiary: NimbleBestiary,
+    StatBlock: NimbleStatBlock,
+    // the heroes act first, the monsters last
+    monsterInitiative: () => 0,
+    compendium: nimbleCompendium,
   },
   libero: {
     Builder: FreeBuilder,

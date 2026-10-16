@@ -1,6 +1,6 @@
 import { roll } from '@thevtt/shared';
 import { describe, expect, it } from 'vitest';
-import { getSystem, nimbleRules as n } from '../src';
+import { award, getSystem, nimbleRules as n } from '../src';
 
 function hero(patch: Partial<n.NimbleCharacter> = {}): n.NimbleCharacter {
   return { ...n.createCharacter(), name: 'Grudge', classId: 'berserker', ancestryId: 'dwarf', backgroundId: 'survivalist', stats: { str: 3, dex: 1, int: -1, wil: -1 }, ...patch };
@@ -97,5 +97,13 @@ describe('Nimble', () => {
     expect(n.encounterDifficulty([2, 2], [4, 4]).label).toBe('Molto mortale');
     // every monster has a level and either HP or the minion rules
     for (const m of n.ALL_MONSTERS) expect(m.hp !== null || m.minion, m.id).toBe(true);
+  });
+
+  it('levels by milestone: the GM grants it, the level up takes it', () => {
+    const out = award('nimble', hero(), { milestone: true });
+    const c = out.data as n.NimbleCharacter;
+    expect(c.milestone).toBe(true);
+    expect(out.note).toBe('può salire al livello 2');
+    expect(n.levelUp(c, 6).milestone).toBeUndefined();
   });
 });

@@ -83,7 +83,7 @@ export function PartyOverview() {
             <button className="btn sm" disabled={!xp} onClick={() => reward({ xp })} title="Gli stessi punti a ogni personaggio al tavolo">
               <Award size={14} /> Assegna a tutti
             </button>
-            {dnd && (
+            {(dnd || state.systemId === 'nimble') && (
               <button className="btn ghost sm" onClick={() => reward({ milestone: true })} title="Un livello in più per tutti, senza contare i punti">
                 Traguardo: un livello
               </button>

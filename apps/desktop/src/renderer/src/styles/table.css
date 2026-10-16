@@ -1630,3 +1630,12 @@ body.spectator-body {
     display: none;
   }
 }
+
+/* Nimble: damage waiting for a hero to take it or Defend */
+.pending-damage {
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px dashed var(--border-strong);
+  color: var(--fg);
+}
