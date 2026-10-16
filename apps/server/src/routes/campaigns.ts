@@ -26,7 +26,10 @@ export function campaignRoutes(app: FastifyInstance, { repo, hub }: Ctx): void {
     const body = req.body as { description?: unknown } | null;
     const description = body?.description !== undefined ? str(req.body, 'description', { max: 2000, optional: true }) : undefined;
     const cover = image(req.body, 'cover', 1_500_000);
-    const c = repo.updateCampaign(req.params.id, { name: name || undefined, description, cover });
+    // homebrew: the shape belongs to the game system (checked in the app); here only its size
+    const hb = (req.body as { homebrew?: unknown } | null)?.homebrew;
+    if (hb !== undefined && hb !== null && (typeof hb !== 'object' || JSON.stringify(hb).length > 1_000_000)) throw badRequest('Homebrew non valido o troppo grande');
+    const c = repo.updateCampaign(req.params.id, { name: name || undefined, description, cover, homebrew: hb });
     hub.notifyCampaign(c.id, { kind: 'campaign.updated', campaignId: c.id }, req.userId);
     return c;
   });

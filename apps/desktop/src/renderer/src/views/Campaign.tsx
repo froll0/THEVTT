@@ -7,6 +7,7 @@ import { coverStyle } from '../components/Cards';
 import { plainText, RichEditor, RichView } from '../components/RichText';
 import { recapForDiscord, toDiscord } from '../lib/discord';
 import { DiscordCard } from './DiscordCard';
+import { HomebrewEditor } from './HomebrewEditor';
 import { Avatar, Empty, Field, Modal, Popover, readImage, Section } from '../components/ui';
 import { useApp } from '../store/app';
 
@@ -277,6 +278,7 @@ export function CampaignView({ id }: { id: string }) {
             </div>
           )}
           {isGm && <DiscordCard campaignId={campaign.id} />}
+          {isGm && campaign.systemId === 'dnd5e-2024' && <HomebrewCard campaign={campaign} />}
         </aside>
       </div>
 
@@ -573,5 +575,22 @@ export function CampaignChat({ campaign }: { campaign: Campaign }) {
         <ChatThread channel={`campaign:${campaign.id}`} people={campaign.members.map((m) => m.user)} placeholder="Scrivi al gruppo" />
       </div>
     </Section>
+  );
+}
+
+/** GM: the campaign's own spells, feats, subclasses and magic items. */
+function HomebrewCard({ campaign }: { campaign: Campaign }) {
+  const [open, setOpen] = useState(false);
+  const hb = campaign.homebrew as { spells?: unknown[]; feats?: unknown[]; subclasses?: unknown[]; items?: unknown[] } | null | undefined;
+  const count = (hb?.spells?.length ?? 0) + (hb?.feats?.length ?? 0) + (hb?.subclasses?.length ?? 0) + (hb?.items?.length ?? 0);
+  return (
+    <div className="panel-card">
+      <h3>Homebrew</h3>
+      <p className="muted small">{count ? `${count} voci fatte da te in questa campagna.` : 'Incantesimi, talenti, sottoclassi e oggetti magici tuoi, nelle schede di tutti.'}</p>
+      <button className="btn sm" onClick={() => setOpen(true)}>
+        Apri l’homebrew
+      </button>
+      {open && <HomebrewEditor campaign={campaign} onClose={() => setOpen(false)} />}
+    </div>
   );
 }

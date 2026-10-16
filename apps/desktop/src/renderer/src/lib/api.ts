@@ -102,7 +102,7 @@ export class Api {
   campaigns = () => this.req<Campaign[]>('GET', '/campaigns');
   campaign = (id: string) => this.req<Campaign>('GET', `/campaigns/${id}`);
   createCampaign = (body: CreateCampaignRequest) => this.req<Campaign>('POST', '/campaigns', body);
-  updateCampaign = (id: string, patch: { name?: string; description?: string; cover?: string | null }) => this.req<Campaign>('PATCH', `/campaigns/${id}`, patch);
+  updateCampaign = (id: string, patch: { name?: string; description?: string; cover?: string | null; homebrew?: unknown }) => this.req<Campaign>('PATCH', `/campaigns/${id}`, patch);
   deleteCampaign = (id: string) => this.req('DELETE', `/campaigns/${id}`);
   invite = (campaignId: string, userId: string) => this.req<Campaign>('POST', `/campaigns/${campaignId}/invites`, { userId });
   cancelInvite = (campaignId: string, inviteId: string) => this.req<Campaign>('DELETE', `/campaigns/${campaignId}/invites/${inviteId}`);

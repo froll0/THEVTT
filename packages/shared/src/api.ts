@@ -59,6 +59,8 @@ export interface Campaign {
   description: string;
   /** cover image (data URL), if set */
   cover: string | null;
+  /** the GM's homebrew for this campaign (shape decided by the game system) */
+  homebrew?: unknown;
   systemId: string;
   gmId: string;
   createdAt: string;

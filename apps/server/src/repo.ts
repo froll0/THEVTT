@@ -168,6 +168,7 @@ export class Repo {
       name: c.name as string,
       description: c.description as string,
       cover: (c.cover as string | null) ?? null,
+      homebrew: c.homebrew ? (JSON.parse(c.homebrew as string) as unknown) : null,
       systemId: c.system_id as string,
       gmId: c.gm_id as string,
       createdAt: c.created_at as string,
@@ -229,7 +230,8 @@ export class Repo {
     return this.campaign(id);
   }
 
-  updateCampaign(id: string, patch: { name?: string; description?: string; cover?: string | null }): Campaign {
+  updateCampaign(id: string, patch: { name?: string; description?: string; cover?: string | null; homebrew?: unknown }): Campaign {
+    if (patch.homebrew !== undefined) this.db.prepare('UPDATE campaigns SET homebrew = ? WHERE id = ?').run(patch.homebrew === null ? null : JSON.stringify(patch.homebrew), id);
     if (patch.cover !== undefined) this.db.prepare('UPDATE campaigns SET cover = ? WHERE id = ?').run(patch.cover, id);
     if (patch.name) this.db.prepare('UPDATE campaigns SET name = ? WHERE id = ?').run(patch.name, id);
     if (patch.description !== undefined) this.db.prepare('UPDATE campaigns SET description = ? WHERE id = ?').run(patch.description, id);

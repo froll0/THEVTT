@@ -114,6 +114,10 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX idx_recaps_campaign ON campaign_recaps(campaign_id, created_at);
   `,
+  // 5: the GM's homebrew for the campaign (spells, items, feats, subclasses), as JSON
+  `
+  ALTER TABLE campaigns ADD COLUMN homebrew TEXT;
+  `,
 ];
 
 export type Db = DatabaseSync;

@@ -1,3 +1,4 @@
+import { dnd5e } from '@thevtt/systems';
 import { useEffect } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CompendiumView } from './views/CompendiumView';
@@ -32,6 +33,11 @@ export function useThemeSync() {
 export function App() {
   useThemeSync();
   const { user, booting, route, boot } = useApp();
+  // the GMs' homebrew of the user's campaigns joins the manual's lists
+  const campaigns = useApp((s) => s.campaigns);
+  useEffect(() => {
+    dnd5e.applyHomebrew(campaigns.filter((c) => c.systemId === 'dnd5e-2024' && c.homebrew).map((c) => dnd5e.cleanHomebrew(c.homebrew)));
+  }, [campaigns]);
 
   useEffect(() => {
     void useHosting.getState().load();

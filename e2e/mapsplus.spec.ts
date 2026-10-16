@@ -127,3 +127,35 @@ test('a token flies, carries a trembling coloured light and an aura that shows w
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   await gm.app.close();
 });
+
+test('the GM’s homebrew spell reaches the compendium and stays with the campaign', async () => {
+  const gm = await launchApp({ hostPort: 4619 });
+  const G = gm.page;
+  await register(G, { where: 'host', username: 'master', displayName: 'Marco' });
+  await apiCall(G, 'POST', '/campaigns', { name: 'Fatta in casa', systemId: 'dnd5e-2024' });
+  await G.reload();
+  await nav(G, 'Campagne');
+  await G.getByText('Fatta in casa').click();
+  await G.getByRole('button', { name: 'Apri l’homebrew' }).click();
+  const dlg = G.getByRole('dialog', { name: 'Homebrew della campagna' });
+  await dlg.getByRole('button', { name: 'Nuovo' }).click();
+  await dlg.getByLabel('Nome dell’incantesimo').fill('Fulmine nero');
+  await dlg.getByLabel('Livello').fill('3');
+  await dlg.getByLabel('Danni').fill('8d6');
+  await dlg.getByRole('button', { name: 'Mago', exact: true }).click();
+  await dlg.getByLabel('Descrizione').fill('Un fulmine di tenebra colpisce una creatura.');
+  await dlg.getByRole('button', { name: 'Salva' }).click();
+  await expect(G.getByText('1 voci fatte da te in questa campagna.')).toBeVisible();
+
+  // on the server with the campaign
+  const camp = (await apiCall<{ id: string; homebrew: { spells: { name: string }[] } }[]>(G, 'GET', '/campaigns')).find((c) => c.homebrew)!;
+  expect(camp.homebrew.spells[0]!.name).toBe('Fulmine nero');
+
+  // in the compendium, like the manual's spells
+  await nav(G, 'Compendio');
+  await G.getByLabel('Cerca nel compendio').fill('Fulmine nero');
+  await expect(G.getByText('Fulmine nero').first()).toBeVisible();
+
+  expect(gm.errors, gm.errors.join('\n')).toEqual([]);
+  await gm.app.close();
+});

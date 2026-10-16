@@ -41,6 +41,7 @@ export * from './rules';
 export * from './rules-text';
 export * from './species';
 export * from './spells';
+export * from './homebrew';
 
 const d20 = (bonus: number) => `1d20${bonus >= 0 ? '+' : ''}${bonus}`;
 

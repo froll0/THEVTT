@@ -1663,3 +1663,38 @@ input[type='color']::-webkit-color-swatch {
 .recap-editor .rt-content {
   min-height: 260px;
 }
+
+/* ---------- homebrew editor ---------- */
+.homebrew {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+  min-height: 320px;
+}
+.homebrew-list {
+  width: 200px;
+  flex: none;
+  max-height: 60vh;
+  overflow: auto;
+}
+.homebrew-list .ghost-row {
+  align-items: flex-start;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+}
+.homebrew-list .ghost-row.active {
+  background: var(--fill);
+}
+.homebrew-feature {
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+@media (max-width: 720px) {
+  .homebrew {
+    flex-direction: column;
+  }
+  .homebrew-list {
+    width: auto;
+  }
+}

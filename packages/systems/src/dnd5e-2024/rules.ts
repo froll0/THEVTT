@@ -209,6 +209,8 @@ export function makeItem(ref: string, qty = 1, equipped = false): InventoryItem 
   const wpn = weaponById(ref);
   const arm = armorById(ref);
   const gear = gearById(ref);
+  // the GM's own magic items bring their description and bonus
+  const hb = gear as (typeof gear & { description?: string; magicBonus?: number }) | undefined;
   return {
     uid: newUid(),
     ref,
@@ -216,6 +218,8 @@ export function makeItem(ref: string, qty = 1, equipped = false): InventoryItem 
     qty: gear?.quantity && qty === 1 ? gear.quantity : qty,
     weight: wpn?.weight ?? arm?.weight ?? (gear ? gear.weight / (gear.quantity ?? 1) : 0),
     equipped,
+    ...(hb?.description ? { notes: hb.description } : {}),
+    ...(hb?.magicBonus ? { magicBonus: hb.magicBonus } : {}),
   };
 }
 
