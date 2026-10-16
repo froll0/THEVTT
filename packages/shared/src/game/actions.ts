@@ -4,7 +4,7 @@ import type { AdventurePackage } from './adventure';
 import type { PartyLoot, RollTable, Shop } from './tables';
 import type { RelationLink, RelationNode } from './relations';
 import type { ExtendedTest, Maneuver, PoolCheck, Zone } from './pool';
-import type { AreaTemplate, ChatCard, Encounter, GameState, Note, Prop, Quest, Scene, Token, Travel, Wall } from './state';
+import type { AreaTemplate, ChatCard, DiceSkin, Encounter, GameState, Note, Prop, Quest, Scene, Token, Travel, Wall } from './state';
 
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
@@ -31,8 +31,14 @@ export type GameAction =
   | { type: 'token.move'; tokenId: string; x: number; y: number }
   | { type: 'token.update'; tokenId: string; patch: TokenPatch }
   | { type: 'token.delete'; tokenId: string }
-  | { type: 'chat'; text: string; private?: boolean }
+  /**
+   * as: a token whose voice it is (the GM: any NPC; players: their own);
+   * to: a whisper, only these people (and the GM) read it
+   */
+  | { type: 'chat'; text: string; private?: boolean; as?: string; to?: string[] }
   /** blind: only the GM sees the result */
+  /** one's own 3D dice: colours and finish (null: back to the player colour) */
+  | { type: 'dice.skin'; skin: DiceSkin | null }
   | { type: 'roll'; formula: string; label?: string; private?: boolean; blind?: boolean }
   | { type: 'card'; card: ChatCard; private?: boolean }
   /** an attack against each target: d20+bonus against its AC; on a hit the damage is applied (doubled dice on a 20) */

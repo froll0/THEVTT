@@ -176,7 +176,41 @@ function faceText(kind: DieKind, label: number, tens?: boolean): string {
   return String(label);
 }
 
-function buildMesh(kind: DieKind, labels: number[], color: string, ink: string, tens: boolean, dim: boolean): THREE.Mesh {
+export type Finish = 'opaco' | 'lucido' | 'metallo' | 'gemma' | 'marmo';
+
+/** surface of the die: how it catches the light */
+const FINISH: Record<Finish, { roughness: number; metalness: number; opacity: number }> = {
+  opaco: { roughness: 0.85, metalness: 0, opacity: 1 },
+  lucido: { roughness: 0.45, metalness: 0.05, opacity: 1 },
+  metallo: { roughness: 0.28, metalness: 0.85, opacity: 1 },
+  gemma: { roughness: 0.08, metalness: 0.1, opacity: 0.72 },
+  marmo: { roughness: 0.35, metalness: 0.02, opacity: 1 },
+};
+
+/** a few soft veins over the base colour, the same on every die */
+function veins(ctx: CanvasRenderingContext2D, size: number, ink: string) {
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  ctx.save();
+  ctx.strokeStyle = ink;
+  ctx.globalAlpha = 0.18;
+  for (let i = 0; i < 14; i++) {
+    ctx.lineWidth = 1 + rnd() * 3;
+    ctx.beginPath();
+    let x = rnd() * size;
+    let y = rnd() * size;
+    ctx.moveTo(x, y);
+    for (let k = 0; k < 6; k++) {
+      x += (rnd() - 0.5) * size * 0.25;
+      y += (rnd() - 0.3) * size * 0.2;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function buildMesh(kind: DieKind, labels: number[], color: string, ink: string, tens: boolean, dim: boolean, finish: Finish = 'lucido'): THREE.Mesh {
   const p = shape(kind);
   const cols = Math.ceil(Math.sqrt(p.faces.length));
   const canvas = document.createElement('canvas');
@@ -184,6 +218,7 @@ function buildMesh(kind: DieKind, labels: number[], color: string, ink: string, 
   const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (finish === 'marmo') veins(ctx, canvas.width, ink);
   ctx.fillStyle = ink;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -248,7 +283,8 @@ function buildMesh(kind: DieKind, labels: number[], color: string, ink: string, 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
-  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.45, metalness: 0.05, transparent: true, opacity: dim ? 0.45 : 1 });
+  const f = FINISH[finish] ?? FINISH.lucido;
+  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: f.roughness, metalness: f.metalness, transparent: true, opacity: dim ? 0.45 : f.opacity });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   return mesh;
@@ -407,7 +443,7 @@ export class DiceTray {
   }
 
   /** Throws the given dice; `onSettle` fires when they stop. */
-  roll(dice: DieSpec[], color: string, ink: string, onSettle?: () => void) {
+  roll(dice: DieSpec[], color: string, ink: string, onSettle?: () => void, finish?: Finish) {
     if (!dice.length) return;
     this.resize();
     const kinds = dice.map((d) => d.sides);
@@ -416,7 +452,7 @@ export class DiceTray {
       const last = frames[i]!.at(-1)!;
       const up = upIndex(d.sides, { x: last.q[0], y: last.q[1], z: last.q[2], w: last.q[3] });
       const value = d.labels === 'tens' ? Math.floor((d.value % 100) / 10) : d.value;
-      const mesh = buildMesh(d.sides, labelsFor(d.sides, up, value), color, ink, d.labels === 'tens', !!d.dim);
+      const mesh = buildMesh(d.sides, labelsFor(d.sides, up, value), color, ink, d.labels === 'tens', !!d.dim, finish);
       this.scene.add(mesh);
       return mesh;
     });

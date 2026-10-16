@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useApp } from '../store/app';
 import { readableOn, useSettings } from '../store/settings';
 import { useTable } from '../store/table';
 
@@ -18,6 +19,20 @@ export function DiceLayer() {
   const seen = useRef<string | null>(null);
 
   useEffect(() => () => tray.current?.dispose(), []);
+
+  // one's chosen dice reach the table (and follow changes in the settings)
+  const skin = useSettings((s) => s.diceSkin);
+  const live = useTable((s) => !!s.state);
+  useEffect(() => {
+    if (!live) return;
+    const t = setTimeout(() => {
+      const { state, dispatch } = useTable.getState();
+      const me = useApp.getState().user?.id ?? '';
+      const now = state?.dice?.[me];
+      if (JSON.stringify(now ?? null) !== JSON.stringify(skin)) dispatch({ type: 'dice.skin', skin });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [live, skin?.color, skin?.ink, skin?.finish]);
 
   useEffect(() => {
     if (!log) return;
@@ -44,8 +59,10 @@ export function DiceLayer() {
       const { state } = useTable.getState();
       for (const e of rolls) {
         const dice = m.diceFor(e.roll!.parts);
-        const color = state?.players[e.authorId]?.color ?? (e.authorId === state?.gmId ? '#e9e7e1' : '#c9a227');
-        tray.current.roll(dice, color, readableOn(color));
+        // their own dice if they chose them, else the player's colour
+        const skin = state?.dice?.[e.authorId];
+        const color = skin?.color ?? state?.players[e.authorId]?.color ?? (e.authorId === state?.gmId ? '#e9e7e1' : '#c9a227');
+        tray.current.roll(dice, color, skin?.ink ?? readableOn(color), undefined, skin?.finish);
       }
     });
   }, [log, enabled]);

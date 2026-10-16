@@ -1,3 +1,4 @@
+import type { DiceSkin } from '@thevtt/shared';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { setLanguage, type Language } from '../i18n';
@@ -31,6 +32,10 @@ export interface Settings {
   musicVolume: number;
   /** rolling 3D dice on the table */
   dice3d: boolean;
+  /** one's own dice, seen by the whole table (null: the player colour) */
+  diceSkin: DiceSkin | null;
+  /** lines spoken as a character are read aloud, a voice per character */
+  npcVoices: boolean;
   board: {
     background: string;
     gridColor: string;
@@ -66,6 +71,8 @@ export const DEFAULT_SETTINGS: Settings = {
   directConnection: true,
   musicVolume: 0.6,
   dice3d: true,
+  diceSkin: null,
+  npcVoices: false,
   board: { background: '#0d0e10', gridColor: '#ffffff', gridOpacity: 0.12, tokenNames: 'hover', hpBars: true },
   customCss: '',
   call: { micId: '', camId: '', outId: '', volumes: {}, tiles: 'small' },

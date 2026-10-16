@@ -1,3 +1,4 @@
+import { DICE_FINISHES, type DiceFinish } from '@thevtt/shared';
 import { Copy, FolderOpen, ImagePlus } from 'lucide-react';
 import type { BackupSummary, HostedServerConfig } from '../../../preload/api';
 import { useEffect, useState } from 'react';
@@ -183,6 +184,25 @@ function TableSettings() {
       </Setting>
       <Setting title="Dadi 3D" hint="I dadi rotolano sul tavolo a ogni tiro. Disattivati anche con «Riduci animazioni».">
         <Switch on={s.dice3d} onChange={(dice3d) => s.set({ dice3d })} />
+      </Setting>
+      <Setting title="I tuoi dadi" hint="Colore, numeri e finitura: li vedono tutti al tavolo">
+        <Switch on={!!s.diceSkin} onChange={(on) => s.set({ diceSkin: on ? { color: '#7a1f2b', ink: '#f2d27a', finish: 'lucido' } : null })} label="Dadi personalizzati" />
+        {s.diceSkin && (
+          <>
+            <input type="color" value={s.diceSkin.color} onChange={(e) => s.set({ diceSkin: { ...s.diceSkin!, color: e.target.value } })} aria-label="Colore dei dadi" />
+            <input type="color" value={s.diceSkin.ink} onChange={(e) => s.set({ diceSkin: { ...s.diceSkin!, ink: e.target.value } })} aria-label="Colore dei numeri" />
+            <select className="select" style={{ width: 'auto' }} value={s.diceSkin.finish} onChange={(e) => s.set({ diceSkin: { ...s.diceSkin!, finish: e.target.value as DiceFinish } })} aria-label="Finitura dei dadi">
+              {DICE_FINISHES.map((f) => (
+                <option key={f} value={f}>
+                  {f[0]!.toUpperCase() + f.slice(1)}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+      </Setting>
+      <Setting title="Voci dei personaggi" hint="Le battute dette «come» un personaggio vengono lette ad alta voce, ognuno con la sua voce">
+        <Switch on={s.npcVoices} onChange={(npcVoices) => s.set({ npcVoices })} label="Voci dei personaggi" />
       </Setting>
       <Setting title="Connessione diretta" hint="Master e giocatori si collegano senza passare dal server; se non riesce si usa il server.">
         <Switch on={s.directConnection} onChange={(directConnection) => s.set({ directConnection })} />

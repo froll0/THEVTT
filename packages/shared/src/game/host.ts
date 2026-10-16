@@ -31,6 +31,7 @@ import {
 import {
   createScene,
   emptyMusic,
+  DICE_FINISHES,
   LOG_LIMIT,
   referencedAssets,
   viewFor,
@@ -333,6 +334,8 @@ export class GameHost {
     const scopes = from === s.gmId ? list.map((a) => UNDO_SCOPE[a.type]).filter((x) => !!x) : [];
     const scope = scopes.length ? { cols: [...new Set(scopes.flatMap((x) => x.cols))], label: list.length > 1 ? `${scopes[0]!.label} (${list.length})` : scopes[0]!.label } : undefined;
     const before = scope ? this.capture(scope.cols) : null;
+    const roundBefore = s.initiative.round;
+    const hpBefore = new Map(Object.values(s.tokens).map((t) => [t.id, t.hp?.current]));
     let res: ActionResult = { ok: false, reason: 'Niente da fare' };
     for (const a of list) {
       const r = this.apply(from, a as Exclude<GameAction, { type: 'game.undo' } | { type: 'game.redo' } | { type: 'batch' }>);
@@ -340,6 +343,9 @@ export class GameHost {
       if (r === COMMIT || res !== COMMIT) res = r;
     }
     if (res === COMMIT) {
+      // a new fight starts a new log; during one, every hit point lost or gained is written down
+      if (roundBefore === 0 && s.initiative.round > 0) s.combat = { startedAt: this.now(), events: [] };
+      if (s.initiative.round > 0 || roundBefore > 0) this.recordCombat(from, list[0]!, hpBefore, Math.max(1, roundBefore || s.initiative.round));
       if (scope && before) {
         const changes = this.diff(before);
         if (changes.length) {
@@ -481,6 +487,10 @@ export class GameHost {
         if (p.bgCellPx !== undefined) scene.bgCellPx = p.bgCellPx === null ? null : Math.min(2000, Math.max(4, Number(p.bgCellPx) || 70));
         if (p.bgOffsetX !== undefined) scene.bgOffsetX = Math.max(-50, Math.min(50, Math.round((Number(p.bgOffsetX) || 0) * 100) / 100));
         if (p.bgOffsetY !== undefined) scene.bgOffsetY = Math.max(-50, Math.min(50, Math.round((Number(p.bgOffsetY) || 0) * 100) / 100));
+        if (p.music !== undefined) {
+          if (p.music !== null && !s.music?.tracks.some((t) => t.id === p.music)) return { ok: false, reason: 'Brano inesistente' };
+          scene.music = p.music;
+        }
         if (p.ambient !== undefined) scene.ambient = p.ambient === 'dark' || p.ambient === 'dim' ? p.ambient : 'bright';
         if (p.daylight !== undefined) {
           scene.daylight = !!p.daylight;
@@ -951,6 +961,10 @@ export class GameHost {
         if (denied) return denied;
         if (!s.scenes[action.sceneId]) return { ok: false, reason: 'Scena inesistente' };
         s.activeSceneId = action.sceneId;
+        // the scene's own music, unless it is already the one playing
+        const tune = s.scenes[action.sceneId]!.music;
+        const m = s.music;
+        if (tune && m?.tracks.some((t) => t.id === tune) && !(m.current === tune && m.playing)) Object.assign(m, { current: tune, playing: true, position: 0, startedAt: this.now() });
         break;
       }
       case 'scene.delete': {
@@ -1131,7 +1145,27 @@ export class GameHost {
       case 'chat': {
         const text = action.text.trim().slice(0, 2000);
         if (!text) return { ok: false, reason: 'Messaggio vuoto' };
-        this.log({ kind: 'chat', authorId: from, text, private: !!action.private });
+        const voice = action.as ? s.tokens[action.as] : undefined;
+        if (action.as && (!voice || (!isGm && !voice.ownerIds.includes(from)))) return { ok: false, reason: 'Puoi parlare solo con la voce dei tuoi personaggi' };
+        const to = Array.isArray(action.to) ? [...new Set(action.to.filter((id) => typeof id === 'string' && (s.players[id] || id === s.gmId) && id !== from))].slice(0, 20) : [];
+        if (Array.isArray(action.to) && !to.length) return { ok: false, reason: 'A chi? Nessuno con quel nome al tavolo' };
+        this.log({
+          kind: 'chat',
+          authorId: from,
+          text,
+          private: !!action.private,
+          ...(voice ? { speaker: { name: voice.name, image: voice.image } } : {}),
+          ...(to.length ? { to } : {}),
+        });
+        break;
+      }
+      case 'dice.skin': {
+        const k = action.skin;
+        const hex = (v: unknown) => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+        s.dice ??= {};
+        if (!k) delete s.dice[from];
+        else if (hex(k.color) && hex(k.ink) && DICE_FINISHES.includes(k.finish)) s.dice[from] = { color: k.color, ink: k.ink, finish: k.finish };
+        else return { ok: false, reason: 'Dadi non validi' };
         break;
       }
       case 'roll': {
@@ -1899,6 +1933,7 @@ export class GameHost {
           t.name = String(action.name).slice(0, 120) || t.name;
         } else {
           m.tracks = m.tracks.filter((t) => t.id !== action.trackId);
+          for (const sc of Object.values(s.scenes)) if (sc.music === action.trackId) sc.music = null;
           if (m.current === action.trackId) Object.assign(m, { current: null, playing: false, position: 0 });
         }
         break;
@@ -2374,6 +2409,22 @@ export class GameHost {
     t.hp = { ...t.hp, current: Math.max(0, t.hp.current - amount) };
     this.concentration(t, amount, from);
     this.hpChanged(t);
+  }
+
+  /** Hit points that changed with an action, in the fight's log. */
+  private recordCombat(from: string, action: GameAction, before: Map<string, number | undefined>, round: number): void {
+    const s = this._state;
+    s.combat ??= { startedAt: this.now(), events: [] };
+    const a = action as { attackerId?: string | null; casterId?: string | null; name?: string; label?: string };
+    const actor = (a.attackerId && s.tokens[a.attackerId]?.name) || (a.casterId && s.tokens[a.casterId]?.name) || s.players[from]?.displayName || (from === s.gmId ? 'Il master' : 'Qualcuno');
+    const what = a.name || a.label || (action.type === 'token.update' ? 'a mano' : action.type);
+    for (const t of Object.values(s.tokens)) {
+      if (!t.hp || !before.has(t.id)) continue;
+      const was = before.get(t.id);
+      if (was === undefined || was === t.hp.current) continue;
+      s.combat.events.push({ round, by: actor, what: String(what).slice(0, 60), target: t.name, amount: t.hp.current - was, pc: !!t.characterId || t.ownerIds.length > 0 });
+    }
+    if (s.combat.events.length > 500) s.combat.events = s.combat.events.slice(-500);
   }
 
   /** The GM's reminder of the lair actions of the creatures in the fight. */

@@ -11,6 +11,7 @@ import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
 import { Board, CELL, groupDeleteActions, type Tool, type ToolOptions } from './Board';
 import { DiceLayer } from './DiceLayer';
+import { SpokenLines } from './SpokenLines';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { PROP_KINDS } from './props';
 import { CallControls, CallTiles, type CallPerson } from './Call';
@@ -349,6 +350,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 onCopied={() => setOptions((o) => ({ ...o, pieceMode: 'paste' }))}
               />
               <DiceLayer />
+              <SpokenLines />
             </>
           ) : (
             <div className="stage-message">

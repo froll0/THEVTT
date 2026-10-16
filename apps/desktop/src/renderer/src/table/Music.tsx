@@ -10,6 +10,37 @@ import { useTable } from '../store/table';
 let audio: HTMLAudioElement | null = null;
 const getAudio = () => (audio ??= new Audio());
 
+/** changing track: the old one fades out, the new one fades in */
+const FADE_MS = 1200;
+let gain = 1;
+let baseVolume = 0.6;
+let fading: ReturnType<typeof setInterval> | null = null;
+const applyVolume = () => {
+  getAudio().volume = Math.max(0, Math.min(1, baseVolume * gain));
+};
+function fade(to: number, ms: number, done?: () => void) {
+  if (fading) clearInterval(fading);
+  fading = null;
+  const from = gain;
+  const t0 = performance.now();
+  if (ms <= 0 || from === to) {
+    gain = to;
+    applyVolume();
+    done?.();
+    return;
+  }
+  fading = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    gain = from + (to - from) * k;
+    applyVolume();
+    if (k >= 1) {
+      clearInterval(fading!);
+      fading = null;
+      done?.();
+    }
+  }, 40);
+}
+
 /** Where the track should be now, in seconds, following the host's clock. */
 export function expectedPosition(m: MusicState, clockOffset: number, now = Date.now()): number {
   return m.playing ? m.position + (now + clockOffset - m.startedAt) / 1000 : m.position;
@@ -37,7 +68,8 @@ export function MusicPlayer() {
   const src = track ? assets[track.asset] : undefined;
 
   useEffect(() => {
-    getAudio().volume = Math.max(0, Math.min(1, volume));
+    baseVolume = volume;
+    applyVolume();
   }, [volume]);
 
   useEffect(() => {
@@ -56,14 +88,11 @@ export function MusicPlayer() {
       a.pause();
       return;
     }
-    if (a.dataset.asset !== track.asset) {
-      a.src = src;
-      a.dataset.asset = track.asset;
-    }
-    a.loop = music.loop;
+    let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
     const sync = () => {
       const m = latest.current;
-      if (!m) return;
+      if (!m || cancelled) return;
       const dur = a.duration;
       let pos = expectedPosition(m, offset);
       const finished = Number.isFinite(dur) && !m.loop && pos >= dur;
@@ -73,10 +102,28 @@ export function MusicPlayer() {
       if (m.playing && !finished) void a.play().catch(() => undefined);
       else a.pause();
     };
-    if (a.readyState >= 1) sync();
-    else a.addEventListener('loadedmetadata', sync, { once: true });
-    const timer = setInterval(sync, 4000);
+    const begin = () => {
+      a.loop = music.loop;
+      if (a.readyState >= 1) sync();
+      else a.addEventListener('loadedmetadata', sync, { once: true });
+      timer = setInterval(sync, 4000);
+    };
+    if (a.dataset.asset !== track.asset) {
+      const swap = () => {
+        if (cancelled) return;
+        a.src = src;
+        a.dataset.asset = track.asset;
+        gain = 0;
+        applyVolume();
+        begin();
+        fade(1, FADE_MS);
+      };
+      // something was playing: let it fade out first
+      if (!a.paused && a.dataset.asset) fade(0, FADE_MS, swap);
+      else swap();
+    } else begin();
     return () => {
+      cancelled = true;
       clearInterval(timer);
       a.removeEventListener('loadedmetadata', sync);
     };

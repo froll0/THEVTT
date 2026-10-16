@@ -1,4 +1,4 @@
-import { describeRoll, sessionStats, tokensInAura, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Weather, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
+import { combatSummary, describeRoll, sessionStats, tokensInAura, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Weather, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
@@ -11,7 +11,7 @@ import { PartyOverview } from './Party';
 import { useSheetTable } from './sheetTable';
 import { tokenSpeed } from '../lib/combat';
 import { INLINE_DICE, plainText, RichEditor, RichView } from '../components/RichText';
-import { BarChart3, Library, BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Minus, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
+import { ChevronDown, BarChart3, Library, BookText, ChevronLeft, Copy, Wand2, Dices, DoorClosed, DoorOpen, RotateCcw, RotateCw, ChevronRight, Eye, EyeOff, ImagePlus, Lock, MapPinned, Minus, Plus, Swords, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, Field, readBackground, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
@@ -47,9 +47,14 @@ function LogLine({
   onRoll,
   target,
   author,
+  portrait,
+  players,
 }: {
   e: LogEntry;
   author?: UserPublic;
+  /** the speaker's portrait, when said in a character's voice */
+  portrait?: string;
+  players?: Record<string, { displayName: string }>;
   meId: string;
   onRoll: (formula: string, label: string) => void;
   /** selected token that this roll can be applied to */
@@ -159,10 +164,25 @@ function LogLine({
       </div>
     );
   }
+  if (e.speaker) {
+    // in a character's voice: their name and portrait, the player's in small
+    return (
+      <div className={`log-chat in-voice ${mine ? 'mine' : ''}`}>
+        <div className="row small" style={{ gap: 6 }}>
+          {portrait ? <span className="speaker-face" style={{ backgroundImage: `url(${portrait})` }} /> : <span className="speaker-face">{e.speaker.name.slice(0, 1)}</span>}
+          <b translate="no">{e.speaker.name}</b>
+          <span className="faint tiny">({e.authorName}) {time(e.ts)}</span>
+          {e.to && <span className="badge">sussurro</span>}
+        </div>
+        <div className="log-text speech">«{e.text}»</div>
+      </div>
+    );
+  }
   return (
-    <div className={`log-chat ${mine ? 'mine' : ''}`}>
+    <div className={`log-chat ${mine ? 'mine' : ''} ${e.to ? 'whisper' : ''}`}>
       <div className="small">
         <Who e={e} author={author} /> <span className="faint tiny">{time(e.ts)}</span> {e.private && <span className="badge">privato</span>}
+        {e.to && <span className="badge">sussurro a {e.to.map((id) => players?.[id]?.displayName ?? 'master').join(', ')}</span>}
       </div>
       <div className="log-text">{e.text}</div>
     </div>
@@ -170,10 +190,14 @@ function LogLine({
 }
 
 export function ChatPanel() {
-  const { state, dispatch, role, selectedTokenId, campaignId } = useTable();
+  const { state, dispatch, role, selectedTokenId, campaignId, assets } = useTable();
   const meId = useApp((s) => s.user?.id ?? '');
   const members = useApp((s) => s.campaigns.find((c) => c.id === campaignId)?.members);
   const [text, setText] = useState('');
+  /** whose voice: a token's id, or '' for one's own */
+  const [voice, setVoice] = useState('');
+  // the GM speaks for anyone on the scene; a player for their own tokens
+  const voices = Object.values(state?.tokens ?? {}).filter((t) => t.sceneId === state?.activeSceneId && (role === 'gm' ? !t.characterId : t.ownerIds.includes(meId)));
   const [stats, setStats] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const log = state?.log ?? [];
@@ -200,9 +224,16 @@ export function ChatPanel() {
     if (!t) return;
     const m = /^\/(r|roll|gr|br)\s+(.+)$/i.exec(t);
     const kind = m?.[1]!.toLowerCase();
+    // a whisper: /w Giulia, Luca: message (names of people at the table)
+    const w = /^\/(?:w|sussurra)\s+(.+?)[:,]?\s*:\s*(.+)$|^\/(?:w|sussurra)\s+(\S+)\s+(.+)$/i.exec(t);
     if (m) dispatch({ type: 'roll', formula: m[2]!, private: kind === 'gr', blind: kind === 'br' });
     else if (/^\/gm\s+/i.test(t)) dispatch({ type: 'chat', text: t.replace(/^\/gm\s+/i, ''), private: true });
-    else dispatch({ type: 'chat', text: t });
+    else if (w && state) {
+      const names = (w[1] ?? w[3]!).split(/\s*,\s*/).map((n) => n.toLowerCase());
+      const to = Object.values(state.players).filter((p) => names.includes(p.displayName.toLowerCase())).map((p) => p.id);
+      if (names.includes('master') || names.includes('gm')) to.push(state.gmId);
+      dispatch({ type: 'chat', text: w[2] ?? w[4]!, to });
+    } else dispatch({ type: 'chat', text: t, ...(voice ? { as: voice } : {}) });
     setText('');
   };
 
@@ -211,7 +242,16 @@ export function ChatPanel() {
       <div className="log">
         {log.length === 0 && <p className="faint small center">Nessun messaggio. Prova /r 1d20+5</p>}
         {log.map((e) => (
-          <LogLine key={e.id} e={e} meId={meId} author={members?.find((m) => m.user.id === e.authorId)?.user} onRoll={(formula, label) => dispatch({ type: 'roll', formula, label })} target={target} />
+          <LogLine
+            key={e.id}
+            e={e}
+            meId={meId}
+            author={members?.find((m) => m.user.id === e.authorId)?.user}
+            portrait={e.speaker?.image ? assets[e.speaker.image] : undefined}
+            players={state?.players}
+            onRoll={(formula, label) => dispatch({ type: 'roll', formula, label })}
+            target={target}
+          />
         ))}
         <div ref={endRef} />
       </div>
@@ -257,9 +297,20 @@ export function ChatPanel() {
         <button className={`btn ghost sm icon ${stats ? 'active' : ''}`} title="Statistiche dei tiri" aria-label="Statistiche dei tiri" onClick={() => setStats(!stats)}>
           <BarChart3 size={14} />
         </button>
+        {voices.length > 0 && (
+          <select className="select voice-select" value={voices.some((t) => t.id === voice) ? voice : ''} onChange={(e) => setVoice(e.target.value)} aria-label="Parla come" title="Parla come: il messaggio esce col nome e il ritratto del personaggio">
+            <option value="">Io</option>
+            {voices.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        )}
         <input
           className="input"
           value={text}
+          title="/w Nome messaggio: un sussurro solo per quella persona"
           placeholder={role === 'gm' ? 'Messaggio, /r 2d6+3, /gr tiro nascosto' : 'Messaggio, /r 1d20+4, /br alla cieca, /gm al master'}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
@@ -428,7 +479,65 @@ export function InitiativePanel() {
           )}
         </>
       )}
+      {isGm && state.combat && state.combat.events.length > 0 && <CombatLogView />}
       {sides && <ExtendedTests />}
+    </div>
+  );
+}
+
+/** GM: the fight blow by blow, and who did (and took) the most. */
+function CombatLogView() {
+  const { state, dispatch } = useTable();
+  const [open, setOpen] = useState(false);
+  if (!state?.combat) return null;
+  const sum = combatSummary(state.combat);
+  const events = [...state.combat.events].reverse();
+  const share = () =>
+    dispatch({
+      type: 'card',
+      card: {
+        title: 'Lo scontro in numeri',
+        subtitle: `${sum.rounds} ${sum.rounds === 1 ? 'round' : 'round'}`,
+        body: [
+          sum.dealt.length ? `Danni inflitti: ${sum.dealt.map(([n, v]) => `${n} ${v}`).join(', ')}` : '',
+          sum.taken.length ? `Danni subiti: ${sum.taken.map(([n, v]) => `${n} ${v}`).join(', ')}` : '',
+          sum.healed.length ? `Cure: ${sum.healed.map(([n, v]) => `${n} ${v}`).join(', ')}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      },
+    });
+  return (
+    <div className="col combat-log" role="region" aria-label="Registro dello scontro">
+      <button className="ghost-row row" onClick={() => setOpen(!open)} aria-expanded={open}>
+        {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <b className="small">Registro dello scontro · {sum.rounds} round</b>
+      </button>
+      {open && (
+        <>
+          <div className="combat-totals small">
+            {sum.dealt.slice(0, 4).map(([n, v]) => (
+              <span key={n}>
+                <b>{n}</b> {v} danni
+              </span>
+            ))}
+          </div>
+          <div className="combat-events">
+            {events.slice(0, 60).map((e, i) => (
+              <div key={i} className="tiny row" style={{ gap: 6 }}>
+                <span className="faint">R{e.round}</span>
+                <span className="grow">
+                  {e.by} · {e.what} → <b>{e.target}</b>
+                </span>
+                <b className={e.amount < 0 ? 'danger-text' : 'ok-text'}>{e.amount > 0 ? `+${e.amount}` : e.amount}</b>
+              </div>
+            ))}
+          </div>
+          <button className="btn ghost sm" onClick={share}>
+            Mostra i numeri in chat
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -725,6 +834,23 @@ export function ScenePanel() {
           </Field>
         )}
       </div>
+      {!!state.music?.tracks.length && (
+        <Field label="Musica della scena">
+          <select
+            className="select"
+            value={active.music ?? ''}
+            onChange={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { music: e.target.value || null } })}
+            title="Parte da sola, in dissolvenza, quando attivi la scena"
+          >
+            <option value="">Nessuna: resta quella che suona</option>
+            {state.music.tracks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
       <div className="row between">
         <span className="small">Nebbia di guerra</span>
         <Switch on={!!active.fog?.enabled} onChange={(enabled) => dispatch({ type: 'fog.enable', sceneId: active.id, enabled })} />

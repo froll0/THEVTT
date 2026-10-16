@@ -1510,3 +1510,59 @@ body.spectator-body {
 .warn-text {
   color: #e69f00;
 }
+
+/* the fight's log */
+.combat-log {
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.combat-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.combat-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow: auto;
+}
+.ok-text {
+  color: #3fb67a;
+}
+:root[data-colorblind='true'] .ok-text {
+  color: #0072b2;
+}
+
+/* speaking as a character, whispers */
+.voice-select {
+  width: auto;
+  max-width: 110px;
+  flex: none;
+}
+.speaker-face {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--bg-sunken, rgba(127, 127, 127, 0.15)) center / cover no-repeat;
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.log-chat.in-voice .speech {
+  font-style: italic;
+  padding-left: 28px;
+}
+.log-chat.whisper {
+  padding-left: var(--s3);
+  border-left: 2px dashed var(--border-strong);
+}
+.log-chat.whisper .log-text {
+  font-style: italic;
+  color: var(--fg-muted, inherit);
+}

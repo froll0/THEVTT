@@ -38,6 +38,8 @@ export interface Scene {
   /** shift of the map image, in cells, to line its grid up with ours */
   bgOffsetX?: number;
   bgOffsetY?: number;
+  /** a track of the playlist that starts (fading in) when the scene goes live */
+  music?: string | null;
   /** the map painted at the table, one terrain code per cell (see terrain.ts) */
   terrain?: string | null;
   /** rock and rooms of the painted map get their walls by themselves (default on) */
@@ -315,6 +317,10 @@ export interface LogEntry {
   private?: boolean;
   /** rolled blind: only the GM sees the result, the author sees that it happened */
   blind?: boolean;
+  /** said in a character's voice: its name and portrait (asset id) */
+  speaker?: { name: string; image: string | null };
+  /** a whisper: only these people, the author and the GM read it */
+  to?: string[];
 }
 
 export interface TablePlayer {
@@ -331,6 +337,14 @@ export interface TableCharacter {
   name: string;
   systemId: string;
   data: unknown;
+}
+
+export type DiceFinish = 'opaco' | 'lucido' | 'metallo' | 'gemma' | 'marmo';
+export const DICE_FINISHES: DiceFinish[] = ['opaco', 'lucido', 'metallo', 'gemma', 'marmo'];
+export interface DiceSkin {
+  color: string;
+  ink: string;
+  finish: DiceFinish;
 }
 
 export interface GameState {
@@ -384,6 +398,28 @@ export interface GameState {
   shops?: Record<string, Shop>;
   /** who's who: people, factions, places and their ties */
   relations?: Relations;
+  /** the last fight, blow by blow (GM only): damage and healing, by round */
+  combat?: CombatLog;
+  /** how each person's 3D dice look, by user id (everyone sees them) */
+  dice?: Record<string, DiceSkin>;
+}
+
+export interface CombatEvent {
+  round: number;
+  /** who dealt it (a token's name, or the person) */
+  by: string;
+  /** with what: the attack, the spell, «a mano» */
+  what: string;
+  target: string;
+  /** hit points: negative = damage, positive = healing */
+  amount: number;
+  /** the target is a player's character */
+  pc: boolean;
+}
+
+export interface CombatLog {
+  startedAt: number;
+  events: CombatEvent[];
 }
 
 /** A creature of a prepared encounter, as it will appear. */
@@ -552,6 +588,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     },
     log: state.log
       .filter((l) => !l.private || l.authorId === userId)
+      .filter((l) => !l.to || l.authorId === userId || l.to.includes(userId))
       // blind rolls: the author only learns that the GM got a result
       .map((l) => (l.blind && l.roll ? { ...l, text: '?', roll: undefined } : l)),
     // your own characters only: the others' sheets are private
@@ -570,6 +607,7 @@ export function viewFor(state: GameState, userId: string): GameState {
     history: undefined,
     quests: Object.fromEntries(Object.entries(state.quests ?? {}).filter(([, q]) => q.visible)),
     encounters: undefined,
+    combat: undefined,
     tables: Object.fromEntries(Object.entries(state.tables ?? {}).filter(([, t]) => t.shared)),
     shops: Object.fromEntries(Object.entries(state.shops ?? {}).filter(([, x]) => x.open)),
     relations: visibleRelations(state.relations),
@@ -587,7 +625,7 @@ export function spectatorView(state: GameState): GameState {
   const tokens: Record<string, Token> = {};
   for (const [id, t] of Object.entries(state.tokens)) tokens[id] = t.ownerIds.length ? { ...t, ownerIds: [...t.ownerIds, SPECTATOR_ID] } : t;
   // (it stays among the owners in this view: dynamic vision draws from their eyes)
-  return viewFor({ ...state, tokens, log: state.log.filter((l) => !l.private && !l.blind) }, SPECTATOR_ID);
+  return viewFor({ ...state, tokens, log: state.log.filter((l) => !l.private && !l.blind && !l.to) }, SPECTATOR_ID);
 }
 
 /** Asset ids referenced by a (filtered) state. */
@@ -597,9 +635,28 @@ export function referencedAssets(state: GameState): Set<string> {
   for (const t of Object.values(state.tokens)) if (t.image) ids.add(t.image);
   for (const n of Object.values(state.notes ?? {})) if (n.image) ids.add(n.image);
   for (const p of Object.values(state.props ?? {})) if (p.image) ids.add(p.image);
+  // the portraits of who spoke in the chat
+  for (const l of state.log) if (l.speaker?.image) ids.add(l.speaker.image);
   const track = state.music?.tracks.find((t) => t.id === state.music?.current);
   if (track) ids.add(track.asset);
   // sound effects are short: everyone has them ready before the GM plays one
   for (const x of state.sounds ?? []) ids.add(x.asset);
   return ids;
+}
+
+/** The fight in numbers: damage dealt and taken, healing, by name. */
+export function combatSummary(log: CombatLog | undefined) {
+  const dealt: Record<string, number> = {};
+  const taken: Record<string, number> = {};
+  const healed: Record<string, number> = {};
+  let rounds = 0;
+  for (const e of log?.events ?? []) {
+    rounds = Math.max(rounds, e.round);
+    if (e.amount < 0) {
+      dealt[e.by] = (dealt[e.by] ?? 0) - e.amount;
+      taken[e.target] = (taken[e.target] ?? 0) - e.amount;
+    } else healed[e.by] = (healed[e.by] ?? 0) + e.amount;
+  }
+  const sorted = (r: Record<string, number>) => Object.entries(r).sort((a, b) => b[1] - a[1]);
+  return { rounds, dealt: sorted(dealt), taken: sorted(taken), healed: sorted(healed) };
 }
