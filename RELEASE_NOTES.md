@@ -1,26 +1,15 @@
 ## Novità
 
-- **Mappe di Dungeondraft e Dungeon Alchemist**: un file .dd2vtt (o .uvtt) entra nella libreria di mappe con immagine, muri, porte e luci già al loro posto.
-- **Griglia allineata con due clic**: su una mappa importata clicchi due angoli di un quadretto (o di un blocco) e la griglia del tavolo si sovrappone a quella del disegno.
-- **Pacchetti avventura**: scene con le creature, incontri, note e dispense, missioni, musica, macro, tabelle, negozi e relazioni in un solo file, da riaprire in un'altra campagna o da passare a un altro master.
-- **Assistente, domande sulla campagna**: legge riassunti, diario, note, missioni e registro del tavolo, e risponde citando da dove viene ogni fatto.
-- **Mappa viva**:
-  - Torce e candele tremolano; ogni luce ha il suo colore.
-  - I token volano o salgono: l'altezza si vede sul token e il righello conta il dislivello.
-  - Lo sfondo di una scena può essere un breve video in loop (webm o mp4).
-  - Quando un'area d'incantesimo cade sulla mappa, tutti vedono un lampo del suo colore.
-  - Selezionando chi ha un'aura, si vede chi c'è dentro.
-- **Copertura automatica** negli attacchi D&D: muri, oggetti solidi e creature in mezzo danno mezza copertura (+2 CA), tre quarti (+5) o totale.
-- **Tabelle e tesoro**:
-  - Tabelle casuali del master, una voce per riga, da tirare con un clic o con /tabella.
-  - Bottino del gruppo: le monete si dividono sulle schede, gli oggetti presi finiscono nell'inventario.
-  - Negozi: i giocatori comprano e il prezzo esce dalla borsa sulla scheda.
-- **Tiri nel testo**: le formule scritte nelle note e dispense («2d6+3») si tirano con un clic.
-- **Chi è chi**: una mappa di PNG, fazioni e luoghi con i loro legami e il rapporto del gruppo con ogni fazione. I giocatori vedono quello che scoprono.
-- **Vista spettatore**: una seconda finestra con la mappa come la vedono i giocatori, l'iniziativa e l'ultimo tiro, da trasmettere o da mostrare su un secondo schermo.
-- **Discord**: il canale del gruppo riceve l'apertura del tavolo, la prossima sessione, i riassunti e, se vuoi, i tiri pubblici.
-- **Accessibilità**:
-  - Colori per daltonici e contrasto alto.
-  - Annunci per lettore di schermo.
-  - Token spostabili con le frecce.
-- **Prestazioni**: sulle mappe grandi si disegna solo la parte inquadrata.
+- **Difficoltà degli incontri**: negli incontri preparati si vede quanto sarà duro lo scontro per il gruppo (facile, medio, difficile, mortale) e quanti PE vale.
+- **Il gruppo a colpo d'occhio** (master): PF, CA, Percezione passiva e condizioni di ogni personaggio al tavolo.
+- **Esperienza e traguardi**: PE a tutto il gruppo con un clic, oppure un livello per traguardo; la scheda avvisa quando si può salire di livello.
+- **Homebrew della campagna** (D&D): incantesimi, talenti, sottoclassi e oggetti magici del master, nelle schede, nella creazione del personaggio e nel compendio di tutti i giocatori.
+- **Parlare come un personaggio**: in chat scegli «Parla come» e il messaggio esce con nome e ritratto del token. Il master parla per i PNG, i giocatori per i propri personaggi. Volendo, le battute vengono lette ad alta voce, una voce per personaggio.
+- **Sussurri**: `/w Giulia messaggio` (o `/w master …`) arriva solo a chi è indirizzato; il master li vede tutti.
+- **Registro dello scontro**: danni e cure round per round, con i totali da mostrare in chat.
+- **Musica per scena**: ogni scena può avere il suo brano, che parte in dissolvenza quando la attivi.
+- **I tuoi dadi**: colore, numeri e finitura (opaco, lucido, metallo, gemma, marmo) dei dadi 3D, visibili a tutto il tavolo.
+- **Calendario della campagna**: mesi, settimane e lune sull'orologio del mondo, con feste ogni anno ed eventi del master che scattano quando arriva il giorno. Gli eventi nascosti li vede solo il master.
+- **Backup più lunghi**: oltre all'ultima settimana restano un backup a settimana per un mese e uno al mese per sei mesi, anche se l'app resta sempre aperta.
+- **Giocare dal browser come un'app**: la pagina /play/ si può installare sul telefono o sul computer.
+- **Estensioni**: piccoli script aggiunti dalle Impostazioni con comandi in chat, pulsanti e reazioni a ciò che succede al tavolo. Girano isolati e possono fare solo quello che potresti fare tu. Guida in docs/ESTENSIONI.md.
