@@ -7,6 +7,7 @@ import { MapLibrary } from './MapLibrary';
 import { RevealEditor } from './Reveal';
 import { GridCalibration } from './GridCalibration';
 import { AdventureDialog } from './Adventure';
+import { PartyOverview } from './Party';
 import { useSheetTable } from './sheetTable';
 import { tokenSpeed } from '../lib/combat';
 import { INLINE_DICE, plainText, RichEditor, RichView } from '../components/RichText';
@@ -450,6 +451,7 @@ export function SheetPanel() {
 
   return (
     <div className="panel-body col">
+      {isGm && <PartyOverview />}
       {list.length === 0 && (
         <p className="muted small">{isGm ? 'Nessun personaggio al tavolo. I giocatori li assegnano dalla pagina della campagna.' : 'Non hai un personaggio in questa campagna. Assegnalo dalla pagina della campagna.'}</p>
       )}

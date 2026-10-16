@@ -1,8 +1,33 @@
-import type { Encounter } from '@thevtt/shared';
+import type { Encounter, GameState } from '@thevtt/shared';
+import { dnd5e } from '@thevtt/systems';
+import { useHomebrew } from '../store/homebrew';
 import { ChevronLeft, Clapperboard, Play, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Switch } from '../components/ui';
 import { useTable } from '../store/table';
+
+/** The levels of the characters seated at the table (D&D). */
+export function partyLevels(state: GameState): number[] {
+  return Object.values(state.players)
+    .map((p) => (p.characterId ? (state.characters[p.characterId]?.data as { level?: number } | undefined)?.level : undefined))
+    .filter((l): l is number => typeof l === 'number' && l > 0);
+}
+
+/** D&D: how hard an encounter is for the party at the table, from its creatures' XP. */
+function useDifficulty(state: GameState | null) {
+  const homebrew = useHomebrew((s) => s.monsters);
+  if (!state || state.systemId !== 'dnd5e-2024') return null;
+  const levels = partyLevels(state);
+  return (e: Pick<Encounter, 'tokens'>) => {
+    const xp = e.tokens.reduce((n, t) => {
+      const m = t.monsterId ? (dnd5e.monsterById(t.monsterId) ?? (homebrew.find((h) => h.id === t.monsterId)?.data as dnd5e.MonsterDef | undefined)) : undefined;
+      return n + (m?.xp ?? 0);
+    }, 0);
+    if (!xp) return null;
+    const d = dnd5e.encounterDifficulty(levels, xp);
+    return { xp, level: d, label: levels.length ? dnd5e.DIFFICULTY_LABELS[d] : 'nessun personaggio al tavolo' };
+  };
+}
 
 /** GM: encounters prepared before the session, launched in one click (scene, creatures, music, note). */
 export function EncountersPanel() {
@@ -10,6 +35,7 @@ export function EncountersPanel() {
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [chapter, setChapter] = useState('');
+  const difficulty = useDifficulty(state);
   if (!state) return null;
   const list = Object.values(state.encounters ?? {});
   const open = list.find((e) => e.id === editing);
@@ -71,6 +97,14 @@ export function EncountersPanel() {
                     {e.noteId ? ' · dispensa' : ''}
                     {e.launchedAt ? ' · già lanciato' : ''}
                   </span>
+                  {(() => {
+                    const d = difficulty?.(e);
+                    return d ? (
+                      <span className={`difficulty diff-${d.level}`} title={`${d.xp} PE di creature per il gruppo al tavolo`}>
+                        {d.label} · {d.xp} PE
+                      </span>
+                    ) : null;
+                  })()}
                 </button>
                 <button className="btn sm" onClick={() => dispatch({ type: 'encounter.launch', encounterId: e.id })} title="Lancia: scena, creature, musica e dispensa">
                   <Play size={12} /> Lancia

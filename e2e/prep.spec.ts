@@ -61,6 +61,8 @@ test('a player from the browser, in English; encounters launched in one click; t
   await panel.getByPlaceholder('Capitolo 1').fill('Capitolo 1');
   await panel.getByRole('button', { name: 'Salva con 1 creatura' }).click();
   await expect(panel.locator('.encounter-row', { hasText: 'Agguato al guado' })).toBeVisible();
+  // how hard it is, from its creatures' XP (no character at the table yet)
+  await expect(panel.locator('.encounter-row', { hasText: 'Agguato al guado' }).locator('.difficulty')).toContainText(/\d+ PE/);
   await expect(panel.getByRole('button', { name: 'Salva vuoto' })).toBeVisible();
 
   await panel.locator('.encounter-row', { hasText: 'Agguato al guado' }).getByTitle('Lancia: scena, creature, musica e dispensa').click();

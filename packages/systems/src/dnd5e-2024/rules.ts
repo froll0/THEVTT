@@ -51,6 +51,10 @@ export interface Dnd5eCharacter {
   version: 2;
   name: string;
   level: number;
+  /** experience points (with milestones the GM says when to level instead) */
+  xp?: number;
+  /** the GM granted a level by milestone: the sheet invites to take it */
+  milestone?: boolean;
   classId: string;
   subclassId: string | null;
   speciesId: string;
@@ -743,6 +747,8 @@ export function levelUp(c: Dnd5eCharacter, hpRoll: number | null): Dnd5eCharacte
   const wasFull = c.hp.current === null;
   next.hpRolls = [...c.hpRolls.slice(0, c.level - 1), hpRoll];
   next.level = c.level + 1;
+  // the milestone granted is taken
+  delete next.milestone;
   if (!wasFull) next.hp.current = currentHp(c) + (maxHp(next) - before);
   return next;
 }

@@ -1,5 +1,5 @@
 import { roll, type ChatCard } from '@thevtt/shared';
-import { dnd5e } from '@thevtt/systems';
+import { canLevelUp, dnd5e, DND_XP_LEVELS } from '@thevtt/systems';
 import { ArrowUpCircle, BookOpen, Dices, Heart, MessageSquareShare, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { Modal, Section, Switch } from '../../components/ui';
@@ -96,11 +96,12 @@ export function Dnd5eSheet({ data, editable, onChange, onRoll, onShare, compact,
             {dnd5e.headline(c)}
             {sub ? ` · ${sub.name}` : ''}
             {c.alignment ? ` · ${c.alignment}` : ''}
+            {c.xp ? ` · ${c.xp}${c.level < 20 ? `/${DND_XP_LEVELS[c.level + 1]}` : ''} PE` : ''}
           </div>
         </div>
         {editable && c.level < 20 && cls && (
-          <button className="btn sm" onClick={() => setLevelUp(true)} title="Sali di livello">
-            <ArrowUpCircle size={14} /> {compact ? '' : 'Livello'}
+          <button className={`btn sm ${canLevelUp(c) ? 'primary level-ready' : ''}`} onClick={() => setLevelUp(true)} title={canLevelUp(c) ? 'Puoi salire di livello!' : 'Sali di livello'}>
+            <ArrowUpCircle size={14} /> {compact ? '' : canLevelUp(c) ? 'Puoi salire di livello' : 'Livello'}
           </button>
         )}
       </div>

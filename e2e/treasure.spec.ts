@@ -80,6 +80,15 @@ test('random tables, the party’s loot shared out, a shop: straight onto the sh
   await P.getByTitle('Chat e tiri').click();
   await expect(P.locator('.log')).toContainText('Nuova nota');
 
+  // the party at a glance, and 300 XP for everyone: Elara can level up
+  await G.getByTitle('Scheda').click();
+  const party = G.getByRole('region', { name: 'Il gruppo' });
+  await expect(party.getByRole('group', { name: 'Elara' })).toContainText('Percezione passiva');
+  await party.getByLabel('Punti esperienza a testa').fill('300');
+  await party.getByRole('button', { name: 'Assegna a tutti' }).click();
+  await expect(party.getByRole('group', { name: 'Elara' })).toContainText('sale di livello');
+  await expect(P.locator('.log')).toContainText('Elara: +300 PE (300) · può salire al livello 2');
+
   // who's who: a faction the party now knows
   await G.getByTitle('Missioni').click();
   await G.getByRole('tab', { name: 'Chi è chi' }).click();
