@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, net, shell, systemPreferences } from 'electron';
 import { spawn } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
-import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AssistantRequest, HostedServerConfig, HostedServerStatus, UpdateInfo } from '../preload/api';
@@ -47,11 +47,33 @@ async function readJson(file: string): Promise<unknown> {
   }
 }
 
-async function writeJson(file: string, value: unknown): Promise<void> {
+/** writes of the same file, one after the other (two at once raced on the same temp file) */
+const writing = new Map<string, Promise<void>>();
+
+async function writeOnce(file: string, value: unknown): Promise<void> {
   await mkdir(dataDir(), { recursive: true });
-  const tmp = `${file}.tmp`;
+  const tmp = `${file}.${process.pid}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.tmp`;
   await writeFile(tmp, JSON.stringify(value));
-  await rename(tmp, file);
+  // Windows can refuse a rename for a moment while something reads the file
+  for (let i = 0; ; i++) {
+    try {
+      await rename(tmp, file);
+      return;
+    } catch (e) {
+      if (i >= 4 || !['EPERM', 'EBUSY', 'EACCES'].includes((e as NodeJS.ErrnoException).code ?? '')) {
+        await rm(tmp, { force: true }).catch(() => undefined);
+        throw e;
+      }
+      await new Promise((r) => setTimeout(r, 30 * (i + 1)));
+    }
+  }
+}
+
+function writeJson(file: string, value: unknown): Promise<void> {
+  const next = (writing.get(file) ?? Promise.resolve()).catch(() => undefined).then(() => writeOnce(file, value));
+  writing.set(file, next);
+  void next.finally(() => writing.get(file) === next && writing.delete(file)).catch(() => undefined);
+  return next;
 }
 
 function createWindow(): BrowserWindow {
