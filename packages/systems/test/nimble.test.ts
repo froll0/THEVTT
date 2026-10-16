@@ -1,4 +1,3 @@
-import { roll } from '@thevtt/shared';
 import { describe, expect, it } from 'vitest';
 import { award, getSystem, nimbleRules as n } from '../src';
 
@@ -43,8 +42,8 @@ describe('Nimble', () => {
     expect(list.find((a) => a.name === 'Ascia bipenne')!.formula).toBe('2d6n+3');
     // sickle: a DEX weapon, Vicious, and the Berserker isn't proficient with it
     expect(list.find((a) => a.name === 'Falcetto')!.formula).toBe('1d4nvx+1');
-    // the formulas roll
-    expect(() => roll(list[0]!.formula)).not.toThrow();
+    // the formulas are Primary Die attacks the dice engine reads (rolled in @thevtt/shared's tests)
+    for (const a of list) expect(a.formula, a.name).toMatch(/^\d*d\d+n(?:[ad]\d+|v|x)*([+-]\d+(d\d+)?)*$/);
   });
 
   it('a Mage: mana (INT×3)+LVL from level 2, tiers every 2 levels, cantrips grow every 5', () => {
