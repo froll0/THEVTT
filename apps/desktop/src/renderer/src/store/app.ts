@@ -17,7 +17,7 @@ export type Route =
   | { name: 'settings'; section?: SettingsSection }
   | { name: 'table'; campaignId: string };
 
-export type SettingsSection = 'appearance' | 'table' | 'server' | 'account' | 'backup' | 'advanced';
+export type SettingsSection = 'appearance' | 'table' | 'server' | 'account' | 'backup' | 'plugins' | 'advanced';
 
 export interface Toast {
   id: number;

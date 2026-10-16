@@ -9,6 +9,7 @@ import { useApp, type SettingsSection } from '../store/app';
 import { DEFAULT_HOSTING, localServerUrl, useHosting } from '../store/hosting';
 import { exportSettings, PRESETS, useSettings, type Settings } from '../store/settings';
 import { useUpdates } from '../store/updates';
+import { PluginSettings } from './PluginSettings';
 
 const ACCENTS = ['#c9a227', '#e6e6e8', '#e4572e', '#ef476f', '#8b7cf6', '#2f6fed', '#06b6d4', '#4fa37e', '#39d353'];
 const AVATAR_COLORS = ['#e07a5f', '#3d85c6', '#81b29a', '#f2cc8f', '#b388eb', '#ef476f', '#06d6a0', '#ffd166'];
@@ -19,6 +20,7 @@ const SECTIONS: { id: SettingsSection; label: string; desktop?: boolean }[] = [
   { id: 'server', label: 'Server' },
   { id: 'account', label: 'Account' },
   { id: 'backup', label: 'Backup', desktop: true },
+  { id: 'plugins', label: 'Estensioni' },
   { id: 'advanced', label: 'Avanzate' },
 ];
 
@@ -41,6 +43,7 @@ export function SettingsView({ initial }: { initial?: SettingsSection }) {
           {section === 'server' && <ServerSettings />}
           {section === 'account' && <Account />}
           {section === 'backup' && <BackupSettings />}
+          {section === 'plugins' && <PluginSettings />}
           {section === 'advanced' && <Advanced />}
         </div>
       </div>

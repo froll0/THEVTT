@@ -1,6 +1,7 @@
 import { describeStep, expandMacro, macroQuestions, parseMacro, type Macro } from '@thevtt/shared';
 import { dnd5e, getSystem } from '@thevtt/systems';
-import { ArrowDown, ArrowUp, CircleAlert, Play, Plus, Settings2, Swords, Trash2, Zap } from 'lucide-react';
+import { ArrowDown, ArrowUp, CircleAlert, Play, Plus, Puzzle, Settings2, Swords, Trash2, Zap } from 'lucide-react';
+import { running, usePlugins } from '../lib/plugins';
 import { useEffect, useMemo, useState } from 'react';
 import { Field, Modal } from '../components/ui';
 import { findMonster } from '../lib/combat';
@@ -128,6 +129,8 @@ export function MacroBar() {
     return () => window.removeEventListener('thevtt:macro', onKey);
   });
   const shared = state?.macros ?? [];
+  const pluginButtons = usePlugins((s) => s.buttons);
+  const plugins = usePlugins((s) => s.plugins);
   // the GM's selected creature: its stat block's actions, one click each
   const creature = state && state.gmId === me && selectedTokenId ? state.tokens[selectedTokenId] : undefined;
   const monster = creature?.monsterId ? findMonster(creature.monsterId) : undefined;
@@ -186,6 +189,13 @@ export function MacroBar() {
           <button key={m.id} className="macro-btn" onClick={() => run(m)} title={`${m.name} · del tavolo\n${m.body}`}>
             <span className="macro-dot shared" style={{ background: m.color }} />
             <span className="ellipsis">{m.name}</span>
+          </button>
+        ))}
+        {pluginButtons.length > 0 && <span className="macro-sep" aria-hidden />}
+        {pluginButtons.map((b) => (
+          <button key={`${b.pluginId}-${b.id}`} className="macro-btn" onClick={() => running.get(b.pluginId)?.press(b.id)} title={`Dall’estensione «${plugins.find((p) => p.id === b.pluginId)?.name ?? ''}»`}>
+            <Puzzle size={12} />
+            <span className="ellipsis">{b.label}</span>
           </button>
         ))}
         {monster && creature && (

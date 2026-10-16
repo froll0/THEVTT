@@ -15,6 +15,7 @@ import { ChevronDown, BarChart3, Library, BookText, ChevronLeft, Copy, Wand2, Di
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, Field, readBackground, readImage, Switch } from '../components/ui';
 import { useApp } from '../store/app';
+import { runPluginCommand } from '../lib/plugins';
 import { useTable } from '../store/table';
 import { useWindows } from '../store/windows';
 import { getSystemUi } from '../systems';
@@ -226,7 +227,8 @@ export function ChatPanel() {
     const kind = m?.[1]!.toLowerCase();
     // a whisper: /w Giulia, Luca: message (names of people at the table)
     const w = /^\/(?:w|sussurra)\s+(.+?)[:,]?\s*:\s*(.+)$|^\/(?:w|sussurra)\s+(\S+)\s+(.+)$/i.exec(t);
-    if (m) dispatch({ type: 'roll', formula: m[2]!, private: kind === 'gr', blind: kind === 'br' });
+    if (!m && !w && runPluginCommand(t)) setText('');
+    else if (m) dispatch({ type: 'roll', formula: m[2]!, private: kind === 'gr', blind: kind === 'br' });
     else if (/^\/gm\s+/i.test(t)) dispatch({ type: 'chat', text: t.replace(/^\/gm\s+/i, ''), private: true });
     else if (w && state) {
       const names = (w[1] ?? w[3]!).split(/\s*,\s*/).map((n) => n.toLowerCase());

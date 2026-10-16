@@ -2176,3 +2176,107 @@ L’assistente c’è solo nell’app desktop del master. ⇒ The assistant is o
 Scrivi il racconto ⇒ Write the story
 Scrivo il racconto… ⇒ Writing the story…
 L’assistente trasforma la bozza in un racconto da leggere ai giocatori: controllalo prima di pubblicare ⇒ The assistant turns the draft into a story to read to the players: check it before publishing
+
+# gruppo, PE, homebrew, voci, sussurri, scontro, calendario, dadi, estensioni
+Il gruppo ⇒ The party
+Il gruppo · {0} ⇒ The party · {0}
+sale di livello ⇒ can level up
+Assegna a tutti ⇒ Give to everyone
+Traguardo: un livello ⇒ Milestone: one level
+Punti esperienza a testa ⇒ Experience points each
+Gli stessi punti a ogni personaggio al tavolo ⇒ The same points to every character at the table
+Un livello in più per tutti, senza contare i punti ⇒ One more level for everyone, without counting points
+Traguardo raggiunto ⇒ Milestone reached
+Punti esperienza ⇒ Experience points
+Puoi salire di livello ⇒ You can level up
+Homebrew della campagna ⇒ Campaign homebrew
+Apri l’homebrew ⇒ Open the homebrew
+Incantesimi ⇒ Spells
+Talenti ⇒ Feats
+Sottoclassi ⇒ Subclasses
+Oggetti magici ⇒ Magic items
+Nome dell’incantesimo ⇒ Spell name
+Registro dello scontro ⇒ Combat log
+Registro dello scontro · {0} round ⇒ Combat log · {0} rounds
+Mostra i numeri in chat ⇒ Show the numbers in chat
+Lo scontro in numeri ⇒ The fight in numbers
+Parla come ⇒ Speak as
+Parla come: il messaggio esce col nome e il ritratto del personaggio ⇒ Speak as: the message shows the character's name and portrait
+Io ⇒ Me
+sussurro ⇒ whisper
+sussurro a {0} ⇒ whisper to {0}
+Puoi parlare solo con la voce dei tuoi personaggi ⇒ You can only speak with your own characters' voices
+A chi? Nessuno con quel nome al tavolo ⇒ To whom? Nobody with that name at the table
+I tuoi dadi ⇒ Your dice
+Colore, numeri e finitura: li vedono tutti al tavolo ⇒ Colour, numbers and finish: everyone at the table sees them
+Dadi personalizzati ⇒ Custom dice
+Colore dei dadi ⇒ Dice colour
+Colore dei numeri ⇒ Number colour
+Finitura dei dadi ⇒ Dice finish
+Opaco ⇒ Matte
+Lucido ⇒ Glossy
+Metallo ⇒ Metal
+Gemma ⇒ Gem
+Marmo ⇒ Marble
+Voci dei personaggi ⇒ Character voices
+Le battute dette «come» un personaggio vengono lette ad alta voce, ognuno con la sua voce ⇒ Lines spoken "as" a character are read aloud, each with their own voice
+Musica della scena ⇒ Scene music
+Nessuna: resta quella che suona ⇒ None: keep what is playing
+Parte da sola, in dissolvenza, quando attivi la scena ⇒ Starts by itself, fading in, when you activate the scene
+Calendario ⇒ Calendar
+Scegli un calendario ⇒ Choose a calendar
+Calendario della campagna ⇒ Campaign calendar
+Il nostro calendario ⇒ Our calendar
+Fantasy: dodici mesi da trenta giorni ⇒ Fantasy: twelve months of thirty days
+Usa questo calendario ⇒ Use this calendar
+Nessun calendario ⇒ No calendar
+Mesi, giorni e lune… ⇒ Months, days and moons…
+Torna a oggi ⇒ Back to today
+Mese precedente ⇒ Previous month
+Mese successivo ⇒ Next month
+Vai a questo giorno ⇒ Go to this day
+Porta l’orologio del mondo a questo giorno, alla stessa ora ⇒ Move the world clock to this day, at the same hour
+Una volta ⇒ Once
+Ogni anno ⇒ Every year
+· ogni anno ⇒ · every year
+I giocatori lo vedono ⇒ Players see it
+Solo per il master ⇒ GM only
+Nome dell’evento ⇒ Event name
+Ora dell’evento ⇒ Event time
+Nota dell’evento ⇒ Event note
+Festa, arrivo, scadenza… ⇒ Festival, arrival, deadline…
+Cosa succede (facoltativo) ⇒ What happens (optional)
+Niente di speciale. ⇒ Nothing special.
+Parti da: ⇒ Start from:
+Mesi (nome: giorni) ⇒ Months (name: days)
+Giorni della settimana ⇒ Days of the week
+Lune (nome: giorni del ciclo) ⇒ Moons (name: days in the cycle)
+Il primo giorno della campagna è il ⇒ The campaign's first day is
+Il master non ha ancora scelto un calendario: si contano solo i giorni. ⇒ The GM hasn't chosen a calendar yet: only days are counted.
+Luna nuova ⇒ New moon
+Luna crescente ⇒ Waxing crescent
+Primo quarto ⇒ First quarter
+Gibbosa crescente ⇒ Waxing gibbous
+Luna piena ⇒ Full moon
+Gibbosa calante ⇒ Waning gibbous
+Ultimo quarto ⇒ Last quarter
+Luna calante ⇒ Waning crescent
+Estensioni ⇒ Extensions
+Da un file .js ⇒ From a .js file
+Incolla il codice ⇒ Paste the code
+Incolla un’estensione ⇒ Paste an extension
+Usa l’esempio ⇒ Use the example
+Codice dell’estensione ⇒ Extension code
+Nessuna descrizione ⇒ No description
+Nessuna estensione. Prova a incollare l’esempio. ⇒ No extensions. Try pasting the example.
+Attivare «{0}»? ⇒ Turn on "{0}"?
+Attiva {0} ⇒ Turn on {0}
+Rimuovi {0} ⇒ Remove {0}
+Attiva ⇒ Turn on
+Attiva solo estensioni di cui ti fidi. Al tavolo potrà: ⇒ Only turn on extensions you trust. At the table it will be able to:
+vedere quello che vedi tu (da master: tutto il tavolo, anche i segreti); ⇒ see what you see (as GM: the whole table, secrets included);
+scrivere in chat, tirare dadi e fare le azioni che puoi fare tu; ⇒ write in chat, roll dice and do the actions you can do;
+collegarsi a internet come una qualsiasi pagina web. ⇒ connect to the internet like any web page.
+Estensione «{0}» aggiunta: attivala quando vuoi ⇒ Extension "{0}" added: turn it on when you like
+Estensione troppo grande (max 200 kB) ⇒ Extension too large (max 200 kB)
+Dall’estensione «{0}» ⇒ From the extension "{0}"

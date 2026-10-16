@@ -12,6 +12,7 @@ import { useTable } from '../store/table';
 import { Board, CELL, groupDeleteActions, type Tool, type ToolOptions } from './Board';
 import { DiceLayer } from './DiceLayer';
 import { SpokenLines } from './SpokenLines';
+import { PluginRuntime } from './PluginRuntime';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { PROP_KINDS } from './props';
 import { CallControls, CallTiles, type CallPerson } from './Call';
@@ -351,6 +352,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
               />
               <DiceLayer />
               <SpokenLines />
+              <PluginRuntime />
             </>
           ) : (
             <div className="stage-message">

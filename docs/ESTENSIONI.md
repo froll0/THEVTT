@@ -1,0 +1,54 @@
+# Estensioni
+
+Un’estensione è un file `.js` che aggiungi dalle **Impostazioni → Estensioni**
+(da un file o incollando il codice). Resta spenta finché non la attivi, e gira
+solo mentre sei al tavolo.
+
+## Cosa può fare
+
+L’estensione gira in un *worker* separato dall’app: non vede la pagina, i dati
+salvati, le password né il resto del computer. Vede il tavolo **come lo vedi
+tu** (da master: tutto) e agisce con le **stesse azioni** dei tuoi clic, che il
+tavolo controlla come sempre: un giocatore non può muovere i token degli altri
+nemmeno con un’estensione. Può collegarsi a internet come una pagina web, e
+non può fare più di 20 azioni al secondo.
+
+## Intestazione
+
+```js
+// @name Meteo casuale
+// @description Tira il tempo ogni mattina
+// @version 1.0
+```
+
+Un’estensione con lo stesso nome di una già installata la aggiorna.
+
+## L’oggetto `thevtt`
+
+| | |
+|---|---|
+| `thevtt.state` | il tavolo come lo vedi tu |
+| `thevtt.on('state', fn)` | a ogni cambiamento del tavolo: `fn(state)` |
+| `thevtt.on('log', fn)` | a ogni riga nuova in chat (messaggi, tiri, schede): `fn(entry)` |
+| `thevtt.on('turn', fn)` | quando l’iniziativa passa al prossimo: `fn(entry, state)` |
+| `thevtt.command(nome, descrizione, fn)` | un comando di chat: `/nome argomenti` chiama `fn(argomenti, state)` |
+| `thevtt.button(etichetta, fn)` | un pulsante sulla barra delle macro |
+| `thevtt.chat(testo)` | scrive in chat |
+| `thevtt.roll(formula, etichetta)` | tira i dadi (`2d6+3`, `4d6kh3`…) |
+| `thevtt.card({ title, subtitle, body, tags, rolls })` | una scheda in chat |
+| `thevtt.dispatch(azione)` | qualsiasi azione del tavolo (vedi `packages/shared/src/game/actions.ts`) |
+| `thevtt.toast(testo)` | un avviso in basso |
+
+## Esempio
+
+```js
+// @name Turni ad alta voce
+// @description Annuncia in chat di chi è il turno
+// @version 1.0
+
+thevtt.on('turn', (entry) => {
+  if (entry) thevtt.chat(`Tocca a ${entry.name}!`);
+});
+
+thevtt.command('moneta', 'Testa o croce', () => thevtt.chat(Math.random() < 0.5 ? 'Testa!' : 'Croce!'));
+```
