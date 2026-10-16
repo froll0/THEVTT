@@ -120,7 +120,8 @@ export class CallPeer {
 export class LevelMeter {
   private readonly ctx: AudioContext;
   private readonly nodes = new Map<string, { source: MediaStreamAudioSourceNode; analyser: AnalyserNode; stream: MediaStream; track: string }>();
-  private readonly buf = new Uint8Array(512);
+  // ~43 ms of sound per look: short sounds between two looks aren't missed
+  private readonly buf = new Uint8Array(2048);
 
   constructor() {
     this.ctx = new AudioContext();
@@ -135,7 +136,7 @@ export class LevelMeter {
     if (!stream || !track) return;
     const source = this.ctx.createMediaStreamSource(new MediaStream([track]));
     const analyser = this.ctx.createAnalyser();
-    analyser.fftSize = 512;
+    analyser.fftSize = 2048;
     source.connect(analyser);
     this.nodes.set(id, { source, analyser, stream, track: track.id });
   }

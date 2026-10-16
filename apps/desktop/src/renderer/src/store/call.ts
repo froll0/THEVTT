@@ -197,7 +197,7 @@ export const useCall = create<CallStore>((set, get) => {
       const changed = Object.keys(speaking).length !== Object.keys(prev).length || Object.entries(speaking).some(([k, v]) => prev[k] !== v);
       if (changed) set({ speaking });
       if (Math.abs(myLevel - get().myLevel) > 0.01) set({ myLevel });
-    }, 120);
+    }, 60);
   };
 
   const stopMeter = () => {
