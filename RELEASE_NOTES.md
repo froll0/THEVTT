@@ -1,9 +1,11 @@
 ## Novità
 
-- **Nimble**: nuovo sistema di gioco, interamente in italiano con una terminologia coerente (il glossario con i termini originali è nel compendio).
-  - **Creazione dell'eroe guidata**: classe, stirpe, background e motivazione, caratteristiche, punti abilità, equipaggiamento, lingue.
-  - **Scheda completa**: tiri salvezza favoriti e sfavoriti, abilità, PF, Ferite e Dadi Vita, Armatura, iniziativa, risorse di classe, attacchi col dado primario, incantesimi e mana con il Potenziare, privilegi e scelte di classe, doni, inventario a spazi, salita di livello, Riposo sul campo e Riposo sicuro.
-  - **Al tavolo**: gli attacchi tirano il dado primario (con 1 si manca, col massimo il critico esplode) e applicano da soli l'armatura media o pesante dei mostri, i gregari e lo svantaggio degli attacchi affrettati. Quando un mostro colpisce un eroe, in chat si sceglie «Difenditi» o «Subisci»; Ferite e Morente si segnano da soli. Nell'iniziativa le azioni dell'eroe si vedono come tre pallini.
-  - **Bestiario** con tutti i mostri e i leggendari, la difficoltà degli scontri e gli attacchi dei mostri direttamente dalla loro scheda.
-  - **Compendio**: regole in breve, condizioni, classi, stirpi, background, incantesimi, armi, armature, oggetti magici, doni e la tabella per creare mostri.
-  - **Traguardi**: il master dà un livello a tutto il gruppo con un clic.
+- **Studio delle mappe**: una nuova sezione «Mappe», separata dal tavolo, per preparare mondi e mappe di sessione e tenerle in una libreria pronta per ogni campagna.
+  - **Mondi**: modelli il terreno (alza, abbassa, ammorbidisci, livella, increspa) sotto un livello del mare regolabile; i biomi si calcolano da soli da altitudine, umidità e latitudine, oppure li dipingi.
+  - **Fiumi, strade e confini**: fiumi a mano o automatici (clicchi la sorgente e l'acqua scende fino al mare), strade, sentieri e rotte marittime, regioni con i loro confini. Ogni linea si corregge punto per punto.
+  - **Simboli e scritte**: 28 simboli (monti, boschi, città, castelli, rovine, mostri marini…), uno alla volta o sparsi col pennello; scritte dritte o curve in tre caratteri; segnaposti con note, collegabili a una mappa di sessione della libreria.
+  - **Generatore**: continente, isole, arcipelago, costa o supercontinente, con fiumi, monti, boschi e città con nomi inventati. Quello che hai messo a mano resta.
+  - **Aspetto**: stile atlante, pergamena o inchiostro, griglia esagonale o quadrata, rosa dei venti, scala e titolo.
+  - **Esportazione**: immagine PNG ad alta risoluzione, file da passare a un altro master, oppure «Usa al tavolo»: il mondo diventa una scena con la sua griglia.
+  - **Mappe di sessione**: l'editor completo del tavolo (terreno, muri e porte, oggetti, luci, scritte, stanze pronte, generatore di dungeon) senza aprire una sessione. Ogni modifica si salva da sola.
+  - Annulla e ripeti, salvataggio automatico; mondi e mappe entrano nei backup e si usano da Scena › Libreria.
