@@ -7,6 +7,7 @@ import {
   type MapPiece,
   type GameState,
   type HostToPlayer,
+  type MapPackage,
   type PlayerToHost,
   type RtcConfig,
   type TableCharacter,
@@ -72,6 +73,8 @@ interface TableStore {
 
   host(campaign: Campaign): Promise<void>;
   join(campaign: Campaign): void;
+  /** the map studio: a table of one, on this computer only, with the map to work on */
+  workshop(pkg?: MapPackage | null, name?: string): void;
   leave(): void;
   dispatch(action: GameAction): void;
   select(tokenId: string | null): void;
@@ -97,6 +100,8 @@ let awaitingToken: Set<string> | null = null;
 const charTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const saveKey = (campaignId: string) => `table-${campaignId}`;
+/** the campaign id of the map studio's table of one */
+export const STUDIO_ID = 'studio';
 
 /** Players: a toast when someone shares a note or handout with you. */
 function announceNotes(prev: GameState | null, next: GameState) {
@@ -338,6 +343,30 @@ export const useTable = create<TableStore>((set, get) => {
       await syncRoster(campaign.id).catch(() => undefined);
       rt.send({ t: 'session.start', campaignId: campaign.id });
       host.connect(me);
+    },
+
+    workshop(pkg, name) {
+      teardown();
+      const user = useApp.getState().user;
+      if (!user) return;
+      const first = newId();
+      const state = createInitialState({ campaignId: STUDIO_ID, campaignName: 'Studio delle mappe', systemId: 'libero', gmId: user.id, sceneId: first });
+      state.scenes[first]!.name = name || 'Nuova mappa';
+      set({ campaignId: STUDIO_ID, role: 'gm', phase: 'live', state: null, assets: {}, pings: [], selectedTokenId: null, selectedPropId: null, selectedWallId: null, group: { tokens: [], props: [] }, routes: {}, editorSceneId: null, targets: [] });
+      host = new GameHost({ state, send: (to, msg) => to === user.id && apply(msg) });
+      host.connect(user.id);
+      if (pkg) {
+        // the map takes the place of the empty scene
+        const id = newId();
+        const res = host.dispatch(user.id, { type: 'scene.import', pkg, id, name: name ?? pkg.name });
+        if (res.ok) {
+          host.dispatch(user.id, { type: 'scene.activate', sceneId: id });
+          host.dispatch(user.id, { type: 'scene.delete', sceneId: first });
+        } else useApp.getState().toast(res.reason, 'error');
+      }
+      // what was done so far isn't something to undo
+      host.clearHistory();
+      set({ assets: { ...host.assetStore }, editorSceneId: host.state.activeSceneId });
     },
 
     join(campaign) {

@@ -2325,3 +2325,107 @@ Ferite {0} ⇒ Wounds {0}
 Grado {0} ⇒ Tier {0}
 Aggiungi un dono… ⇒ Add a boon…
 Aggiungi un incantesimo di utilità… ⇒ Add a utility spell…
+# Studio delle mappe
+Mappe ⇒ Maps
+Mondi ⇒ Worlds
+Mappe per il tavolo ⇒ Maps for the table
+Mondi da esplorare e mappe per le sessioni, pronti per ogni campagna. ⇒ Worlds to explore and maps for your sessions, ready for every campaign.
+Nuovo mondo ⇒ New world
+Crea il tuo primo mondo ⇒ Create your first world
+Nuova mappa ⇒ New map
+Crea la tua prima mappa ⇒ Create your first map
+Nuova mappa per il tavolo ⇒ New map for the table
+Dungeon, città, radure: terreno, muri e porte, luci e oggetti. Al tavolo si usano da Scena › Libreria. ⇒ Dungeons, towns, glades: ground, walls and doors, lights and props. At the table they're in Scene › Library.
+Apri nello studio ⇒ Open in the studio
+Esporta come file ⇒ Export as a file
+Per cominciare ⇒ To start with
+Solo mare ⇒ Only sea
+Continente ⇒ Continent
+Supercontinente ⇒ Supercontinent
+Isole ⇒ Islands
+Arcipelago ⇒ Archipelago
+Costa ⇒ Coast
+Regione ⇒ Region
+Mondo intero ⇒ Whole world
+Creo il mondo… ⇒ Making the world…
+Larghezza (caselle) ⇒ Width (squares)
+Altezza (caselle) ⇒ Height (squares)
+Genera ⇒ Generate
+Usa al tavolo ⇒ Use at the table
+Genera il mondo ⇒ Generate the world
+Usa questa terra ⇒ Use this land
+Terre emerse ⇒ Land
+Coste frastagliate ⇒ Ragged coasts
+Seme ⇒ Seed
+Un altro ⇒ Another
+Fiumi ⇒ Rivers
+Monti, colline e boschi ⇒ Mountains, hills and forests
+Città e villaggi con i nomi ⇒ Towns and villages with names
+Modella il terreno ⇒ Shape the ground
+Dipingi i biomi ⇒ Paint biomes
+Strade e rotte ⇒ Roads and routes
+Regioni e confini ⇒ Regions and borders
+Simboli ⇒ Symbols
+Scritte ⇒ Labels
+Segnaposti con note ⇒ Pins with notes
+Selezione ⇒ Selection
+Mappa ⇒ Map
+Stile ⇒ Style
+Atlante ⇒ Atlas
+Inchiostro ⇒ Ink
+Mare ⇒ Sea
+Livello del mare ⇒ Sea level
+Livelli ⇒ Layers
+Rilievo ⇒ Relief
+Regioni ⇒ Regions
+Strade ⇒ Roads
+Segnaposti ⇒ Pins
+Bussola, scala e titolo ⇒ Compass, scale and title
+Quadrati ⇒ Squares
+Misura delle caselle ⇒ Cell size
+Visibilità ⇒ Visibility
+Ornamenti ⇒ Ornaments
+Rosa dei venti ⇒ Compass rose
+Scala ⇒ Scale
+Aggiunte automatiche ⇒ Automatic additions
+Aggiungi fiumi ⇒ Add rivers
+Monti e boschi ⇒ Mountains and forests
+Città e villaggi ⇒ Towns and villages
+Togli i simboli automatici ⇒ Remove the automatic symbols
+Alza ⇒ Raise
+Abbassa ⇒ Lower
+Ammorbidisci ⇒ Smooth
+Livella ⇒ Flatten
+Increspa ⇒ Roughen
+Forza ⇒ Strength
+Automatico ⇒ Automatic
+Strada ⇒ Road
+Rotta marittima ⇒ Sea route
+Uno alla volta ⇒ One at a time
+Spargi ⇒ Scatter
+Insediamenti ⇒ Settlements
+Luoghi ⇒ Places
+Calligrafico ⇒ Calligraphic
+Curvatura ⇒ Curve
+Spaziatura ⇒ Spacing
+Corsivo ⇒ Italic
+Maiuscolo ⇒ Capitals
+Specchiato ⇒ Mirrored
+Riempimento ⇒ Fill
+Tratteggiato ⇒ Dashed
+Continuo ⇒ Solid
+Nessun bordo ⇒ No border
+Scrivi il nome sulla mappa ⇒ Write the name on the map
+Fiume ⇒ River
+Mappa del luogo ⇒ Map of the place
+Apri la mappa del luogo ⇒ Open the map of the place
+Distanza ⇒ Distance
+Lunghezza della barra ⇒ Bar length
+Niente di selezionato. ⇒ Nothing selected.
+Da salvare ⇒ Not saved
+Salvata nella libreria ⇒ Saved in the library
+Al tavolo: Scena › Libreria ⇒ At the table: Scene › Library
+Finisci ({0} punti) ⇒ Finish ({0} points)
+Mondo «{0}» aggiunto ⇒ World «{0}» added
+Mappa «{0}» aggiunta ⇒ Map «{0}» added
+Nella libreria delle mappe: al tavolo la trovi in Scena › Libreria ⇒ In the map library: at the table it's in Scene › Library

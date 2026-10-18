@@ -2,6 +2,7 @@ import { dnd5e } from '@thevtt/systems';
 import { useEffect } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CompendiumView } from './views/CompendiumView';
+import { MapsView, StudioView } from './views/MapsView';
 import { TopBar } from './components/Shell';
 import { Toasts } from './components/ui';
 import { useApp } from './store/app';
@@ -63,6 +64,17 @@ export function App() {
     );
   }
 
+  if (route.name === 'studio') {
+    return (
+      <>
+        <ErrorBoundary area="Lo studio delle mappe" key={`${route.kind}-${route.id}`}>
+          <StudioView kind={route.kind} id={route.id} />
+        </ErrorBoundary>
+        <Toasts />
+      </>
+    );
+  }
+
   if (route.name === 'table') {
     return (
       <>
@@ -87,6 +99,7 @@ export function App() {
           {route.name === 'participants' && <ParticipantsView />}
           {route.name === 'compendium' && <CompendiumView />}
           {route.name === 'journal' && <JournalView />}
+          {route.name === 'maps' && <MapsView />}
           {route.name === 'settings' && <SettingsView initial={route.section} />}
         </ErrorBoundary>
       </main>

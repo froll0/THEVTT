@@ -444,6 +444,14 @@ export class GameHost {
     return inverse;
   }
 
+  /** Forget what can be undone (a map just loaded isn't a change to take back). */
+  clearHistory(): void {
+    this.undoStack = [];
+    this.redoStack = [];
+    this.syncHistory();
+    this.broadcast();
+  }
+
   private syncHistory(): void {
     this._state.history = { undo: this.undoStack.map((st) => st.label).reverse().slice(0, 5), redo: this.redoStack.map((st) => st.label).reverse().slice(0, 5) };
   }

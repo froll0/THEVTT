@@ -14,6 +14,8 @@ export type Route =
   | { name: 'participants' }
   | { name: 'compendium' }
   | { name: 'journal' }
+  | { name: 'maps' }
+  | { name: 'studio'; kind: 'world' | 'scene'; id: string }
   | { name: 'settings'; section?: SettingsSection }
   | { name: 'table'; campaignId: string };
 

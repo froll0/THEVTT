@@ -37,6 +37,15 @@ export async function saveMap(pkg: MapPackage): Promise<LibraryEntry> {
   return entry;
 }
 
+/** Saves a map again over its own entry (the map studio), or as a new one if it's gone. */
+export async function updateMap(id: string, pkg: MapPackage): Promise<LibraryEntry> {
+  const thumb = (await renderPackage(pkg, 360)).toDataURL('image/jpeg', 0.8);
+  const entry: LibraryEntry = { id, name: pkg.name, savedAt: new Date().toISOString(), thumb, info: describePackage(pkg) };
+  await localStore.write(fileKey(id), pkg);
+  await writeIndex([entry, ...(await listMaps()).filter((e) => e.id !== id)]);
+  return entry;
+}
+
 export async function loadMap(id: string): Promise<MapPackage | null> {
   const pkg = await localStore.read<MapPackage>(fileKey(id));
   return isMapPackage(pkg) ? pkg : null;
