@@ -1,7 +1,8 @@
-import { roll, type ChatCard, type RollResult } from '@thevtt/shared';
+import { roll, type ChatCard, type RollResult, newId } from '@thevtt/shared';
 import { nimbleRules as n } from '@thevtt/systems';
-import { ArrowUpCircle, Dices, Heart, MessageSquareShare, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun, Swords, Trash2, Zap } from 'lucide-react';
+import { ArrowUpCircle, Dices, Heart, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun, Swords, Trash2, Zap } from 'lucide-react';
 import { useState } from 'react';
+import { ShareButton } from '../../components/ShareButton';
 import { Modal, Section, Switch } from '../../components/ui';
 import { PrintPart } from '../../components/Print';
 import type { SheetProps, SheetTable } from '..';
@@ -11,7 +12,6 @@ type Set = (patch: Partial<C>) => void;
 type Roll = (formula: string, label: string) => void;
 type Share = ((card: ChatCard) => void) | undefined;
 const { STATS, STAT_INFO, SKILLS, SKILL_INFO } = n;
-const rid = () => Math.random().toString(36).slice(2, 10);
 
 /** Advantage (n > 0) or disadvantage (n < 0) on the Primary Die of a formula. */
 export function withEdge(formula: string, edge: number): string {
@@ -30,25 +30,6 @@ const d20Edge = (base: string, edge: number) => {
 };
 
 const SAVE_MARK: Record<n.SaveKind, string> = { adv: ' ▲', dis: ' ▼', neutral: '' };
-
-function ShareButton({ onShare, card }: { onShare: Share; card: () => ChatCard }) {
-  if (!onShare) return null;
-  return (
-    <button
-      type="button"
-      className="btn ghost sm icon share"
-      title="Mostra in chat"
-      aria-label="Mostra in chat"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onShare(card());
-      }}
-    >
-      <MessageSquareShare size={13} />
-    </button>
-  );
-}
 
 export function spellCard(c: C, s: n.SpellDef): ChatCard {
   const f = n.spellFormula(c, s);
@@ -795,11 +776,11 @@ function FeaturesTab({ c, set, editable, onShare }: { c: C; set: Set; editable: 
 
 function itemFromRef(ref: string): n.NimbleItem | null {
   const w = n.findWeapon(ref);
-  if (w) return { id: rid(), ref, name: w.name, slots: w.twoHanded ? 2 : 1, qty: 1 };
+  if (w) return { id: newId(), ref, name: w.name, slots: w.twoHanded ? 2 : 1, qty: 1 };
   const a = n.findArmor(ref) ?? n.findShield(ref);
-  if (a) return { id: rid(), ref, name: a.name, slots: 1, qty: 1 };
+  if (a) return { id: newId(), ref, name: a.name, slots: 1, qty: 1 };
   const g = n.GEAR.find((x) => x.id === ref);
-  if (g) return { id: rid(), ref, name: g.name, slots: g.slots ?? 1, qty: 1 };
+  if (g) return { id: newId(), ref, name: g.name, slots: g.slots ?? 1, qty: 1 };
   return null;
 }
 
@@ -921,7 +902,7 @@ function InventoryTab({ c, set, editable, onRoll }: { c: C; set: Set; editable: 
             onSubmit={(e) => {
               e.preventDefault();
               if (!custom.trim()) return;
-              add({ id: rid(), name: custom.trim(), slots: 1, qty: 1 });
+              add({ id: newId(), name: custom.trim(), slots: 1, qty: 1 });
               setCustom('');
             }}
           >

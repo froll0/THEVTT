@@ -57,6 +57,30 @@ export interface ToolOptions {
   zones?: boolean;
 }
 
+/** The tools as they are when a table, the studio or the audience's window opens. */
+export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
+  fogReveal: true,
+  shape: 'circle',
+  drawColor: '',
+  drawWidth: 0.08,
+  erase: false,
+  drawText: false,
+  doorState: 'closed',
+  wallKind: 'wall',
+  wallMode: 'line',
+  wallErase: false,
+  propKind: 'crate',
+  lightPreview: false,
+  snap: true,
+  terrain: 's',
+  terrainMode: 'brush',
+  brushSize: 2,
+  propRotation: 0,
+  lightKind: 'torch',
+  showTokens: true,
+  pieceMode: 'copy',
+};
+
 /** A light preset as placed by the light tool, in cells for a scene. */
 export function presetLight(scene: { cellDistance: number; unit?: 'm' | 'ft' }, id: string) {
   const p = LIGHT_PRESETS.find((l) => l.id === id) ?? LIGHT_PRESETS.find((l) => l.id === 'torch')!;

@@ -1,7 +1,8 @@
-import { successes, type ChatCard } from '@thevtt/shared';
+import { successes, type ChatCard, newId } from '@thevtt/shared';
 import { warhammer as w } from '@thevtt/systems';
-import { BookOpen, Dices, Flame, HeartCrack, MessageSquareShare, Minus, Plus, Shield, Sparkles, Sword, Trash2, X } from 'lucide-react';
+import { BookOpen, Dices, Flame, HeartCrack, Minus, Plus, Shield, Sparkles, Sword, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
+import { ShareButton } from '../../components/ShareButton';
 import { Modal, Section, Switch } from '../../components/ui';
 import { PrintPart } from '../../components/Print';
 import type { SheetProps, SheetTable } from '..';
@@ -29,7 +30,6 @@ interface PendingTest {
   chaos?: boolean;
 }
 
-const rid = () => Math.random().toString(36).slice(2, 10);
 
 export function WtowSheet({ data, editable, onChange, onRoll, onShare, compact, table, print }: SheetProps<C> & { compact?: boolean }) {
   const c = w.normalize(data);
@@ -616,7 +616,7 @@ function WoundsSection({ c, editable, set, onRoll, table }: { c: C; editable: bo
             disabled={!custom}
             onClick={() => {
               const r = w.WOUND_TABLE.find((x) => x.name === custom)!;
-              set({ wounds: [...c.wounds, { id: rid(), name: r.name, text: r.text, heal: r.heal, treated: false }] });
+              set({ wounds: [...c.wounds, { id: newId(), name: r.name, text: r.text, heal: r.heal, treated: false }] });
               setCustom('');
             }}
           >
@@ -634,15 +634,6 @@ function WoundsSection({ c, editable, set, onRoll, table }: { c: C; editable: bo
 
 /* ------------------------------------------------------------ Talenti */
 
-function shareButton(onShare: ((c: ChatCard) => void) | undefined, card: () => ChatCard) {
-  if (!onShare) return null;
-  return (
-    <button className="btn ghost sm icon share" title="Mostra in chat" aria-label="Mostra in chat" onClick={() => onShare(card())}>
-      <MessageSquareShare size={13} />
-    </button>
-  );
-}
-
 function TalentsTab({ c, onShare }: { c: C; onShare?: (card: ChatCard) => void }) {
   const career = w.getCareer(c);
   return (
@@ -652,7 +643,7 @@ function TalentsTab({ c, onShare }: { c: C; onShare?: (card: ChatCard) => void }
           <div className="detail">
             <div className="row between">
               <b>{career.talent.name}</b>
-              {shareButton(onShare, () => ({ title: career.talent.name, subtitle: `Talento di Carriera · ${career.name}`, body: career.talent.text }))}
+              <ShareButton onShare={onShare} card={() => ({ title: career.talent.name, subtitle: `Talento di Carriera · ${career.name}`, body: career.talent.text })} />
             </div>
             <span className="small">{career.talent.text}</span>
           </div>
@@ -670,7 +661,7 @@ function TalentsTab({ c, onShare }: { c: C; onShare?: (card: ChatCard) => void }
                     {(p.rank ?? 1) > 1 ? ` ${p.rank}` : ''}
                     {p.note ? ` (${p.note})` : ''}
                   </b>
-                  {t && shareButton(onShare, () => ({ title: t.name, subtitle: `Talento · ${t.req}`, body: t.text }))}
+                  {t && <ShareButton onShare={onShare} card={() => ({ title: t.name, subtitle: `Talento · ${t.req}`, body: t.text })} />}
                 </div>
                 <span className="small">{t?.text}</span>
               </div>
@@ -859,7 +850,7 @@ function MagicTab({
                         <Sparkles size={12} /> Lancia
                       </button>
                     )}
-                    {shareButton(onShare, () => ({ title: s.name, subtitle: `${s.lore} · VM ${s.vm}`, tags: [s.target, s.range, s.duration], body: s.text }))}
+                    <ShareButton onShare={onShare} card={() => ({ title: s.name, subtitle: `${s.lore} · VM ${s.vm}`, tags: [s.target, s.range, s.duration], body: s.text })} />
                     {editable && (
                       <button className="btn ghost sm icon" aria-label="Togli" onClick={() => setMagic({ spells: mg.spells.filter((x) => x.id !== id) })}>
                         <Trash2 size={12} />
@@ -1030,7 +1021,7 @@ function FaithTab({ c, editable, set, onShare, onTest }: { c: C; editable: boole
                             <Dices size={12} />
                           </button>
                         )}
-                        {shareButton(onShare, () => ({ title: p.name, subtitle: `Preghiera di ${god.name}`, body: p.text }))}
+                        <ShareButton onShare={onShare} card={() => ({ title: p.name, subtitle: `Preghiera di ${god.name}`, body: p.text })} />
                       </span>
                     </div>
                     <span className="small">{p.text}</span>

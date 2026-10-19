@@ -1,7 +1,8 @@
 import { roll, type ChatCard } from '@thevtt/shared';
 import { canLevelUp, dnd5e, DND_XP_LEVELS } from '@thevtt/systems';
-import { ArrowUpCircle, BookOpen, Dices, Heart, MessageSquareShare, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun } from 'lucide-react';
+import { ArrowUpCircle, BookOpen, Dices, Heart, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun } from 'lucide-react';
 import { useState } from 'react';
+import { ShareButton } from '../../components/ShareButton';
 import { Modal, Section, Switch } from '../../components/ui';
 import { PrintPart } from '../../components/Print';
 import type { SheetProps, SheetTable } from '..';
@@ -14,25 +15,6 @@ const addDice = (base: string, extra: string | undefined, times: number) => (ext
 
 type Tab = 'main' | 'combat' | 'spells' | 'features' | 'inventory' | 'details';
 type Share = ((card: ChatCard) => void) | undefined;
-
-function ShareButton({ onShare, card }: { onShare: Share; card: () => ChatCard }) {
-  if (!onShare) return null;
-  return (
-    <button
-      type="button"
-      className="btn ghost sm icon share"
-      title="Mostra in chat"
-      aria-label="Mostra in chat"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onShare(card());
-      }}
-    >
-      <MessageSquareShare size={13} />
-    </button>
-  );
-}
 
 /** Chat card for a spell, with the rolls it needs at the given caster's numbers. */
 function spellCard(c: C, sc: dnd5e.Spellcasting, s: dnd5e.SpellDef): ChatCard {

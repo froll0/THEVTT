@@ -279,4 +279,16 @@ describe('journal', () => {
     expect((await api('PATCH', `/campaigns/${camp.id}`, b.token, { cover: null })).status).not.toBe(200);
     expect((await api('GET', `/campaigns/${camp.id}`, a.token)).body.cover).toBe(png);
   });
+
+  it('stops guessing passwords: after a few wrong ones the account (and the address) waits', async () => {
+    await register('bruno');
+    const login = (password: string, ip: string, username = 'bruno') =>
+      app.inject({ method: 'POST', url: '/auth/login', headers: { 'cf-connecting-ip': ip }, payload: { username, password } });
+    for (let i = 0; i < 8; i++) expect((await login('wrong-pass', `10.0.0.${i}`)).statusCode).toBe(401);
+    // even the right password, from anywhere, has to wait
+    expect((await login('password123', '10.0.1.1')).statusCode).toBe(429);
+    // another account from another address is fine
+    await register('carla');
+    expect((await login('password123', '10.0.2.1', 'carla')).statusCode).toBe(200);
+  });
 });

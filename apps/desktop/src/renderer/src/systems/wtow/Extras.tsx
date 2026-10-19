@@ -1,4 +1,4 @@
-import { describeRoll, roll, successes, type ChatCard, type RollResult } from '@thevtt/shared';
+import { describeRoll, roll, successes, type ChatCard, type RollResult, newId } from '@thevtt/shared';
 import { warhammer as w } from '@thevtt/systems';
 import { Dices, Gem, Landmark, Minus, Plus, Skull, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -9,7 +9,6 @@ import type { SheetTable } from '..';
 type C = w.WtowCharacter;
 type Set = (patch: Partial<C>) => void;
 const { SKILLS, SKILL_INFO } = w;
-const rid = () => Math.random().toString(36).slice(2, 10);
 
 /** Roll and read the result: in the table's chat when there, on the sheet (a toast) otherwise. */
 export async function rollTest(table: SheetTable | undefined, formula: string, label: string): Promise<RollResult | null> {
@@ -114,7 +113,7 @@ export function MagicItemsSection({ c, editable, set }: { c: C; editable: boolea
                 const def = w.magicItem(adding);
                 const name = def?.name ?? prompt('Nome dell’oggetto')?.trim();
                 if (!name) return;
-                set({ items: [...c.items, { id: rid(), ref: def?.id, name, charges: def?.charges }] });
+                set({ items: [...c.items, { id: newId(), ref: def?.id, name, charges: def?.charges }] });
                 setAdding('');
               }}
             >
@@ -365,7 +364,7 @@ export function IntermezzoTab({ c, editable, set, table, onShare }: { c: C; edit
         if (act.effect === 'fate') next = { ...next, fate: { ...next.fate, burned: Math.max(0, next.fate.burned - 1) } };
         if (act.effect === 'lore' && project.trim() && !next.lore.includes(project.trim())) next = { ...next, lore: [...next.lore, project.trim()] };
       } else {
-        next = { ...next, projects: [...rest, { id: old?.id ?? rid(), name, need: req, have }] };
+        next = { ...next, projects: [...rest, { id: old?.id ?? newId(), name, need: req, have }] };
         text = `«${name}»: ${have}/${req} successi.`;
       }
       if (act.effect === 'fate') next = { ...next, fate: { ...next.fate, spent: next.fate.spent + 1 } };

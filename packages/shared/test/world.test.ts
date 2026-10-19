@@ -10,7 +10,6 @@ import {
   decodeField,
   elevation,
   encodeField,
-  generateHeights,
   generateWorld,
   isWorldMap,
   normalizeWorld,

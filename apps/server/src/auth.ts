@@ -24,6 +24,8 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 export function issueToken(db: Db, userId: string): string {
   const token = randomBytes(32).toString('base64url');
   const now = new Date();
+  // tokens past their date are of no use to anyone
+  db.prepare('DELETE FROM auth_tokens WHERE expires_at < ?').run(now.toISOString());
   const expires = new Date(now.getTime() + TOKEN_TTL_DAYS * 86_400_000);
   db.prepare('INSERT INTO auth_tokens (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(
     sha256(token),

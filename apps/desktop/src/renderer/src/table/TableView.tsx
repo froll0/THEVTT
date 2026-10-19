@@ -9,12 +9,11 @@ import { Avatar, Modal } from '../components/ui';
 import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
-import { Board, CELL, groupDeleteActions, type Tool, type ToolOptions } from './Board';
+import { Board, CELL, DEFAULT_TOOL_OPTIONS, groupDeleteActions, type Tool, type ToolOptions } from './Board';
 import { DiceLayer } from './DiceLayer';
 import { SpokenLines } from './SpokenLines';
 import { PluginRuntime } from './PluginRuntime';
 import { MusicChip, MusicPanel, MusicPlayer } from './Music';
-import { PROP_KINDS } from './props';
 import { CallControls, CallTiles, type CallPerson } from './Call';
 import { GroupSaveForm } from './Saves';
 import { QuestsPanel, RestPrompt, WorldClock } from './World';
@@ -44,28 +43,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const table = useTable();
   const dockPosition = useSettings((s) => s.dockPosition);
   const [tool, setTool] = useState<Tool>('select');
-  const [options, setOptions] = useState<ToolOptions>({
-    fogReveal: true,
-    shape: 'circle',
-    drawColor: '',
-    drawWidth: 0.08,
-    erase: false,
-    drawText: false,
-    doorState: 'closed',
-    wallKind: 'wall',
-    wallMode: 'line',
-    wallErase: false,
-    propKind: 'crate',
-    lightPreview: false,
-    snap: true,
-    terrain: 's',
-    terrainMode: 'brush',
-    brushSize: 2,
-    propRotation: 0,
-    lightKind: 'torch',
-    showTokens: true,
-    pieceMode: 'copy',
-  });
+  const [options, setOptions] = useState<ToolOptions>(DEFAULT_TOOL_OPTIONS);
   const [editorTool, setEditorTool] = useState<EditorTool>('terrain');
   const editorToolRef = useRef(editorTool);
   editorToolRef.current = editorTool;
@@ -365,7 +343,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
               ) : (
                 <>
                   <div className="spinner" />
-                  <p className="muted">{isGm ? 'Preparo il tavolo…' : 'Mi siedo al tavolo…'}</p>
+                  <p className="muted">{isGm ? 'Apparecchio il tavolo…' : 'Prendo posto al tavolo…'}</p>
                 </>
               )}
             </div>

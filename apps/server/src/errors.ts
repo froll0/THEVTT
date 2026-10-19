@@ -13,6 +13,7 @@ export const unauthorized = (message = 'Accesso richiesto') => new HttpError(401
 export const forbidden = (message = 'Operazione non consentita') => new HttpError(403, 'forbidden', message);
 export const notFound = (message = 'Non trovato') => new HttpError(404, 'not_found', message);
 export const conflict = (message: string) => new HttpError(409, 'conflict', message);
+export const tooMany = (message: string) => new HttpError(429, 'too_many', message);
 
 /** Tiny body validators: keep the API strict without a schema dependency. */
 export function str(body: unknown, key: string, opts: { min?: number; max?: number; optional?: boolean; pattern?: RegExp } = {}): string {

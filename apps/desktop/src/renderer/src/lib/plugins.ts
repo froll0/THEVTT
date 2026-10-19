@@ -13,6 +13,8 @@ export { parsePlugin, type Plugin };
  */
 
 export const MAX_PLUGIN_BYTES = 200_000;
+/** buttons and chat commands one extension may add */
+const MAX_PER_PLUGIN = 12;
 
 interface PluginStore {
   userId: string | null;
@@ -119,13 +121,24 @@ export class PluginRunner {
         break;
       }
       case 'toast':
-        this.host.toast(`${this.plugin.name}: ${String(m.text)}`);
+        this.host.toast(`${this.plugin.name}: ${String(m.text).slice(0, 200)}`);
         break;
-      case 'command':
-        usePlugins.setState((s) => ({ commands: [...s.commands.filter((c) => c.name !== m.name), { pluginId: id, name: String(m.name), description: String(m.description) }] }));
+      case 'command': {
+        // a misbehaving script can't fill the chat's commands or the macro bar
+        const name = String(m.name).toLowerCase().slice(0, 24);
+        usePlugins.setState((s) => {
+          const others = s.commands.filter((c) => c.name !== name);
+          if (others.filter((c) => c.pluginId === id).length >= MAX_PER_PLUGIN) return s;
+          return { commands: [...others, { pluginId: id, name, description: String(m.description).slice(0, 120) }] };
+        });
         break;
+      }
       case 'button':
-        usePlugins.setState((s) => ({ buttons: [...s.buttons, { pluginId: id, id: String(m.id), label: String(m.label) }] }));
+        usePlugins.setState((s) => {
+          const mine = s.buttons.filter((b) => b.pluginId === id);
+          if (mine.length >= MAX_PER_PLUGIN || mine.some((b) => b.id === String(m.id))) return s;
+          return { buttons: [...s.buttons, { pluginId: id, id: String(m.id), label: String(m.label).slice(0, 40) }] };
+        });
         break;
     }
   }

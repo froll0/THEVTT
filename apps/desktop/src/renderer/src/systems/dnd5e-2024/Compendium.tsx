@@ -57,7 +57,8 @@ export function RuleText({ body }: { body: string }) {
   );
 }
 
-const Meta = ({ items }: { items: [string, ReactNode][] }) => (
+/** Facts of a rule or item as a two-column list (empty ones left out). */
+export const Meta = ({ items }: { items: [string, ReactNode][] }) => (
   <dl className="meta-list">
     {items
       .filter(([, v]) => v !== undefined && v !== null && v !== '')

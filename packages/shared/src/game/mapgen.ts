@@ -110,7 +110,6 @@ export function extractWalls(grid: { w: number; h: number; get(x: number, y: num
 }
 
 const roomCenter = (r: MapRoom) => ({ x: Math.floor(r.x + r.w / 2), y: Math.floor(r.y + r.h / 2) });
-const inRoom = (r: MapRoom, x: number, y: number) => x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h;
 
 function dungeon(o: Required<MapGenOptions>, rnd: () => number): GeneratedMap {
   const g = new Grid(o.width, o.height, T.void);

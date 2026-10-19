@@ -1,21 +1,7 @@
 import { nimbleRules as n } from '@thevtt/systems';
-import type { ReactNode } from 'react';
 import type { CompendiumEntry } from '..';
-import { RuleText } from '../dnd5e-2024/Compendium';
+import { Meta, RuleText } from '../dnd5e-2024/Compendium';
 import { MonsterBlock } from './Bestiary';
-
-const Meta = ({ items }: { items: [string, ReactNode][] }) => (
-  <dl className="meta-list">
-    {items
-      .filter(([, v]) => v !== undefined && v !== null && v !== '')
-      .map(([k, v]) => (
-        <div key={k}>
-          <dt>{k}</dt>
-          <dd>{v}</dd>
-        </div>
-      ))}
-  </dl>
-);
 
 const { STAT_INFO } = n;
 

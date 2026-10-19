@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import { chmod, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import type { AssistantRequest, HostedServerConfig, HostedServerStatus, UpdateInfo } from '../preload/api';
 import { DEFAULT_RENDEZVOUS, newIdentity, normalizeCode, resolve as resolveCode, type GroupIdentity } from './group-code';
 import { DEFAULT_SERVER_CONFIG, HostedServer } from './hosted-server';
@@ -70,11 +70,33 @@ async function writeOnce(file: string, value: unknown): Promise<void> {
 }
 
 function writeJson(file: string, value: unknown): Promise<void> {
-  const next = (writing.get(file) ?? Promise.resolve()).catch(() => undefined).then(() => writeOnce(file, value));
+  // null is "forget it": the file goes, rather than staying behind with nothing in it
+  const op = value === null ? () => rm(file, { force: true }) : () => writeOnce(file, value);
+  const next = (writing.get(file) ?? Promise.resolve()).catch(() => undefined).then(op);
   writing.set(file, next);
   void next.finally(() => writing.get(file) === next && writing.delete(file)).catch(() => undefined);
   return next;
 }
+
+/** the app's own pages: the built files, or the dev server while developing */
+function isAppUrl(url: string): boolean {
+  if (devUrl && url.startsWith(devUrl)) return true;
+  return url.startsWith('file://') && decodeURIComponent(url).includes(join(__dirname, '../renderer').replace(/\\/g, '/'));
+}
+
+// No window of the app ever becomes another site: it would get the desktop bridge (saved data, keys).
+// Links to the web open in the browser instead; nothing else loads.
+app.on('web-contents-created', (_e, contents) => {
+  contents.on('will-navigate', (ev, url) => {
+    if (isAppUrl(url)) return;
+    ev.preventDefault();
+    if (/^https?:/i.test(url)) void shell.openExternal(url);
+  });
+  contents.on('will-redirect', (ev, url) => {
+    if (!isAppUrl(url)) ev.preventDefault();
+  });
+  contents.on('will-attach-webview', (ev) => ev.preventDefault());
+});
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -254,12 +276,14 @@ ipcMain.handle('update:install', async (e) => {
     await shell.openExternal(u.pageUrl);
     return { opened: true };
   }
+  // only what the project published on GitHub runs here (tests point to a release file of their own)
+  if (!/^https:\/\/github\.com\//i.test(u.asset.url) && !process.env.THEVTT_UPDATE_URL) return { error: 'Questo aggiornamento non viene da GitHub: scaricalo dalla pagina del progetto' };
   installing = true;
   try {
     const res = await net.fetch(u.asset.url, { headers: { 'user-agent': `TheVTT/${app.getVersion()}` } });
     if (!res.ok || !res.body) throw new Error(`download ${res.status}`);
     const total = Number(res.headers.get('content-length')) || u.asset.size;
-    const target = u.mode === 'appimage' ? `${process.env.APPIMAGE}.new` : join(tmpdir(), u.asset.name);
+    const target = u.mode === 'appimage' ? `${process.env.APPIMAGE}.new` : join(tmpdir(), basename(u.asset.name));
     const out = createWriteStream(target);
     let received = 0;
     let lastSent = 0;
@@ -275,6 +299,11 @@ ipcMain.handle('update:install', async (e) => {
       }
     }
     await new Promise<void>((resolve, reject) => out.end((err?: Error | null) => (err ? reject(err) : resolve())));
+    // a download cut short is never run
+    if (total && received !== total) {
+      await rm(target, { force: true }).catch(() => undefined);
+      throw new Error('download incompleto');
+    }
     if (u.mode === 'installer') {
       // silent install over the current one, then the installer starts the new version
       spawn(target, ['/S', '--updated', '--force-run'], { detached: true, stdio: 'ignore' }).unref();

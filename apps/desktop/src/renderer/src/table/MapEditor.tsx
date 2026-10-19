@@ -31,14 +31,14 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Field, readBackground, readImage, Switch } from '../components/ui';
+import { Field, readBackground, Switch } from '../components/ui';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
 import type { ToolOptions } from './Board';
 import { MapGenerator } from './MapGenerator';
 import { MapLibrary } from './MapLibrary';
 import { MapAlignment } from './Panels';
-import { drawProp, LIGHT_PRESETS, PROP_KINDS, propKind } from './props';
+import { drawProp, LIGHT_PRESETS, propKind } from './props';
 import { download, renderPackage } from './sceneImage';
 import { STAMPS } from './stamps';
 import { renderTerrain, terrainSample } from './terrainRender';

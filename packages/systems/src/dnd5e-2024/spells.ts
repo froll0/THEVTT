@@ -84,7 +84,6 @@ function s(
 
 const A = 'Azione';
 const BA = 'Azione bonus';
-const R = 'Reazione';
 const I = 'Istantanea';
 
 export const SPELLS: SpellDef[] = [

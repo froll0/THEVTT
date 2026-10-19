@@ -6,7 +6,7 @@ import { TopBar } from '../components/Shell';
 import { mapFile, updateMap } from '../lib/mapLibrary';
 import { useApp } from '../store/app';
 import { useTable } from '../store/table';
-import { Board, type ToolOptions } from '../table/Board';
+import { Board, DEFAULT_TOOL_OPTIONS, type ToolOptions } from '../table/Board';
 import { EditorPanel, EditorRail, type EditorTool } from '../table/MapEditor';
 import { DoorInspector, PropInspector } from '../table/Panels';
 import { download, renderPackage } from '../table/sceneImage';
@@ -24,28 +24,7 @@ export function SceneStudio({ entryId, pkg, onClose }: { entryId: string; pkg: M
   const [tool, setTool] = useState<EditorTool>('terrain');
   const toolRef = useRef(tool);
   toolRef.current = tool;
-  const [options, setOptions] = useState<ToolOptions>({
-    fogReveal: true,
-    shape: 'circle',
-    drawColor: '',
-    drawWidth: 0.08,
-    erase: false,
-    drawText: false,
-    doorState: 'closed',
-    wallKind: 'wall',
-    wallMode: 'line',
-    wallErase: false,
-    propKind: 'crate',
-    lightPreview: false,
-    snap: true,
-    terrain: 's',
-    terrainMode: 'brush',
-    brushSize: 2,
-    propRotation: 0,
-    lightKind: 'torch',
-    showTokens: true,
-    pieceMode: 'copy',
-  });
+  const [options, setOptions] = useState<ToolOptions>(DEFAULT_TOOL_OPTIONS);
   const cameraRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
   const [saved, setSaved] = useState<'saved' | 'saving' | 'dirty'>('saved');
   const loaded = useRef(false);

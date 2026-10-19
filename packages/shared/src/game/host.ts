@@ -1120,12 +1120,17 @@ export class GameHost {
           if (!isGm && !PLAYER_TOKEN_FIELDS.includes(key)) return { ok: false, reason: `Campo non modificabile: ${key}` };
         }
         if (patch.name !== undefined) t.name = String(patch.name).slice(0, 60);
-        if (patch.color !== undefined) t.color = String(patch.color);
+        if (patch.color !== undefined) {
+          // a colour, not any text: it ends up in every drawing of the map
+          const c = String(patch.color);
+          if (!/^#[0-9a-f]{3,8}$/i.test(c)) return { ok: false, reason: 'Colore non valido' };
+          t.color = c;
+        }
         if (patch.size !== undefined) t.size = clampInt(patch.size, 1, 10);
         if (patch.hidden !== undefined) t.hidden = !!patch.hidden;
         if (patch.ownerIds !== undefined) t.ownerIds = patch.ownerIds.filter((id) => !!s.players[id]);
         if (patch.ac !== undefined) t.ac = patch.ac === null ? null : clampInt(patch.ac, 0, 99);
-        if (patch.conditions !== undefined) t.conditions = patch.conditions.slice(0, 20).map(String);
+        if (patch.conditions !== undefined) t.conditions = [...new Set(patch.conditions.slice(0, 20).map((c) => String(c).slice(0, 40)))];
         if (patch.conditionRounds !== undefined) {
           const timers: Record<string, number> = {};
           for (const [k, v] of Object.entries(patch.conditionRounds ?? {})) {

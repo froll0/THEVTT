@@ -6,7 +6,6 @@ import { Field, readImage, Section, Switch, Tabs } from '../../components/ui';
 
 type C = dnd5e.Dnd5eCharacter;
 type Ability = dnd5e.Ability;
-type Skill = dnd5e.Skill;
 export type Set = (patch: Partial<C>) => void;
 
 const {

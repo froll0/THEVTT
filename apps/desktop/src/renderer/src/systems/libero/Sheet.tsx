@@ -1,4 +1,4 @@
-import { roll } from '@thevtt/shared';
+import { roll, newId } from '@thevtt/shared';
 import { free as f } from '@thevtt/systems';
 import { Dices, Minus, Plus, Settings2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -6,7 +6,6 @@ import { Section } from '../../components/ui';
 import type { BuilderProps, SheetProps } from '..';
 
 type C = f.FreeCharacter;
-const rid = () => Math.random().toString(36).slice(2, 10);
 
 /** fields grouped under their heading, in order */
 function groups<T extends { group?: string }>(list: T[]): [string, T[]][] {
@@ -168,7 +167,7 @@ function StructureEditor({ c, set }: { c: C; set: (patch: Partial<C>) => void })
               </button>
             </div>
           ))}
-          <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ fields: [...c.fields, { id: rid(), label: 'Nuovo campo', kind: 'number', value: 0 }] })}>
+          <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ fields: [...c.fields, { id: newId(), label: 'Nuovo campo', kind: 'number', value: 0 }] })}>
             <Plus size={12} /> Campo
           </button>
           <span className="faint tiny">I campi numerici si usano nelle formule col loro nome: «Forza» diventa @forza.</span>
@@ -192,7 +191,7 @@ function StructureEditor({ c, set }: { c: C; set: (patch: Partial<C>) => void })
               </div>
             );
           })}
-          <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ rolls: [...c.rolls, { id: rid(), label: 'Nuovo tiro', formula: '1d20' }] })}>
+          <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ rolls: [...c.rolls, { id: newId(), label: 'Nuovo tiro', formula: '1d20' }] })}>
             <Plus size={12} /> Tiro
           </button>
           <span className="faint tiny">Formule: 1d20+@forza · 2d6 · (@corpo+@lotta)d6h5 conta i dadi da 5 in su · 3d10s4 quelli fino a 4 · 1d100.</span>

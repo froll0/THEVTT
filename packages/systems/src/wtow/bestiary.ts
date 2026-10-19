@@ -139,7 +139,6 @@ const FOREST: [string, string] = ['Figlio della Foresta', 'Nei boschi ignora il 
 const FLY: [string, string] = ['Volo', 'Vola attraverso Zone verticali ignorando gli ostacoli; non può alzarsi in volo se a Distanza Ravvicinata da un nemico a terra.'];
 const MONSTER_FLY: [string, string] = ['Volo Mostruoso (Reazione)', 'Vola attraverso Zone verticali. Come Reazione Arretra verso l’alto; se ha già Arretrato nel turno subisce invece una Ferita.'];
 const HORDE = (who: string): [string, string] => ['Orda', `Quando ${who} Aiuta un alleato in un attacco di mischia non serve una Prova: +1d, anche oltre il massimo.`];
-const UNDEAD = (who: string): [string, string] => ['Nonmorto', `${who} non mangia, non dorme e non respira; è immune agli effetti psicologici.`];
 const SWARM = (n: number): [string, string][] => [
   ['Sono Dappertutto!', 'Conta sempre in superiorità numerica (già incluso) e chi è nella sua Zona è a Distanza Ravvicinata; si attraversa senza penalità.'],
   ['Sterminio', `Non subisce Ferite né Condizioni: si sconfigge con una Prova Prolungata di ${n} successi (un’Azione a Prova) con un’Abilità offensiva o l’ambiente, oppure con un Pericolo o un effetto che copre tutta la Zona.`],

@@ -3,30 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { SPECTATOR_CHANNEL, type SpectatorMessage } from '../lib/spectator';
 import { useTable } from '../store/table';
 import { useThemeSync } from '../App';
-import { Board, type ToolOptions } from '../table/Board';
+import { Board, DEFAULT_TOOL_OPTIONS } from '../table/Board';
 
-const OPTIONS: ToolOptions = {
-  fogReveal: true,
-  shape: 'circle',
-  drawColor: '',
-  drawWidth: 0.08,
-  erase: false,
-  drawText: false,
-  doorState: 'closed',
-  wallKind: 'wall',
-  wallMode: 'line',
-  wallErase: false,
-  propKind: 'crate',
-  lightPreview: false,
-  snap: true,
-  terrain: 's',
-  terrainMode: 'brush',
-  brushSize: 2,
-  propRotation: 0,
-  lightKind: 'torch',
-  showTokens: true,
-  pieceMode: 'copy',
-};
 
 /**
  * The audience's window: the map as the players see it, the turn order and
@@ -68,7 +46,7 @@ export function Spectator() {
   return (
     <div className="spectator" aria-label="Vista spettatore">
       <div className="spectator-board board">
-        <Board tool="select" options={OPTIONS} cameraRef={cameraRef} viewerId={SPECTATOR_ID} readOnly />
+        <Board tool="select" options={DEFAULT_TOOL_OPTIONS} cameraRef={cameraRef} viewerId={SPECTATOR_ID} readOnly />
       </div>
       <div className="spectator-title">{state.campaignName}</div>
       {ini.round > 0 && ini.entries.length > 0 && (
