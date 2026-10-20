@@ -105,11 +105,13 @@ export const useApp = create<AppState>((set, get) => {
   };
 
   /**
-   * Presence as it arrived, numbered: a participants list fetched before someone
-   * came online must not mark them offline again when its answer lands later.
+   * Live news as it arrived, numbered: a list fetched before someone came online
+   * (or a session started) must not undo it when its answer lands later.
    */
-  let presenceSeq = 0;
+  let liveSeq = 0;
   const presence = new Map<string, { online: boolean; seq: number }>();
+  /** the same for sessions starting and ending while the campaigns are on their way */
+  const sessionNews = new Map<string, { session: SessionInfo | null; seq: number }>();
   const byPresence = (list: UserPublic[]) => list.sort((a, b) => Number(!!b.online) - Number(!!a.online) || a.displayName.localeCompare(b.displayName));
 
   let lookupTimer: ReturnType<typeof setTimeout> | null = null;
@@ -137,12 +139,13 @@ export const useApp = create<AppState>((set, get) => {
           void import('./chat').then(({ useChat }) => useChat.getState().loadUnread());
           break;
         case 'presence':
-          presence.set(msg.userId, { online: msg.online, seq: ++presenceSeq });
+          presence.set(msg.userId, { online: msg.online, seq: ++liveSeq });
           set((s) => ({ participants: byPresence(s.participants.map((p) => (p.id === msg.userId ? { ...p, online: msg.online } : p))) }));
           // someone new on the server
           if (msg.online && msg.userId !== get().user?.id && !get().participants.some((p) => p.id === msg.userId)) void get().refresh(['participants']);
           break;
         case 'session.state':
+          sessionNews.set(msg.campaignId, { session: msg.session ?? null, seq: ++liveSeq });
           set((s) => {
             const sessions = { ...s.sessions };
             if (msg.session) sessions[msg.campaignId] = msg.session;
@@ -290,7 +293,7 @@ export const useApp = create<AppState>((set, get) => {
       const { api } = get();
       const tasks = what.map(async (w) => {
         if (w === 'participants') {
-          const asked = presenceSeq;
+          const asked = liveSeq;
           const list = await api.participants();
           // what changed while the list was on its way wins over it
           for (const p of list) {
@@ -302,7 +305,11 @@ export const useApp = create<AppState>((set, get) => {
         if (w === 'invites') set({ invites: await api.invites() });
         if (w === 'characters') set({ characters: await api.characters() });
         if (w === 'campaigns') {
-          const campaigns = await api.campaigns();
+          const asked = liveSeq;
+          const campaigns = (await api.campaigns()).map((c) => {
+            const news = sessionNews.get(c.id);
+            return news && news.seq > asked ? { ...c, session: news.session } : c;
+          });
           const sessions: Record<string, SessionInfo> = {};
           for (const c of campaigns) if (c.session) sessions[c.id] = c.session;
           set({ campaigns, sessions });
