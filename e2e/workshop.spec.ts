@@ -27,7 +27,7 @@ test('the extensions workshop: a template, a snippet, tried on the pretend table
   const code = G.getByRole('textbox', { name: 'Codice dell’estensione' });
   await code.click();
   await G.keyboard.press('Escape');
-  await G.keyboard.press('Control+End');
+  await G.keyboard.press('ControlOrMeta+End');
   await G.keyboard.press('Enter');
   await G.getByRole('button', { name: 'Pulsante', exact: true }).click();
   await G.keyboard.type('Oro');
@@ -41,10 +41,10 @@ test('the extensions workshop: a template, a snippet, tried on the pretend table
   // the pretend table plays by the rules: Lia's natural 20 reaches the extension's code
   await code.click();
   await G.keyboard.press('Escape');
-  await G.keyboard.press('Control+End');
+  await G.keyboard.press('ControlOrMeta+End');
   await G.keyboard.press('Enter');
   await G.keyboard.type("thevtt.on('log', (e) => { if (e.roll?.parts[0]?.rolls?.[0]?.value === 20) thevtt.toast('critico!') ");
-  await G.keyboard.press('Control+End');
+  await G.keyboard.press('ControlOrMeta+End');
   await G.keyboard.type(';');
   // the bench starts again a moment after the last key
   await G.waitForTimeout(1500);
@@ -54,14 +54,14 @@ test('the extensions workshop: a template, a snippet, tried on the pretend table
 
   // a mistake is shown, not run silently
   await code.click();
-  await G.keyboard.press('Control+End');
+  await G.keyboard.press('ControlOrMeta+End');
   await G.keyboard.press('Enter');
   await G.keyboard.type('thevtt.boh()');
   await expect(G.locator('.cm-lintRange-warning').first()).toBeVisible();
-  await G.keyboard.press('Control+z');
+  await G.keyboard.press('ControlOrMeta+z');
 
   // saved with Ctrl+S, it is one of the extensions; back in to change it
-  await G.keyboard.press('Control+s');
+  await G.keyboard.press('ControlOrMeta+s');
   await expect(G.locator('.studio-top')).toContainText('Salvata');
   await G.getByRole('button', { name: 'Estensioni', exact: true }).first().click();
   await expect(G.getByText('Borsa del drago · 1.0')).toBeVisible();

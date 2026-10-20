@@ -2483,3 +2483,4 @@ Una riga di chat (entry) ⇒ A chat line (entry)
 Limiti: al massimo 20 azioni al secondo, 12 pulsanti e 12 comandi. Non può leggere i tuoi file, le password né le impostazioni dell’app. ⇒ Limits: at most 20 actions a second, 12 buttons and 12 commands. It can’t read your files, passwords or the app’s settings.
 {0} salvata ⇒ {0} saved
 Guida ⇒ Guide
+Salva ({0}+S) ⇒ Save ({0}+S)

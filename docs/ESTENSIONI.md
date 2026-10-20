@@ -25,7 +25,7 @@ un’estensione) apre un editor fatto per scriverle:
   succedere qualcosa (Lia tira, un 20 o un 1 naturale, il turno che passa). La
   console mostra messaggi, tiri, avvisi, errori e `thevtt.log`;
 - una **guida** dell’API con un pulsante per inserire ogni voce;
-- `Ctrl+S` salva tra le tue estensioni, **Esporta** la scarica come `.js`.
+- `Ctrl+S` (`⌘S` su Mac) salva tra le tue estensioni, **Esporta** la scarica come `.js`.
 
 ## Cosa può fare
 

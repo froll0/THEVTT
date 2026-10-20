@@ -20,6 +20,9 @@ const KIND_LABEL: Record<BenchLine['kind'], string> = {
   action: 'azione',
 };
 
+/** the editor's shortcuts use ⌘ on a Mac (suggestions stay on Ctrl+Space everywhere) */
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
+
 /** the snippet syntax (`${campo}`) as plain code, for the manual's examples */
 const plain = (snippet: string) => snippet.replace(/\$\{([^}]*)\}/g, '$1').replace(/\t/g, '  ');
 
@@ -121,7 +124,7 @@ export function PluginStudio({ id }: { id: string | null }) {
           <button className="btn sm" onClick={exportFile} title="L’estensione come file .js, da condividere">
             <FileDown size={14} /> Esporta
           </button>
-          <button className="btn primary sm" onClick={save} disabled={!dirty} title="Salva (Ctrl+S)">
+          <button className="btn primary sm" onClick={save} disabled={!dirty} title={`Salva (${MOD}+S)`}>
             <Save size={14} /> Salva
           </button>
         </div>
@@ -181,16 +184,16 @@ export function PluginStudio({ id }: { id: string | null }) {
               <kbd>Ctrl</kbd>+<kbd>Spazio</kbd> suggerimenti
             </span>
             <span>
-              <kbd>Ctrl</kbd>+<kbd>S</kbd> salva
+              <kbd>{MOD}</kbd>+<kbd>S</kbd> salva
             </span>
             <span>
-              <kbd>Ctrl</kbd>+<kbd>F</kbd> cerca
+              <kbd>{MOD}</kbd>+<kbd>F</kbd> cerca
             </span>
             <span>
-              <kbd>Ctrl</kbd>+<kbd>/</kbd> commento
+              <kbd>{MOD}</kbd>+<kbd>/</kbd> commento
             </span>
             <span>
-              <kbd>Ctrl</kbd>+<kbd>Z</kbd> annulla
+              <kbd>{MOD}</kbd>+<kbd>Z</kbd> annulla
             </span>
           </div>
         </div>
@@ -224,7 +227,7 @@ export function PluginStudio({ id }: { id: string | null }) {
           }
         >
           <p>{pickTemplate.description}</p>
-          <p className="small faint">Il codice che hai scritto qui viene sostituito{savedCode !== null && !dirty ? ' (quello salvato resta finché non salvi di nuovo)' : ''}. Puoi tornare indietro con Ctrl+Z.</p>
+          <p className="small faint">Il codice che hai scritto qui viene sostituito{savedCode !== null && !dirty ? ' (quello salvato resta finché non salvi di nuovo)' : ''}. Puoi tornare indietro con {MOD}+Z.</p>
         </Modal>
       )}
       {leaving && (
