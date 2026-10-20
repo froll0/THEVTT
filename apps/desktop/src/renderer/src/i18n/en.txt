@@ -2429,3 +2429,57 @@ I tuoi eroi, pronti per la prossima avventura. ⇒ Your heroes, ready for the ne
 Nessun tavolo aperto: la locanda è tranquilla. ⇒ No table open: the tavern is quiet.
 Apparecchio il tavolo… ⇒ Setting the table…
 Prendo posto al tavolo… ⇒ Taking a seat at the table…
+# Laboratorio delle estensioni
+Il laboratorio delle estensioni ⇒ The extensions workshop
+Crea nel laboratorio ⇒ Create in the workshop
+Apri nel laboratorio ⇒ Open in the workshop
+Nessuna estensione. Creane una nel laboratorio, partendo da un modello. ⇒ No extensions. Make one in the workshop, starting from a template.
+Non ancora salvata ⇒ Not saved yet
+Modifiche da salvare ⇒ Unsaved changes
+L’estensione come file .js, da condividere ⇒ The extension as a .js file, to share
+Salva (Ctrl+S) ⇒ Save (Ctrl+S)
+Intestazione, modelli e frammenti ⇒ Header, templates and snippets
+Intestazione ⇒ Header
+Versione ⇒ Version
+La mia estensione ⇒ My extension
+Cosa fa, in una riga ⇒ What it does, in one line
+Modelli ⇒ Templates
+Frammenti ⇒ Snippets
+Si inseriscono dove sei; Tab passa al campo successivo. ⇒ Inserted where you are; Tab moves to the next field.
+suggerimenti ⇒ suggestions
+salva ⇒ save
+cerca ⇒ find
+commento ⇒ comment
+annulla ⇒ undo
+Spazio ⇒ Space
+Banco di prova ⇒ Test bench
+Partire da «{0}»? ⇒ Start from «{0}»?
+Usa il modello ⇒ Use the template
+Il codice che hai scritto qui viene sostituito. Puoi tornare indietro con Ctrl+Z. ⇒ The code you wrote here is replaced. You can go back with Ctrl+Z.
+Il codice che hai scritto qui viene sostituito (quello salvato resta finché non salvi di nuovo). Puoi tornare indietro con Ctrl+Z. ⇒ The code you wrote here is replaced (the saved one stays until you save again). You can go back with Ctrl+Z.
+Uscire dal laboratorio? ⇒ Leave the workshop?
+Esci senza salvare ⇒ Leave without saving
+Salva ed esci ⇒ Save and leave
+Ci sono modifiche non salvate. ⇒ There are unsaved changes.
+Prova mentre scrivi ⇒ Try while you write
+Riavvia l’estensione su un tavolo nuovo ⇒ Restart the extension on a fresh table
+Il tavolo di prova ⇒ The test table
+Round {0} · turno di {1} ⇒ Round {0} · {1}’s turn
+Fai succedere qualcosa: ⇒ Make something happen:
+Lia tira ⇒ Lia rolls
+20 naturale ⇒ Natural 20
+1 naturale ⇒ Natural 1
+Turno successivo ⇒ Next turn
+Lia scrive ⇒ Lia writes
+Tavolo nuovo ⇒ Fresh table
+Pulsanti dell’estensione ⇒ Extension buttons
+Console del banco di prova ⇒ Test bench console
+Qui compare quello che fa l’estensione: messaggi, tiri, avvisi, errori e i suoi thevtt.log. ⇒ What the extension does shows up here: messages, rolls, notices, errors and its thevtt.log.
+Scrivi, /r 1d20 o un /comando ⇒ Write, /r 1d20 or a /command
+Chat del banco di prova ⇒ Test bench chat
+Inserisci ⇒ Insert
+Il tavolo (state) ⇒ The table (state)
+Una riga di chat (entry) ⇒ A chat line (entry)
+Limiti: al massimo 20 azioni al secondo, 12 pulsanti e 12 comandi. Non può leggere i tuoi file, le password né le impostazioni dell’app. ⇒ Limits: at most 20 actions a second, 12 buttons and 12 commands. It can’t read your files, passwords or the app’s settings.
+{0} salvata ⇒ {0} saved
+Guida ⇒ Guide

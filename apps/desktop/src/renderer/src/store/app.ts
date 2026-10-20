@@ -16,6 +16,7 @@ export type Route =
   | { name: 'journal' }
   | { name: 'maps' }
   | { name: 'studio'; kind: 'world' | 'scene'; id: string }
+  | { name: 'workshop'; id: string | null }
   | { name: 'settings'; section?: SettingsSection }
   | { name: 'table'; campaignId: string };
 

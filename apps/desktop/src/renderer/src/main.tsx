@@ -10,6 +10,7 @@ import './styles/glass.css';
 import './styles/phone.css';
 import './styles/print.css';
 import './styles/studio.css';
+import './styles/workshop.css';
 import './styles/fantasy.css';
 import '@fontsource-variable/inter/opsz.css';
 // the fantasy look: Cinzel for titles, EB Garamond for long texts, Alegreya Sans for the interface

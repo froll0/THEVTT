@@ -25,6 +25,8 @@ interface PluginStore {
   errors: Record<string, string>;
   load(userId: string): Promise<void>;
   install(code: string, fileName?: string): Plugin;
+  /** the workshop saves over the extension it opened, even renamed */
+  update(id: string, code: string): Plugin;
   toggle(id: string, enabled: boolean): void;
   remove(id: string): void;
 }
@@ -55,6 +57,17 @@ export const usePlugins = create<PluginStore>((set, get) => {
       persist();
       return plugin;
     },
+    update: (id, code) => {
+      const old = get().plugins.find((p) => p.id === id);
+      if (!old) return get().install(code);
+      if (code.length > MAX_PLUGIN_BYTES) throw new Error('Estensione troppo grande (max 200 kB)');
+      const meta = parsePlugin(code, old.name);
+      if (get().plugins.some((p) => p.id !== id && p.name === meta.name)) throw new Error(`C’è già un’estensione chiamata «${meta.name}»`);
+      const plugin: Plugin = { ...old, ...meta, installedAt: Date.now() };
+      set({ plugins: get().plugins.map((p) => (p.id === id ? plugin : p)) });
+      persist();
+      return plugin;
+    },
     toggle: (id, enabled) => {
       set({ plugins: get().plugins.map((p) => (p.id === id ? { ...p, enabled } : p)) });
       persist();
@@ -71,12 +84,15 @@ type FromWorker =
   | { k: 'error'; message: string }
   | { k: 'dispatch'; action: GameAction }
   | { k: 'toast'; text: string }
+  | { k: 'print'; text: string }
   | { k: 'command'; name: string; description: string }
   | { k: 'button'; id: string; label: string };
 
 export interface PluginHost {
   dispatch(action: GameAction): void;
   toast(text: string): void;
+  /** thevtt.log / console.log: only the workshop shows them */
+  print?(text: string): void;
 }
 
 /** One running extension. */
@@ -122,6 +138,9 @@ export class PluginRunner {
       }
       case 'toast':
         this.host.toast(`${this.plugin.name}: ${String(m.text).slice(0, 200)}`);
+        break;
+      case 'print':
+        this.host.print?.(String(m.text));
         break;
       case 'command': {
         // a misbehaving script can't fill the chat's commands or the macro bar

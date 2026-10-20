@@ -4,6 +4,29 @@ Un’estensione è un file `.js` che aggiungi dalle **Impostazioni → Estension
 (da un file o incollando il codice). Resta spenta finché non la attivi, e gira
 solo mentre sei al tavolo.
 
+## Il laboratorio
+
+**Impostazioni → Estensioni → Crea nel laboratorio** (o la matita accanto a
+un’estensione) apre un editor fatto per scriverle:
+
+- **suggerimenti mentre scrivi**: dopo `thevtt.`, `state.` o `entry.` compare
+  quello che puoi usare, con la spiegazione; scegliendolo si inserisce già
+  pronto, con i campi da riempire (Tab passa al successivo). Scrivendo
+  `comando`, `pulsante` o `quando` arriva il blocco intero;
+- **controlli immediati**: parentesi o virgolette mancanti, nomi di `thevtt`
+  che non esistono, intestazione senza nome;
+- **modelli** da cui partire (critici, araldo dei turni, borsa del bottino,
+  colpo rapido, segnalini) e **frammenti** da inserire con un clic;
+- l’**intestazione** si compila anche da un modulo (nome, descrizione,
+  versione);
+- un **banco di prova**: un tavolo finto ma con le regole vere (tu da master,
+  Lia giocatrice, una guerriera e due goblin in iniziativa). L’estensione gira
+  lì mentre scrivi: i suoi pulsanti e comandi si provano subito, e si può far
+  succedere qualcosa (Lia tira, un 20 o un 1 naturale, il turno che passa). La
+  console mostra messaggi, tiri, avvisi, errori e `thevtt.log`;
+- una **guida** dell’API con un pulsante per inserire ogni voce;
+- `Ctrl+S` salva tra le tue estensioni, **Esporta** la scarica come `.js`.
+
 ## Cosa può fare
 
 L’estensione gira in un *worker* separato dall’app: non vede la pagina, i dati
@@ -38,6 +61,7 @@ Un’estensione con lo stesso nome di una già installata la aggiorna.
 | `thevtt.card({ title, subtitle, body, tags, rolls })` | una scheda in chat |
 | `thevtt.dispatch(azione)` | qualsiasi azione del tavolo (vedi `packages/shared/src/game/actions.ts`) |
 | `thevtt.toast(testo)` | un avviso in basso |
+| `thevtt.log(...valori)` | una riga nella console del laboratorio (anche `console.log`); al tavolo non si vede |
 
 ## Esempio
 

@@ -60,7 +60,22 @@ const thevtt = Object.freeze({
   toast(text) {
     post({ k: 'toast', text: String(text).slice(0, 200) });
   },
+  /** a line for whoever is writing the extension (the workshop's console) */
+  log(...values) {
+    post({ k: 'print', text: values.map(show).join(' ').slice(0, 2000) });
+  },
 });
+
+function show(v) {
+  if (typeof v === 'string') return v;
+  try {
+    return JSON.stringify(v, null, 1).replace(/\n\s*/g, ' ');
+  } catch {
+    return String(v);
+  }
+}
+// console.log while writing one lands in the same place
+self.console.log = (...values) => thevtt.log(...values);
 
 self.onmessage = (e) => {
   const m = e.data || {};

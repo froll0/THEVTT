@@ -1,4 +1,4 @@
-import { CircleAlert, FileUp, Puzzle, Trash2 } from 'lucide-react';
+import { CircleAlert, FileUp, FlaskConical, Pencil, Puzzle, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Setting, Switch } from '../components/ui';
 import { usePlugins, type Plugin } from '../lib/plugins';
@@ -26,6 +26,7 @@ thevtt.button('Iniziativa', () => thevtt.roll('1d20', 'Iniziativa'));`;
 export function PluginSettings() {
   const me = useApp((s) => s.user?.id ?? '');
   const toast = useApp((s) => s.toast);
+  const go = useApp((s) => s.go);
   const { plugins, errors, load, install, toggle, remove } = usePlugins();
   const [paste, setPaste] = useState(false);
   const [code, setCode] = useState('');
@@ -54,6 +55,9 @@ export function PluginSettings() {
         quello che potresti fare tu: vedono il tavolo come lo vedi tu, e le loro azioni passano gli stessi controlli dei tuoi clic.
       </p>
       <div className="row" style={{ gap: 6 }}>
+        <button className="btn primary sm" onClick={() => go({ name: 'workshop', id: null })}>
+          <FlaskConical size={14} /> Crea nel laboratorio
+        </button>
         <button className="btn sm" onClick={() => file.current?.click()}>
           <FileUp size={14} /> Da un file .js
         </button>
@@ -80,6 +84,9 @@ export function PluginSettings() {
             hint={errors[p.id] && p.enabled ? `Errore: ${errors[p.id]}` : p.description || 'Nessuna descrizione'}
           >
             {errors[p.id] && p.enabled && <CircleAlert size={14} className="danger-text" aria-label="Errore" />}
+            <button className="btn ghost sm icon" onClick={() => go({ name: 'workshop', id: p.id })} aria-label={`Modifica ${p.name}`} title="Apri nel laboratorio">
+              <Pencil size={14} />
+            </button>
             <Switch on={p.enabled} onChange={(on) => (on ? setConfirm(p) : toggle(p.id, false))} label={`Attiva ${p.name}`} />
             <button className="btn ghost sm icon" onClick={() => remove(p.id)} aria-label={`Rimuovi ${p.name}`}>
               <Trash2 size={14} />
@@ -88,7 +95,7 @@ export function PluginSettings() {
         ))}
         {!plugins.length && (
           <p className="faint small">
-            <Puzzle size={13} /> Nessuna estensione. Prova a incollare l’esempio.
+            <Puzzle size={13} /> Nessuna estensione. Creane una nel laboratorio, partendo da un modello.
           </p>
         )}
       </div>

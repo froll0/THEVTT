@@ -18,6 +18,7 @@ import { CharactersView } from './views/Characters';
 import { ParticipantsView } from './views/Participants';
 import { HomeView } from './views/Home';
 import { JournalView } from './views/JournalView';
+import { PluginStudio } from './views/PluginStudio';
 import { SettingsView } from './views/Settings';
 
 export function useThemeSync() {
@@ -69,6 +70,17 @@ export function App() {
       <>
         <ErrorBoundary area="Lo studio delle mappe" key={`${route.kind}-${route.id}`}>
           <StudioView kind={route.kind} id={route.id} />
+        </ErrorBoundary>
+        <Toasts />
+      </>
+    );
+  }
+
+  if (route.name === 'workshop') {
+    return (
+      <>
+        <ErrorBoundary area="Il laboratorio delle estensioni" key={route.id ?? 'nuova'}>
+          <PluginStudio id={route.id} />
         </ErrorBoundary>
         <Toasts />
       </>
