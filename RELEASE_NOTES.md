@@ -1,11 +1,26 @@
 ## Novità
 
-- **Studio delle mappe**: una nuova sezione «Mappe», separata dal tavolo, per preparare mondi e mappe di sessione e tenerle in una libreria pronta per ogni campagna.
-  - **Mondi**: modelli il terreno (alza, abbassa, ammorbidisci, livella, increspa) sotto un livello del mare regolabile; i biomi si calcolano da soli da altitudine, umidità e latitudine, oppure li dipingi.
-  - **Fiumi, strade e confini**: fiumi a mano o automatici (clicchi la sorgente e l'acqua scende fino al mare), strade, sentieri e rotte marittime, regioni con i loro confini. Ogni linea si corregge punto per punto.
-  - **Simboli e scritte**: 28 simboli (monti, boschi, città, castelli, rovine, mostri marini…), uno alla volta o sparsi col pennello; scritte dritte o curve in tre caratteri; segnaposti con note, collegabili a una mappa di sessione della libreria.
-  - **Generatore**: continente, isole, arcipelago, costa o supercontinente, con fiumi, monti, boschi e città con nomi inventati. Quello che hai messo a mano resta.
-  - **Aspetto**: stile atlante, pergamena o inchiostro, griglia esagonale o quadrata, rosa dei venti, scala e titolo.
-  - **Esportazione**: immagine PNG ad alta risoluzione, file da passare a un altro master, oppure «Usa al tavolo»: il mondo diventa una scena con la sua griglia.
-  - **Mappe di sessione**: l'editor completo del tavolo (terreno, muri e porte, oggetti, luci, scritte, stanze pronte, generatore di dungeon) senza aprire una sessione. Ogni modifica si salva da sola.
-  - Annulla e ripeti, salvataggio automatico; mondi e mappe entrano nei backup e si usano da Scena › Libreria.
+- **Una veste fantasy**: la nuova veste predefinita somiglia a una locanda a lume di candela nel tema scuro e a una pergamena nel tema chiaro.
+  - Ci sono anche i temi Grimorio, Bosco antico, Forgia, Gelo e Corte.
+  - Caratteri da manoscritto, cornici dorate, cuoio e ornamenti sui titoli.
+  - I testi delle pagine hanno un tono d'avventura.
+  - Lo stile precedente si chiama «Vetro» e resta disponibile in Impostazioni › Aspetto › Stile.
+- **Laboratorio delle estensioni**: puoi creare le tue estensioni dentro l'app, da Impostazioni › Estensioni › Crea nel laboratorio.
+  - **Editor**: colori in tinta con il tema e suggerimenti mentre scrivi. Dopo `thevtt.` compare tutto quello che puoi usare, con la spiegazione, e Tab passa al campo successivo. L'editor segnala subito parentesi o virgolette mancanti e nomi che non esistono.
+  - **Modelli e frammenti**: modelli pronti da cui partire (Critici e disastri, Araldo dei turni, Borsa del bottino, Colpo rapido, Segnalini ispirazione) e frammenti da inserire con un clic.
+  - **Intestazione**: nome, descrizione e versione si compilano da un modulo.
+  - **Banco di prova**: un tavolo finto con le regole vere, dove l'estensione gira mentre la scrivi. Provi subito i suoi pulsanti e comandi e puoi simulare un tiro, un 20 o un 1 naturale, il turno che passa.
+  - **Console**: mostra messaggi, tiri, errori e il nuovo `thevtt.log()`.
+  - **Guida, salvataggio ed esportazione**: una guida dell'API, Ctrl+S (⌘S su Mac) per salvare ed esportazione in `.js`.
+
+## Correzioni
+
+- **Sicurezza**:
+  - la finestra dell'app non può più essere portata su pagine esterne;
+  - gli aggiornamenti arrivano solo da GitHub, e un download interrotto viene scartato;
+  - dopo troppe password sbagliate l'accesso si blocca per qualche minuto.
+- **Tavolo**:
+  - colori e condizioni dei token vengono controllati prima di essere accettati;
+  - quando il master svuota la cronologia, se ne accorgono anche gli altri.
+- **Partecipanti e sessioni**: un giocatore appena entrato non risulta più offline per il master, e il pulsante «Siediti al tavolo» compare sempre appena il master avvia la sessione.
+- **Estensioni**: ognuna può aggiungere al massimo 12 pulsanti e 12 comandi.
