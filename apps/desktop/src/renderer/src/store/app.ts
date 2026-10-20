@@ -104,6 +104,14 @@ export const useApp = create<AppState>((set, get) => {
     return true;
   };
 
+  /**
+   * Presence as it arrived, numbered: a participants list fetched before someone
+   * came online must not mark them offline again when its answer lands later.
+   */
+  let presenceSeq = 0;
+  const presence = new Map<string, { online: boolean; seq: number }>();
+  const byPresence = (list: UserPublic[]) => list.sort((a, b) => Number(!!b.online) - Number(!!a.online) || a.displayName.localeCompare(b.displayName));
+
   let lookupTimer: ReturnType<typeof setTimeout> | null = null;
   const connect = () => {
     get().rt?.close();
@@ -129,11 +137,8 @@ export const useApp = create<AppState>((set, get) => {
           void import('./chat').then(({ useChat }) => useChat.getState().loadUnread());
           break;
         case 'presence':
-          set((s) => ({
-            participants: s.participants
-              .map((p) => (p.id === msg.userId ? { ...p, online: msg.online } : p))
-              .sort((a, b) => Number(!!b.online) - Number(!!a.online) || a.displayName.localeCompare(b.displayName)),
-          }));
+          presence.set(msg.userId, { online: msg.online, seq: ++presenceSeq });
+          set((s) => ({ participants: byPresence(s.participants.map((p) => (p.id === msg.userId ? { ...p, online: msg.online } : p))) }));
           // someone new on the server
           if (msg.online && msg.userId !== get().user?.id && !get().participants.some((p) => p.id === msg.userId)) void get().refresh(['participants']);
           break;
@@ -284,7 +289,16 @@ export const useApp = create<AppState>((set, get) => {
     async refresh(what = ['participants', 'invites', 'campaigns', 'characters']) {
       const { api } = get();
       const tasks = what.map(async (w) => {
-        if (w === 'participants') set({ participants: await api.participants() });
+        if (w === 'participants') {
+          const asked = presenceSeq;
+          const list = await api.participants();
+          // what changed while the list was on its way wins over it
+          for (const p of list) {
+            const live = presence.get(p.id);
+            if (live && live.seq > asked) p.online = live.online;
+          }
+          set({ participants: byPresence(list) });
+        }
         if (w === 'invites') set({ invites: await api.invites() });
         if (w === 'characters') set({ characters: await api.characters() });
         if (w === 'campaigns') {
