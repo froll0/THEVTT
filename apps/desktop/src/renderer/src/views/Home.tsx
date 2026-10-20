@@ -24,7 +24,7 @@ export function HomeView() {
           <h1>
             {greeting}, {user?.displayName}
           </h1>
-          <p>{live.length ? `${live.length === 1 ? 'Un tavolo è aperto' : `${live.length} tavoli sono aperti`} adesso.` : 'Nessun tavolo aperto.'}</p>
+          <p>{live.length ? `${live.length === 1 ? 'Un tavolo è aperto' : `${live.length} tavoli sono aperti`} adesso.` : 'Nessun tavolo aperto: la locanda è tranquilla.'}</p>
         </div>
         <div className="row">
           <button className="btn" onClick={() => go({ name: 'character', id: null })}>
@@ -218,7 +218,7 @@ function JournalCard() {
           ))}
         </div>
       ) : (
-        <p className="faint small">{pages ? 'Appunti di sessione che legge solo tu.' : '…'}</p>
+        <p className="faint small">{pages ? 'Appunti d’avventura che leggi solo tu.' : '…'}</p>
       )}
     </div>
   );

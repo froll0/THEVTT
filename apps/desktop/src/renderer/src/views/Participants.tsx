@@ -42,7 +42,7 @@ export function ParticipantsView() {
 
   return (
     <div className="page">
-      <PageHeader title="Partecipanti" subtitle="Tutti quelli che giocano su questo server. Puoi invitarli nelle tue campagne o scrivergli in privato." />
+      <PageHeader title="Partecipanti" subtitle="La compagnia di questo server: invitali alle tue campagne o scrivi loro in privato." />
       {participants.length > 6 && (
         <div className="search-field">
           <Search size={14} />

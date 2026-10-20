@@ -1591,8 +1591,6 @@ In pausa: i giocatori non possono muovere né disegnare ⇒ Paused: players can'
 In attesa del master ⇒ Waiting for the GM
 Il tavolo si aprirà appena ⇒ The table will open as soon as
 avvierà la sessione. ⇒ starts the session.
-Preparo il tavolo… ⇒ Setting up the table…
-Mi siedo al tavolo… ⇒ Taking a seat at the table…
 Seleziona e sposta (V) ⇒ Select and move (V)
 Righello (M) ⇒ Ruler (M)
 Ping (P · o Alt+clic) ⇒ Ping (P · or Alt+click)
@@ -1884,7 +1882,6 @@ Pubblica ⇒ Publish
 Luoghi visitati, PNG incontrati, indizi, tesori, conti in sospeso… ⇒ Places visited, NPCs met, clues, treasure, unfinished business…
 Chat del gruppo ⇒ Group chat
 Scrivi al gruppo ⇒ Write to the group
-Quelle che guidi e quelle a cui partecipi. ⇒ The ones you run and the ones you play in.
 Nuova campagna ⇒ New campaign
 Come master ⇒ As GM
 La tua prima campagna ⇒ Your first campaign
@@ -1912,7 +1909,6 @@ Personaggio eliminato ⇒ Character deleted
 Personaggio importato ⇒ Character imported
 {0} personaggi importati ⇒ {0} characters imported
 Nessun personaggio nel file ⇒ No characters in the file
-I tuoi eroi, pronti per qualsiasi tavolo. ⇒ Your heroes, ready for any table.
 Un file di personaggi esportato da TheVTT ⇒ A characters file exported from TheVTT
 Importa personaggi ⇒ Import characters
 Salva i tuoi personaggi in un file ⇒ Save your characters to a file
@@ -1923,7 +1919,6 @@ Buon pomeriggio ⇒ Good afternoon
 Buonasera ⇒ Good evening
 {0} adesso. ⇒ {0} now.
 {0} tavoli sono aperti ⇒ {0} tables are open
-Nessun tavolo aperto. ⇒ No table open.
 è in gioco ⇒ is in play
 al tavolo · master ⇒ at the table · GM
 Siediti ⇒ Join
@@ -1939,11 +1934,9 @@ da ⇒ from
 Partecipanti online ⇒ People online
 Nessuno online. ⇒ Nobody online.
 Apri ⇒ Open
-Appunti di sessione che legge solo tu. ⇒ Session notes only you read.
-Appunti di sessione che legge solo tu. Al tavolo lo apri in una finestra accanto alla mappa. ⇒ Session notes only you read. At the table you open it in a window next to the map.
+Appunti d’avventura che leggi solo tu. ⇒ Adventure notes only you read.
 Insieme in {0} ⇒ Together in {0}
 Scrivi a {0} ⇒ Write to {0}
-Tutti quelli che giocano su questo server. Puoi invitarli nelle tue campagne o scrivergli in privato. ⇒ Everyone playing on this server. You can invite them to your campaigns or message them privately.
 Cerca per nome ⇒ Search by name
 Cerca tra i partecipanti ⇒ Search people
 Per ora ci sei solo tu. Condividi il codice del gruppo: chi si registra con quel codice compare qui. ⇒ For now it's just you. Share the group code: whoever signs up with it shows up here.
@@ -2329,7 +2322,6 @@ Aggiungi un incantesimo di utilità… ⇒ Add a utility spell…
 Mappe ⇒ Maps
 Mondi ⇒ Worlds
 Mappe per il tavolo ⇒ Maps for the table
-Mondi da esplorare e mappe per le sessioni, pronti per ogni campagna. ⇒ Worlds to explore and maps for your sessions, ready for every campaign.
 Nuovo mondo ⇒ New world
 Crea il tuo primo mondo ⇒ Create your first world
 Nuova mappa ⇒ New map
@@ -2429,3 +2421,11 @@ Finisci ({0} punti) ⇒ Finish ({0} points)
 Mondo «{0}» aggiunto ⇒ World «{0}» added
 Mappa «{0}» aggiunta ⇒ Map «{0}» added
 Nella libreria delle mappe: al tavolo la trovi in Scena › Libreria ⇒ In the map library: at the table it's in Scene › Library
+Le avventure che guidi come master e quelle in cui siedi al tavolo. ⇒ The adventures you run as GM and the ones where you sit at the table.
+Il tuo taccuino d’avventura: lo leggi solo tu. Al tavolo si apre in una finestra accanto alla mappa. ⇒ Your adventure notebook: only you read it. At the table it opens in a window next to the map.
+La compagnia di questo server: invitali alle tue campagne o scrivi loro in privato. ⇒ The company on this server: invite them to your campaigns or write to them privately.
+Il tavolo del cartografo: mondi da esplorare e mappe per le sessioni, pronti per ogni campagna. ⇒ The cartographer’s table: worlds to explore and maps for your sessions, ready for every campaign.
+I tuoi eroi, pronti per la prossima avventura. ⇒ Your heroes, ready for the next adventure.
+Nessun tavolo aperto: la locanda è tranquilla. ⇒ No table open: the tavern is quiet.
+Apparecchio il tavolo… ⇒ Setting the table…
+Prendo posto al tavolo… ⇒ Taking a seat at the table…

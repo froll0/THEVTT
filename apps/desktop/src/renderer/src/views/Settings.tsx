@@ -11,7 +11,7 @@ import { exportSettings, PRESETS, useSettings, type Settings } from '../store/se
 import { useUpdates } from '../store/updates';
 import { PluginSettings } from './PluginSettings';
 
-const ACCENTS = ['#c9a227', '#e6e6e8', '#e4572e', '#ef476f', '#8b7cf6', '#2f6fed', '#06b6d4', '#4fa37e', '#39d353'];
+const ACCENTS = ['#c9973f', '#8e2f24', '#de6a35', '#a688e8', '#7fae5c', '#8ec5e6', '#24527a', '#cfc6b4', '#0a84ff'];
 const AVATAR_COLORS = ['#e07a5f', '#3d85c6', '#81b29a', '#f2cc8f', '#b388eb', '#ef476f', '#06d6a0', '#ffd166'];
 
 const SECTIONS: { id: SettingsSection; label: string; desktop?: boolean }[] = [
@@ -59,10 +59,11 @@ function Appearance() {
         <div className="theme-grid">
           {PRESETS.map((p) => {
             const dark = p.patch.theme === 'dark';
-            const active = p.patch.accent === s.accent && p.patch.theme === s.theme && p.patch.font === s.font;
+            const fantasy = p.patch.skin === 'fantasy';
+            const active = p.patch.accent === s.accent && p.patch.theme === s.theme && p.patch.font === s.font && p.patch.skin === (s.skin ?? 'fantasy');
             return (
               <button key={p.id} className={`theme-card ${active ? 'on' : ''}`} onClick={() => s.set(p.patch)}>
-                <div className="preview" style={{ background: dark ? '#111113' : '#fbfbfa' }}>
+                <div className={`preview ${fantasy ? (dark ? 'fantasy-dark' : 'fantasy-light') : ''}`} style={{ background: dark ? '#111113' : '#fbfbfa' }}>
                   <i style={{ width: 22, background: p.patch.accent }} />
                   <i style={{ width: 34, background: dark ? '#2a2a2e' : '#e4e4e0' }} />
                 </div>
@@ -83,13 +84,23 @@ function Appearance() {
             ]}
           />
         </Setting>
+        <Setting title="Stile" hint="Fantasy: legno, ottone e pergamena. Vetro: pulito e moderno.">
+          <Tabs<Settings['skin']>
+            value={s.skin ?? 'fantasy'}
+            onChange={(skin) => s.set({ skin, font: skin === 'fantasy' ? 'fantasy' : s.font === 'fantasy' ? 'sans' : s.font })}
+            options={[
+              { id: 'fantasy', label: 'Fantasy' },
+              { id: 'glass', label: 'Vetro' },
+            ]}
+          />
+        </Setting>
         <Setting title="Modalità">
           <Tabs<Settings['theme']>
             value={s.theme}
             onChange={(theme) => s.set({ theme })}
             options={[
-              { id: 'dark', label: 'Scura' },
-              { id: 'light', label: 'Chiara' },
+              { id: 'dark', label: (s.skin ?? 'fantasy') === 'fantasy' ? 'Locanda' : 'Scura' },
+              { id: 'light', label: (s.skin ?? 'fantasy') === 'fantasy' ? 'Pergamena' : 'Chiara' },
               { id: 'system', label: 'Sistema' },
             ]}
           />
@@ -104,6 +115,7 @@ function Appearance() {
         </Setting>
         <Setting title="Carattere">
           <select className="select" style={{ width: 180 }} value={s.font} onChange={(e) => s.set({ font: e.target.value as Settings['font'] })}>
+            <option value="fantasy">Fantasy</option>
             <option value="sans">Moderno</option>
             <option value="rounded">Arrotondato</option>
             <option value="serif">Classico</option>

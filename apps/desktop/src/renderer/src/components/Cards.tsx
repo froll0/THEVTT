@@ -13,7 +13,8 @@ export function coverStyle(name: string, image?: string | null): CSSProperties {
   for (const ch of name) x = Math.imul(x ^ ch.charCodeAt(0), 16777619);
   const h = (x >>> 0) % 360;
   return {
-    backgroundImage: `radial-gradient(120% 90% at 15% 0%, hsl(${h} 45% 42% / 0.9), transparent 60%), radial-gradient(90% 90% at 100% 100%, hsl(${(h + 50) % 360} 40% 30% / 0.9), transparent 70%), linear-gradient(135deg, hsl(${h} 25% 18%), hsl(${(h + 30) % 360} 25% 12%))`,
+    // the look adds its own texture on top and tones the colours (see fantasy.css)
+    backgroundImage: `var(--cover-texture, linear-gradient(transparent, transparent)), radial-gradient(120% 90% at 15% 0%, hsl(${h} var(--cover-sat, 45%) 42% / 0.9), transparent 60%), radial-gradient(90% 90% at 100% 100%, hsl(${(h + 50) % 360} var(--cover-sat, 40%) 30% / 0.9), transparent 70%), linear-gradient(135deg, hsl(${h} 25% 18%), hsl(${(h + 30) % 360} 25% 12%))`,
   };
 }
 

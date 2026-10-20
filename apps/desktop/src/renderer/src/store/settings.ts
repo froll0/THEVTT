@@ -4,7 +4,9 @@ import { persist } from 'zustand/middleware';
 import { setLanguage, type Language } from '../i18n';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
-export type FontChoice = 'sans' | 'rounded' | 'serif' | 'mono';
+export type FontChoice = 'fantasy' | 'sans' | 'rounded' | 'serif' | 'mono';
+/** the look: tavern wood, brass and parchment, or Apple-like glass */
+export type Skin = 'fantasy' | 'glass';
 export type Density = 'compact' | 'comfortable' | 'spacious';
 export type NameMode = 'always' | 'hover' | 'never';
 
@@ -12,6 +14,7 @@ export interface Settings {
   /** interface language; game texts stay in Italian */
   language: Language;
   theme: ThemeMode;
+  skin: Skin;
   accent: string;
   font: FontChoice;
   uiScale: number;
@@ -57,10 +60,11 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   language: 'it',
   theme: 'system',
-  accent: '#0a84ff',
-  font: 'sans',
+  skin: 'fantasy',
+  accent: '#c9973f',
+  font: 'fantasy',
   uiScale: 1,
-  radius: 12,
+  radius: 6,
   density: 'comfortable',
   glass: true,
   reduceMotion: false,
@@ -73,7 +77,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dice3d: true,
   diceSkin: null,
   npcVoices: false,
-  board: { background: '#0d0e10', gridColor: '#ffffff', gridOpacity: 0.12, tokenNames: 'hover', hpBars: true },
+  board: { background: '#15110c', gridColor: '#f2dcb0', gridOpacity: 0.12, tokenNames: 'hover', hpBars: true },
   customCss: '',
   call: { micId: '', camId: '', outId: '', volumes: {}, tiles: 'small' },
 };
@@ -85,16 +89,19 @@ export interface ThemePreset {
 }
 
 export const PRESETS: ThemePreset[] = [
-  { id: 'default', name: 'Vetro', patch: { theme: 'system', accent: '#0a84ff', font: 'sans', radius: 12 } },
-  { id: 'obsidian', name: 'Ossidiana', patch: { theme: 'dark', accent: '#c9a227', font: 'sans', radius: 12 } },
-  { id: 'indigo', name: 'Indaco', patch: { theme: 'dark', accent: '#5e5ce6', font: 'sans', radius: 14 } },
-  { id: 'graphite', name: 'Grafite', patch: { theme: 'dark', accent: '#e6e6e8', font: 'sans', radius: 8 } },
-  { id: 'arcane', name: 'Arcano', patch: { theme: 'dark', accent: '#8b7cf6', font: 'sans', radius: 10 } },
-  { id: 'forest', name: 'Foresta', patch: { theme: 'dark', accent: '#4fa37e', font: 'rounded', radius: 10 } },
-  { id: 'ember', name: 'Brace', patch: { theme: 'dark', accent: '#e4572e', font: 'sans', radius: 6 } },
-  { id: 'paper', name: 'Carta', patch: { theme: 'light', accent: '#1f1f22', font: 'sans', radius: 8 } },
-  { id: 'parchment', name: 'Pergamena', patch: { theme: 'light', accent: '#9a3b2a', font: 'serif', radius: 4 } },
-  { id: 'terminal', name: 'Terminale', patch: { theme: 'dark', accent: '#39d353', font: 'mono', radius: 0 } },
+  // the fantasy looks: wood, brass, leather and parchment
+  { id: 'tavern', name: 'Locanda', patch: { skin: 'fantasy', theme: 'dark', accent: '#c9973f', font: 'fantasy', radius: 6 } },
+  { id: 'scroll', name: 'Pergamena', patch: { skin: 'fantasy', theme: 'light', accent: '#8e2f24', font: 'fantasy', radius: 6 } },
+  { id: 'grimoire', name: 'Grimorio', patch: { skin: 'fantasy', theme: 'dark', accent: '#a688e8', font: 'fantasy', radius: 6 } },
+  { id: 'greenwood', name: 'Bosco antico', patch: { skin: 'fantasy', theme: 'dark', accent: '#7fae5c', font: 'fantasy', radius: 6 } },
+  { id: 'forge', name: 'Forgia', patch: { skin: 'fantasy', theme: 'dark', accent: '#de6a35', font: 'fantasy', radius: 4 } },
+  { id: 'frost', name: 'Gelo', patch: { skin: 'fantasy', theme: 'dark', accent: '#8ec5e6', font: 'fantasy', radius: 6 } },
+  { id: 'court', name: 'Corte', patch: { skin: 'fantasy', theme: 'light', accent: '#24527a', font: 'fantasy', radius: 6 } },
+  // the clean ones, as before
+  { id: 'default', name: 'Vetro', patch: { skin: 'glass', theme: 'system', accent: '#0a84ff', font: 'sans', radius: 12 } },
+  { id: 'graphite', name: 'Grafite', patch: { skin: 'glass', theme: 'dark', accent: '#e6e6e8', font: 'sans', radius: 8 } },
+  { id: 'paper', name: 'Carta', patch: { skin: 'glass', theme: 'light', accent: '#1f1f22', font: 'sans', radius: 8 } },
+  { id: 'terminal', name: 'Terminale', patch: { skin: 'glass', theme: 'dark', accent: '#39d353', font: 'mono', radius: 0 } },
 ];
 
 interface SettingsStore extends Settings {
@@ -118,11 +125,20 @@ export const useSettings = create<SettingsStore>()(
     }),
     {
       name: 'thevtt:settings',
-      version: 2,
-      // v2 (the glass redesign): whoever kept the old default look gets the new one
+      version: 3,
       migrate: (persisted, version) => {
-        const s = persisted as Partial<Settings>;
-        if (version < 2 && s && s.accent === '#c9a227' && (s.radius ?? 8) === 8 && s.theme === 'dark') return { ...s, theme: 'system', accent: '#0a84ff', radius: 12 } as Settings;
+        let s = (persisted ?? {}) as Partial<Settings>;
+        // v2 (the glass redesign): whoever kept the old default look gets the new one
+        if (version < 2 && s.accent === '#c9a227' && (s.radius ?? 8) === 8 && s.theme === 'dark') s = { ...s, theme: 'system', accent: '#0a84ff', radius: 12 };
+        // v3 (the fantasy redesign): everyone moves to it; their own colour, font and corners stay if they chose them
+        if (version < 3) {
+          s = { ...s, skin: 'fantasy' };
+          if (!s.accent || s.accent === '#0a84ff') s.accent = '#c9973f';
+          if (!s.font || s.font === 'sans') s.font = 'fantasy';
+          if (s.radius === undefined || s.radius === 12) s.radius = 6;
+          // the table's wood, unless one picked another colour
+          if (!s.board || (s.board.background === '#0d0e10' && s.board.gridColor === '#ffffff')) s.board = { ...(s.board ?? DEFAULT_SETTINGS.board), background: '#15110c', gridColor: '#f2dcb0' };
+        }
         return s as Settings;
       },
       // settings saved before a field existed get its default
@@ -135,11 +151,13 @@ export const useSettings = create<SettingsStore>()(
 );
 
 export function exportSettings(s: Settings): string {
-  const { theme, accent, font, uiScale, radius, density, glass, reduceMotion, dockPosition, board, customCss } = s;
-  return JSON.stringify({ theme, accent, font, uiScale, radius, density, glass, reduceMotion, dockPosition, board, customCss }, null, 2);
+  const { theme, skin, accent, font, uiScale, radius, density, glass, reduceMotion, dockPosition, board, customCss } = s;
+  return JSON.stringify({ theme, skin, accent, font, uiScale, radius, density, glass, reduceMotion, dockPosition, board, customCss }, null, 2);
 }
 
 const FONTS: Record<FontChoice, string> = {
+  // a humanist sans, readable in dense panels; titles and long texts get their own (see fantasy.css)
+  fantasy: '"Alegreya Sans", "Segoe UI", system-ui, sans-serif',
   // San Francisco on a Mac, Inter (shipped with the app) elsewhere
   sans: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif',
   rounded: '"Nunito", "SF Pro Rounded", "Varela Round", system-ui, sans-serif',
@@ -166,6 +184,7 @@ export function applySettings(s: Settings, prefersDark: boolean): void {
   const root = document.documentElement;
   const dark = s.theme === 'system' ? prefersDark : s.theme === 'dark';
   root.dataset.theme = dark ? 'dark' : 'light';
+  root.dataset.skin = s.skin ?? 'fantasy';
   root.dataset.glass = String(s.glass);
   root.dataset.motion = s.reduceMotion ? 'reduce' : 'full';
   root.dataset.contrast = s.highContrast ? 'high' : 'normal';

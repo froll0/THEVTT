@@ -27,7 +27,7 @@ export function CampaignsView() {
 
   return (
     <div className="page wide">
-      <PageHeader title="Campagne" subtitle="Quelle che guidi e quelle a cui partecipi.">
+      <PageHeader title="Campagne" subtitle="Le avventure che guidi come master e quelle in cui siedi al tavolo.">
         <button className="btn primary" onClick={() => setCreating(true)}>
           Nuova campagna
         </button>
