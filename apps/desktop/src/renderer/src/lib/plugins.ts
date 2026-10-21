@@ -81,7 +81,7 @@ export const usePlugins = create<PluginStore>((set, get) => {
 
 type FromWorker =
   | { k: 'ready' }
-  | { k: 'error'; message: string }
+  | { k: 'error'; message: string; line?: number }
   | { k: 'dispatch'; action: GameAction }
   | { k: 'toast'; text: string }
   | { k: 'print'; text: string }
@@ -93,6 +93,8 @@ export interface PluginHost {
   toast(text: string): void;
   /** thevtt.log / console.log: only the workshop shows them */
   print?(text: string): void;
+  /** an error, with its line in the extension's code when known */
+  error?(message: string, line?: number): void;
 }
 
 /** One running extension. */
@@ -111,8 +113,10 @@ export class PluginRunner {
     this.worker.postMessage({ k: 'load', code: plugin.code });
   }
 
-  private fail(message: string) {
-    usePlugins.setState((s) => ({ errors: { ...s.errors, [this.plugin.id]: message.slice(0, 300) } }));
+  private fail(message: string, line?: number) {
+    const text = `${message.slice(0, 300)}${line ? ` (riga ${line})` : ''}`;
+    usePlugins.setState((s) => ({ errors: { ...s.errors, [this.plugin.id]: text } }));
+    this.host.error?.(message, line);
   }
 
   private receive(m: FromWorker) {
@@ -126,7 +130,7 @@ export class PluginRunner {
         });
         break;
       case 'error':
-        this.fail(String(m.message));
+        this.fail(String(m.message), typeof m.line === 'number' && m.line > 0 ? Math.floor(m.line) : undefined);
         break;
       case 'dispatch': {
         const now = Date.now();

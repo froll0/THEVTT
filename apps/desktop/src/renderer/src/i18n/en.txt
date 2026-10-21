@@ -2484,3 +2484,5 @@ Limiti: al massimo 20 azioni al secondo, 12 pulsanti e 12 comandi. Non può legg
 {0} salvata ⇒ {0} saved
 Guida ⇒ Guide
 Salva ({0}+S) ⇒ Save ({0}+S)
+Vai alla riga nel codice ⇒ Go to the line in the code
+riga {0} ⇒ line {0}

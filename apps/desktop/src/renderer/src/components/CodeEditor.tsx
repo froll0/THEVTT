@@ -13,6 +13,8 @@ import { API, FIELDS } from '../lib/pluginKit';
 export interface CodeEditorHandle {
   /** puts a snippet (with ${fields}) at the cursor, on a line of its own */
   insertSnippet(template: string): void;
+  /** puts the cursor on a line (1 = the first) and selects it */
+  goto(line: number): void;
   focus(): void;
 }
 
@@ -184,6 +186,13 @@ export const CodeEditor = forwardRef<CodeEditorHandle, { value: string; onChange
       const at = blank ? line.from : line.to;
       const prefix = blank ? '' : '\n';
       snippet(prefix + template)(v, null, at, blank ? line.to : at);
+      v.focus();
+    },
+    goto(n: number) {
+      const v = view.current;
+      if (!v) return;
+      const line = v.state.doc.line(Math.min(Math.max(1, n), v.state.doc.lines));
+      v.dispatch({ selection: { anchor: line.from, head: line.to }, scrollIntoView: true });
       v.focus();
     },
     focus() {

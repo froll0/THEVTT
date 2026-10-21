@@ -60,6 +60,20 @@ test('the extensions workshop: a template, a snippet, tried on the pretend table
   await expect(G.locator('.cm-lintRange-warning').first()).toBeVisible();
   await G.keyboard.press('ControlOrMeta+z');
 
+  // a mistake while it runs points at its line, one click away
+  await code.click();
+  await G.keyboard.press('ControlOrMeta+End');
+  await G.keyboard.press('Enter');
+  await G.keyboard.type("thevtt.button('Rompi', () => thevtt.state.nulla.x)");
+  await G.waitForTimeout(1500);
+  await bench.getByRole('toolbar', { name: 'Pulsanti dell’estensione' }).getByRole('button', { name: 'Rompi' }).click();
+  const goto = bench.getByRole('button', { name: /^riga \d+$/ });
+  await expect(goto).toBeVisible();
+  const line = Number((await goto.textContent())!.replace(/\D/g, ''));
+  await goto.click();
+  await expect(G.locator('.cm-lineNumbers .cm-activeLineGutter')).toHaveText(String(line));
+  await expect(G.locator('.cm-activeLine')).toContainText("thevtt.button('Rompi'");
+
   // saved with Ctrl+S, it is one of the extensions; back in to change it
   await G.keyboard.press('ControlOrMeta+s');
   await expect(G.locator('.studio-top')).toContainText('Salvata');

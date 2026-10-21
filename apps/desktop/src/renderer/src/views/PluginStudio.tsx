@@ -207,7 +207,7 @@ export function PluginStudio({ id }: { id: string | null }) {
               { id: 'manual', label: 'Guida' },
             ]}
           />
-          {pane === 'bench' ? bench && <Bench bench={bench} auto={auto} setAuto={setAuto} onRun={() => run()} /> : <Manual onInsert={(s) => editor.current?.insertSnippet(s)} />}
+          {pane === 'bench' ? bench && <Bench bench={bench} auto={auto} setAuto={setAuto} onRun={() => run()} onGoto={(n) => editor.current?.goto(n)} /> : <Manual onInsert={(s) => editor.current?.insertSnippet(s)} />}
         </aside>
       </div>
 
@@ -253,7 +253,7 @@ export function PluginStudio({ id }: { id: string | null }) {
 }
 
 /** the pretend table: what the extension did, its buttons and commands, a chat */
-function Bench({ bench, auto, setAuto, onRun }: { bench: PluginBench; auto: boolean; setAuto(v: boolean): void; onRun(): void }) {
+function Bench({ bench, auto, setAuto, onRun, onGoto }: { bench: PluginBench; auto: boolean; setAuto(v: boolean): void; onRun(): void; onGoto(line: number): void }) {
   const lines = useSyncExternalStore(
     (fn) => bench.subscribe(fn),
     () => bench.lines,
@@ -350,7 +350,14 @@ function Bench({ bench, auto, setAuto, onRun }: { bench: PluginBench; auto: bool
         {lines.map((l) => (
           <div key={l.id} className={`bench-line ${l.kind}`}>
             <span className="bench-kind">{KIND_LABEL[l.kind]}</span>
-            <span className="bench-text">{l.text}</span>
+            <span className="bench-text">
+              {l.text}
+              {l.line && (
+                <button className="bench-goto" onClick={() => onGoto(l.line!)} title="Vai alla riga nel codice">
+                  riga {l.line}
+                </button>
+              )}
+            </span>
           </div>
         ))}
         {!lines.length && <p className="faint small">Qui compare quello che fa l’estensione: messaggi, tiri, avvisi, errori e i suoi thevtt.log.</p>}

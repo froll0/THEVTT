@@ -289,3 +289,17 @@
     border: none;
   }
 }
+.bench-goto {
+  all: unset;
+  cursor: pointer;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  color: var(--danger);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+.bench-goto:hover,
+.bench-goto:focus-visible {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}

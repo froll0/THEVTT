@@ -10,12 +10,20 @@ let state = null;
 let nextId = 1;
 
 const post = (m) => self.postMessage(m);
+// the extension's code runs as `function anonymous(thevtt\n) {\n"use strict";\n…`: three lines before its first
+const HEADER_LINES = 3;
+/** an error, with the line of the extension's code it came from when the stack tells */
+const report = (e) => {
+  const m = /<anonymous>:(\d+):(\d+)/.exec(String((e && e.stack) || ''));
+  const line = m ? Number(m[1]) - HEADER_LINES : 0;
+  post({ k: 'error', message: String((e && e.message) || e), ...(line > 0 ? { line, col: Number(m[2]) } : {}) });
+};
 const safe = (fn, ...args) => {
   try {
     const r = fn(...args);
-    if (r && typeof r.catch === 'function') r.catch((e) => post({ k: 'error', message: String((e && e.message) || e) }));
+    if (r && typeof r.catch === 'function') r.catch(report);
   } catch (e) {
-    post({ k: 'error', message: String((e && e.message) || e) });
+    report(e);
   }
 };
 
@@ -85,7 +93,7 @@ self.onmessage = (e) => {
       new Function('thevtt', `"use strict";\n${m.code}`)(thevtt);
       post({ k: 'ready' });
     } catch (err) {
-      post({ k: 'error', message: String((err && err.message) || err) });
+      report(err);
     }
   } else if (m.k === 'state') {
     const prevTurn = state ? `${state.initiative.round}:${state.initiative.turn}` : null;

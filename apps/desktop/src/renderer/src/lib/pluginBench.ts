@@ -11,6 +11,8 @@ export interface BenchLine {
   id: number;
   kind: BenchKind;
   text: string;
+  /** for errors: the line of the extension's code */
+  line?: number;
 }
 
 /** how a table line reads in the workshop's console */
@@ -80,16 +82,11 @@ export class PluginBench {
         dispatch: (a) => this.act(ME, a, true),
         toast: (t) => this.push('toast', t),
         print: (t) => this.push('print', t),
+        error: (message, line) => this.push('error', message, line),
       },
     );
     this.runner.state(this.view);
-    // the errors the runner records, in the console too
-    this.unwatch = usePlugins.subscribe((s, prev) => {
-      const e = s.errors[BENCH_ID];
-      if (e && e !== prev.errors[BENCH_ID]) this.push('error', e);
-    });
   }
-  private unwatch: () => void;
 
   subscribe(fn: () => void) {
     this.listeners.add(fn);
@@ -99,8 +96,8 @@ export class PluginBench {
     for (const fn of this.listeners) fn();
   }
 
-  private push(kind: BenchKind, text: string) {
-    this.lines = [...this.lines, { id: ++this.seq, kind, text }].slice(-300);
+  private push(kind: BenchKind, text: string, line?: number) {
+    this.lines = [...this.lines, { id: ++this.seq, kind, text, ...(line ? { line } : {}) }].slice(-300);
     this.emit();
   }
 
@@ -156,7 +153,6 @@ export class PluginBench {
   }
 
   stop() {
-    this.unwatch();
     this.runner.stop();
     this.listeners.clear();
   }
