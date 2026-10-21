@@ -122,7 +122,7 @@ export function WorldClock() {
           </div>
           <div className="row" style={{ gap: 6 }}>
             <input className="input" style={{ width: 64 }} type="number" min={1} value={day} onChange={(e) => setDay(e.target.value)} aria-label="Giorno" />
-            <input className="input" style={{ width: 90 }} type="time" value={clock} onChange={(e) => setClock(e.target.value)} aria-label="Ora" />
+            <input className="input" style={{ width: 118 }} type="time" value={clock} onChange={(e) => setClock(e.target.value)} aria-label="Ora" />
             <button className="btn sm" onClick={set}>
               Imposta
             </button>
