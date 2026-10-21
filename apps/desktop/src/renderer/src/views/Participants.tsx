@@ -1,6 +1,6 @@
 import type { UserPublic } from '@thevtt/shared';
 import { MessageSquare, Search } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChatThread } from '../components/ChatThread';
 import { Avatar, Empty, Modal, PageHeader, Section } from '../components/ui';
 import { useApp } from '../store/app';
@@ -8,7 +8,11 @@ import { useChat } from '../store/chat';
 
 /** Everyone who plays on this server: the group's server is private, so everyone sees everyone. */
 export function ParticipantsView() {
-  const { participants, campaigns, user } = useApp();
+  const { participants, campaigns, user, refresh } = useApp();
+  // opened, the page asks again: a presence missed while the connection came back shows up here
+  useEffect(() => {
+    void refresh(['participants']);
+  }, [refresh]);
   const [query, setQuery] = useState('');
   const [dm, setDm] = useState<UserPublic | null>(null);
   const unread = useChat((s) => s.unread);
