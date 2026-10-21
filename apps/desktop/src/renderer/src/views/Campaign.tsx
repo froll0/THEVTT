@@ -9,6 +9,7 @@ import { formatSession, relativeDay } from '../lib/dates';
 import { recapForDiscord, toDiscord } from '../lib/discord';
 import { DiscordCard } from './DiscordCard';
 import { HomebrewEditor } from './HomebrewEditor';
+import { SheetDesigner } from './SheetDesigner';
 import { Avatar, Empty, Field, Modal, Popover, readImage, Section } from '../components/ui';
 import { useApp } from '../store/app';
 
@@ -280,6 +281,7 @@ export function CampaignView({ id }: { id: string }) {
           )}
           {isGm && <DiscordCard campaignId={campaign.id} />}
           {isGm && campaign.systemId === 'dnd5e-2024' && <HomebrewCard campaign={campaign} />}
+          {isGm && campaign.systemId === 'libero' && <SheetsCard campaign={campaign} />}
         </aside>
       </div>
 
@@ -562,6 +564,24 @@ export function CampaignChat({ campaign }: { campaign: Campaign }) {
         <ChatThread channel={`campaign:${campaign.id}`} people={campaign.members.map((m) => m.user)} placeholder="Scrivi al gruppo" />
       </div>
     </Section>
+  );
+}
+
+/** GM, free system: the character sheets made for this campaign. */
+function SheetsCard({ campaign }: { campaign: Campaign }) {
+  const [open, setOpen] = useState(false);
+  const count = (campaign.homebrew as { sheets?: unknown[] } | null | undefined)?.sheets?.length ?? 0;
+  return (
+    <div className="panel-card">
+      <h3>Schede della campagna</h3>
+      <p className="muted small">
+        {count ? `${count === 1 ? 'Una scheda fatta' : `${count} schede fatte`} da te: i giocatori partono da qui.` : 'Disegna la scheda del tuo gioco: campi, tracciati, caselle e tiri, senza codice.'}
+      </p>
+      <button className="btn sm" onClick={() => setOpen(true)}>
+        {count ? 'Modifica le schede' : 'Disegna una scheda'}
+      </button>
+      {open && <SheetDesigner campaign={campaign} onClose={() => setOpen(false)} />}
+    </div>
   );
 }
 

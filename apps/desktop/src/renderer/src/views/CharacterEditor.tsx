@@ -1,5 +1,5 @@
 import { describeRoll, roll, successes } from '@thevtt/shared';
-import { getSystem, listSystems } from '@thevtt/systems';
+import { free, getSystem, listSystems } from '@thevtt/systems';
 import { ArrowLeft, MoreHorizontal, Printer } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Modal, PageHeader, Popover } from '../components/ui';
@@ -15,7 +15,13 @@ export function CharacterEditor({ id, systemId: requestedSystem, assignTo }: { i
   const [systemId, setSystemId] = useState<string | undefined>(existing?.systemId ?? requestedSystem ?? (systems.length === 1 ? systems[0]!.id : undefined));
   const system = systemId ? getSystem(systemId) : undefined;
   const ui = systemId ? getSystemUi(systemId) : undefined;
-  const initial = useMemo(() => existing?.data ?? system?.createCharacter(), [existing, system]);
+  const campaigns = useApp((s) => s.campaigns);
+  const initial = useMemo(() => {
+    if (existing) return existing.data;
+    // free system, for a campaign with its own sheets: the first of them
+    const sheet = system?.id === 'libero' && free.cleanFreeHomebrew(campaigns.find((c) => c.id === assignTo)?.homebrew).sheets[0];
+    return sheet ? free.createCharacter(`${free.CAMPAIGN_TEMPLATE}${sheet.id}`) : system?.createCharacter();
+  }, [existing, system]); // eslint-disable-line react-hooks/exhaustive-deps
   const [data, setData] = useState<unknown>(initial);
   const [mode, setMode] = useState<Mode>(existing && system && !system.validate(existing.data).length ? 'sheet' : 'build');
   const [confirmDelete, setConfirmDelete] = useState(false);

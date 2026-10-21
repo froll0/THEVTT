@@ -2532,3 +2532,30 @@ Il link non è valido ⇒ The link isn't valid
 Non riesco a scaricarla: controlla il link o la connessione ⇒ I can't download it: check the link or the connection
 Il sito risponde {0} ⇒ The site answers {0}
 Il link porta a una pagina web, non al file .js ⇒ The link leads to a web page, not to the .js file
+# Schede della campagna (sistema libero)
+Schede della campagna ⇒ Campaign sheets
+Disegna una scheda ⇒ Design a sheet
+Modifica le schede ⇒ Edit the sheets
+Disegna la scheda del tuo gioco: campi, tracciati, caselle e tiri, senza codice. ⇒ Design your game's sheet: fields, tracks, boxes and rolls, no code.
+Una scheda fatta da te: i giocatori partono da qui. ⇒ One sheet made by you: players start from here.
+{0} schede fatte da te: i giocatori partono da qui. ⇒ {0} sheets made by you: players start from here.
+Schede salvate: i giocatori le trovano creando un personaggio ⇒ Sheets saved: players find them when creating a character
+Le schede ⇒ The sheets
+{0} campi · {1} tiri ⇒ {0} fields · {1} rolls
+Parti da ⇒ Start from
+Nuova scheda ⇒ New sheet
+Questo file non è una scheda di TheVTT ⇒ This file isn't a TheVTT sheet
+«{0}» importata ⇒ «{0}» imported
+{0} schede importate ⇒ {0} sheets imported
+I giocatori le trovano per prime quando creano un personaggio; quelle già fatte non cambiano. ⇒ Players find them first when they create a character; the ones already made don't change.
+Struttura della scheda ⇒ Sheet structure
+Nome della scheda ⇒ Sheet name
+Per chi è, cosa si tira ⇒ Who it's for, what gets rolled
+Anteprima ⇒ Preview
+Anteprima: i valori che scrivi qui sono quelli di partenza. ⇒ Preview: the values you write here are the starting ones.
+Nessuna scheda ancora: creane una partendo da un modello, poi cambiala come vuoi. ⇒ No sheets yet: make one from a template, then change it as you like.
+Casella ⇒ Box
+Mostra come pallini da riempire ⇒ Show as dots to fill
+{0} a pallini ⇒ {0} as dots
+della campagna ⇒ of the campaign
+{0}: {1} su {2} ⇒ {0}: {1} of {2}

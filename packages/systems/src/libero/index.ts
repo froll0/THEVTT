@@ -6,16 +6,18 @@ import type { GameSystem, QuickRoll, StatLine } from '../types';
  * possono usare i campi numerici: «1d20+@forza», «@abilità d6».
  */
 
-export type FieldKind = 'number' | 'text' | 'track';
+export type FieldKind = 'number' | 'text' | 'track' | 'check';
 
 export interface FreeField {
   id: string;
   label: string;
   kind: FieldKind;
-  /** number and track: the value; text: unused */
+  /** number and track: the value; check: 1 ticked, 0 not; text: unused */
   value: number;
   /** track: the maximum */
   max?: number;
+  /** track: shown as a row of dots to fill (blood, willpower…) rather than a number */
+  dots?: boolean;
   text?: string;
   /** what the table uses it for: the token's hit points or its defence (CA) */
   role?: 'hp' | 'defense' | 'initiative';
@@ -63,6 +65,8 @@ export interface FreeTemplate {
   id: string;
   name: string;
   text: string;
+  /** a sheet designed for a campaign: its name */
+  campaign?: string;
   make: () => Pick<FreeCharacter, 'fields' | 'rolls'>;
 }
 
@@ -266,23 +270,7 @@ const n = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? 
 
 export function normalize(raw: unknown): FreeCharacter {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, any>;
-  const fields: FreeField[] = (Array.isArray(r.fields) ? r.fields : [])
-    .filter((f: any) => f && typeof f.label === 'string')
-    .slice(0, 80)
-    .map((f: any) => ({
-      id: str(f.id) || rid(),
-      label: f.label.slice(0, 40),
-      kind: f.kind === 'text' || f.kind === 'track' ? f.kind : 'number',
-      value: n(f.value),
-      max: f.kind === 'track' ? n(f.max, 10) : undefined,
-      text: typeof f.text === 'string' ? f.text : undefined,
-      role: f.role === 'hp' || f.role === 'defense' || f.role === 'initiative' ? f.role : undefined,
-      group: typeof f.group === 'string' && f.group.trim() ? f.group.slice(0, 40) : undefined,
-    }));
-  const rolls: FreeRoll[] = (Array.isArray(r.rolls) ? r.rolls : [])
-    .filter((x: any) => x && typeof x.label === 'string' && typeof x.formula === 'string')
-    .slice(0, 60)
-    .map((x: any) => ({ id: str(x.id) || rid(), label: x.label.slice(0, 50), formula: x.formula.slice(0, 80), group: typeof x.group === 'string' && x.group.trim() ? x.group.slice(0, 40) : undefined }));
+  const { fields, rolls } = cleanParts(r);
   return {
     version: 1,
     name: str(r.name),
@@ -294,6 +282,82 @@ export function normalize(raw: unknown): FreeCharacter {
     inventory: str(r.inventory),
     notes: str(r.notes),
   };
+}
+
+/** fields and rolls from untrusted input (a sheet, a campaign's template, a file) */
+function cleanParts(r: Record<string, any>): Pick<FreeCharacter, 'fields' | 'rolls'> {
+  const fields: FreeField[] = (Array.isArray(r.fields) ? r.fields : [])
+    .filter((f: any) => f && typeof f.label === 'string')
+    .slice(0, 80)
+    .map((f: any) => ({
+      id: str(f.id) || rid(),
+      label: f.label.slice(0, 40),
+      kind: f.kind === 'text' || f.kind === 'track' || f.kind === 'check' ? f.kind : 'number',
+      value: f.kind === 'check' ? (f.value ? 1 : 0) : n(f.value),
+      max: f.kind === 'track' ? n(f.max, 10) : undefined,
+      ...(f.kind === 'track' && f.dots ? { dots: true } : {}),
+      text: typeof f.text === 'string' ? f.text : undefined,
+      role: f.role === 'hp' || f.role === 'defense' || f.role === 'initiative' ? f.role : undefined,
+      group: typeof f.group === 'string' && f.group.trim() ? f.group.slice(0, 40) : undefined,
+    }));
+  const rolls: FreeRoll[] = (Array.isArray(r.rolls) ? r.rolls : [])
+    .filter((x: any) => x && typeof x.label === 'string' && typeof x.formula === 'string')
+    .slice(0, 60)
+    .map((x: any) => ({ id: str(x.id) || rid(), label: x.label.slice(0, 50), formula: x.formula.slice(0, 80), group: typeof x.group === 'string' && x.group.trim() ? x.group.slice(0, 40) : undefined }));
+  return { fields, rolls };
+}
+
+/**
+ * A sheet the GM designs for the campaign: the players start their characters
+ * from it. Kept in the campaign's homebrew, as data.
+ */
+export interface SheetDesign {
+  id: string;
+  name: string;
+  text: string;
+  fields: FreeField[];
+  rolls: FreeRoll[];
+}
+
+export interface FreeHomebrew {
+  sheets: SheetDesign[];
+}
+
+export const CAMPAIGN_TEMPLATE = 'campagna:';
+
+export function cleanFreeHomebrew(raw: unknown): FreeHomebrew {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, any>;
+  const sheets = (Array.isArray(r.sheets) ? r.sheets : [])
+    .filter((x: any) => x && typeof x === 'object')
+    .slice(0, 20)
+    .map((x: any): SheetDesign => ({ id: str(x.id).slice(0, 40) || rid(), name: str(x.name).slice(0, 60) || 'Scheda', text: str(x.text).slice(0, 300), ...cleanParts(x) }));
+  return { sheets };
+}
+
+/** a design from one of the built-in templates, to change from there */
+export function designFrom(templateId: string, name?: string): SheetDesign {
+  const t = TEMPLATES.find((x) => x.id === templateId) ?? TEMPLATES[0]!;
+  return { id: rid(), name: name ?? t.name, text: t.text, ...t.make() };
+}
+
+/**
+ * The sheets of the user's campaigns join the templates a character starts
+ * from, first in the list (and the ones there before go away).
+ */
+export function applyCampaignSheets(sets: { campaignName: string; homebrew: FreeHomebrew }[]): void {
+  for (let i = TEMPLATES.length - 1; i >= 0; i--) if (TEMPLATES[i]!.id.startsWith(CAMPAIGN_TEMPLATE)) TEMPLATES.splice(i, 1);
+  const own: FreeTemplate[] = [];
+  for (const set of sets)
+    for (const d of set.homebrew.sheets)
+      own.push({
+        id: `${CAMPAIGN_TEMPLATE}${d.id}`,
+        name: d.name,
+        text: d.text || `La scheda di «${set.campaignName}»`,
+        campaign: set.campaignName,
+        // fresh ids for every character made from it
+        make: () => ({ fields: d.fields.map((f) => ({ ...f, id: rid() })), rolls: d.rolls.map((x) => ({ ...x, id: rid() })) }),
+      });
+  TEMPLATES.unshift(...own);
 }
 
 /** The values a formula can use, by field name (numbers and tracks). */
@@ -345,7 +409,8 @@ export const libero: GameSystem<FreeCharacter> = {
   summary(raw) {
     const c = normalize(raw);
     const lines: StatLine[] = [];
-    for (const f of c.fields.slice(0, 12)) lines.push({ label: f.label, value: f.kind === 'track' ? `${f.value}/${f.max ?? 0}` : f.kind === 'text' ? (f.text ?? '') : String(f.value) });
+    for (const f of c.fields.slice(0, 12))
+      lines.push({ label: f.label, value: f.kind === 'track' ? `${f.value}/${f.max ?? 0}` : f.kind === 'text' ? (f.text ?? '') : f.kind === 'check' ? (f.value ? '✓' : '—') : String(f.value) });
     return lines;
   },
   quickRolls(raw): QuickRoll[] {

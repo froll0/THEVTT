@@ -1,4 +1,4 @@
-import { dnd5e } from '@thevtt/systems';
+import { dnd5e, free } from '@thevtt/systems';
 import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { TopBar } from './components/Shell';
@@ -54,6 +54,7 @@ export function App() {
   const campaigns = useApp((s) => s.campaigns);
   useEffect(() => {
     dnd5e.applyHomebrew(campaigns.filter((c) => c.systemId === 'dnd5e-2024' && c.homebrew).map((c) => dnd5e.cleanHomebrew(c.homebrew)));
+    free.applyCampaignSheets(campaigns.filter((c) => c.systemId === 'libero' && c.homebrew).map((c) => ({ campaignName: c.name, homebrew: free.cleanFreeHomebrew(c.homebrew) })));
   }, [campaigns]);
 
   useEffect(() => {

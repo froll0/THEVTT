@@ -1,6 +1,6 @@
 import { roll, newId } from '@thevtt/shared';
 import { free as f } from '@thevtt/systems';
-import { Dices, Minus, Plus, Settings2, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Dices, Minus, Plus, Settings2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Section } from '../../components/ui';
 import type { BuilderProps, SheetProps } from '..';
@@ -29,7 +29,7 @@ function formulaError(c: C, formula: string): string | null {
   }
 }
 
-export function FreeSheet({ data, editable, onChange, onRoll, compact }: SheetProps<C>) {
+export function FreeSheet({ data, editable, onChange, onRoll, compact, design = true }: SheetProps<C> & { /** the button to change the sheet's structure */ design?: boolean }) {
   const c = f.normalize(data);
   const set = (patch: Partial<C>) => onChange({ ...c, ...patch });
   const [structure, setStructure] = useState(false);
@@ -46,7 +46,7 @@ export function FreeSheet({ data, editable, onChange, onRoll, compact }: SheetPr
           {compact ? <b>{c.name}</b> : <h2 className="ellipsis">{c.name || 'Senza nome'}</h2>}
           <div className="muted small ellipsis">{c.concept || 'Sistema libero'}</div>
         </div>
-        {editable && (
+        {editable && design && (
           <button className={`btn ghost sm ${structure ? 'active' : ''}`} onClick={() => setStructure(!structure)} title="Aggiungi, togli o rinomina campi e tiri">
             <Settings2 size={13} /> {structure ? 'Fine' : 'Struttura'}
           </button>
@@ -62,6 +62,9 @@ export function FreeSheet({ data, editable, onChange, onRoll, compact }: SheetPr
               {tracks.map((x) => (
                 <div key={x.id} className="stat" title={x.role === 'hp' ? 'Segue i punti ferita del token' : undefined}>
                   <small>{x.label}</small>
+                  {x.dots ? (
+                    <Dots field={x} editable={editable} onChange={(value) => setField(x.id, { value })} />
+                  ) : (
                   <div className="row" style={{ gap: 4 }}>
                     {editable && (
                       <button className="btn ghost sm icon" aria-label={`${x.label} meno uno`} onClick={() => setField(x.id, { value: Math.max(0, x.value - 1) })}>
@@ -78,6 +81,7 @@ export function FreeSheet({ data, editable, onChange, onRoll, compact }: SheetPr
                       </button>
                     )}
                   </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -86,9 +90,11 @@ export function FreeSheet({ data, editable, onChange, onRoll, compact }: SheetPr
             <Section key={g || '-'} title={g || 'Scheda'}>
               <div className="free-fields">
                 {list.map((x) => (
-                  <label key={x.id} className={`free-field ${x.kind === 'text' ? 'wide' : ''}`}>
+                  <label key={x.id} className={`free-field ${x.kind === 'text' ? 'wide' : ''} ${x.kind === 'check' ? 'check' : ''}`}>
                     <span>{x.label}</span>
-                    {x.kind === 'text' ? (
+                    {x.kind === 'check' ? (
+                      <input type="checkbox" checked={!!x.value} disabled={!editable} onChange={(e) => setField(x.id, { value: e.target.checked ? 1 : 0 })} aria-label={x.label} />
+                    ) : x.kind === 'text' ? (
                       editable ? (
                         <input className="input" value={x.text ?? ''} onChange={(e) => setField(x.id, { text: e.target.value })} />
                       ) : (
@@ -135,7 +141,7 @@ export function FreeSheet({ data, editable, onChange, onRoll, compact }: SheetPr
   );
 }
 
-function StructureEditor({ c, set }: { c: C; set: (patch: Partial<C>) => void }) {
+export function StructureEditor({ c, set }: { c: C; set: (patch: Partial<C>) => void }) {
   const field = (id: string, patch: Partial<f.FreeField>) => set({ fields: c.fields.map((x) => (x.id === id ? { ...x, ...patch } : x)) });
   const rollAt = (id: string, patch: Partial<f.FreeRoll>) => set({ rolls: c.rolls.map((x) => (x.id === id ? { ...x, ...patch } : x)) });
   return (
@@ -149,9 +155,21 @@ function StructureEditor({ c, set }: { c: C; set: (patch: Partial<C>) => void })
                 <option value="number">Numero</option>
                 <option value="track">Tracciato</option>
                 <option value="text">Testo</option>
+                <option value="check">Casella</option>
               </select>
               {x.kind === 'track' ? (
-                <input className="input num" type="number" value={x.max ?? 10} onChange={(e) => field(x.id, { max: Number(e.target.value) || 0 })} aria-label="Massimo" title="Massimo" />
+                <span className="row" style={{ gap: 2 }}>
+                  <input className="input num" type="number" value={x.max ?? 10} onChange={(e) => field(x.id, { max: Number(e.target.value) || 0 })} aria-label="Massimo" title="Massimo" />
+                  <button
+                    className={`btn ghost sm icon ${x.dots ? 'active' : ''}`}
+                    onClick={() => field(x.id, { dots: !x.dots || undefined })}
+                    aria-pressed={!!x.dots}
+                    aria-label={`${x.label} a pallini`}
+                    title="Mostra come pallini da riempire"
+                  >
+                    ●
+                  </button>
+                </span>
               ) : (
                 <span />
               )}
@@ -162,6 +180,7 @@ function StructureEditor({ c, set }: { c: C; set: (patch: Partial<C>) => void })
                 <option value="defense">Difesa (CA)</option>
                 <option value="initiative">Iniziativa</option>
               </select>
+              <Move list={c.fields} id={x.id} label={x.label} onMove={(fields) => set({ fields })} />
               <button className="btn ghost sm icon" aria-label={`Togli ${x.label}`} onClick={() => set({ fields: c.fields.filter((y) => y.id !== x.id) })}>
                 <Trash2 size={12} />
               </button>
@@ -183,6 +202,7 @@ function StructureEditor({ c, set }: { c: C; set: (patch: Partial<C>) => void })
                   <input className="input" value={x.label} onChange={(e) => rollAt(x.id, { label: e.target.value })} aria-label="Nome del tiro" placeholder="Nome" />
                   <input className="input" value={x.formula} onChange={(e) => rollAt(x.id, { formula: e.target.value })} aria-label="Formula" placeholder="1d20+@forza" spellCheck={false} />
                   <input className="input" value={x.group ?? ''} onChange={(e) => rollAt(x.id, { group: e.target.value || undefined })} aria-label="Gruppo del tiro" placeholder="Gruppo" />
+                  <Move list={c.rolls} id={x.id} label={x.label} onMove={(rolls) => set({ rolls })} />
                   <button className="btn ghost sm icon" aria-label={`Togli ${x.label}`} onClick={() => set({ rolls: c.rolls.filter((y) => y.id !== x.id) })}>
                     <Trash2 size={12} />
                   </button>
@@ -201,6 +221,44 @@ function StructureEditor({ c, set }: { c: C; set: (patch: Partial<C>) => void })
   );
 }
 
+/** a track as dots to fill: a click on a dot sets the value there (on the last filled one, one less) */
+function Dots({ field, editable, onChange }: { field: f.FreeField; editable: boolean; onChange(v: number): void }) {
+  const max = Math.min(20, field.max ?? 5);
+  return (
+    <div className="dots" role="group" aria-label={`${field.label}: ${field.value} su ${max}`}>
+      {Array.from({ length: max }, (_, i) => (
+        <button
+          key={i}
+          className={`dot ${i < field.value ? 'on' : ''}`}
+          disabled={!editable}
+          onClick={() => onChange(field.value === i + 1 ? i : i + 1)}
+          aria-label={`${field.label} ${i + 1}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** up and down in a list */
+function Move<T extends { id: string }>({ list, id, label, onMove }: { list: T[]; id: string; label: string; onMove(next: T[]): void }) {
+  const i = list.findIndex((x) => x.id === id);
+  const swap = (j: number) => {
+    const next = [...list];
+    [next[i], next[j]] = [next[j]!, next[i]!];
+    onMove(next);
+  };
+  return (
+    <span className="row" style={{ gap: 0 }}>
+      <button className="btn ghost sm icon" disabled={i <= 0} onClick={() => swap(i - 1)} aria-label={`Sposta su ${label}`}>
+        <ArrowUp size={12} />
+      </button>
+      <button className="btn ghost sm icon" disabled={i >= list.length - 1} onClick={() => swap(i + 1)} aria-label={`Sposta giù ${label}`}>
+        <ArrowDown size={12} />
+      </button>
+    </span>
+  );
+}
+
 /** Creation: a template, a name, then the sheet itself. */
 export function FreeBuilder({ value, onChange }: BuilderProps<C>) {
   const c = f.normalize(value);
@@ -216,6 +274,7 @@ export function FreeBuilder({ value, onChange }: BuilderProps<C>) {
               onClick={() => c.template !== t.id && onChange({ ...f.createCharacter(t.id), name: c.name, concept: c.concept, notes: c.notes, inventory: c.inventory })}
             >
               <b>{t.name}</b>
+              {t.campaign && <span className="badge">della campagna</span>}
               <small>{t.text}</small>
             </button>
           ))}
