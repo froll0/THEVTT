@@ -1,25 +1,40 @@
 import { dnd5e } from '@thevtt/systems';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { CompendiumView } from './views/CompendiumView';
-import { MapsView, StudioView } from './views/MapsView';
 import { TopBar } from './components/Shell';
 import { Toasts } from './components/ui';
 import { useApp } from './store/app';
 import { useHosting } from './store/hosting';
 import { startUpdateChecks } from './store/updates';
 import { applySettings, useSettings } from './store/settings';
-import { TableView } from './table/TableView';
 import { AuthView } from './views/Auth';
-import { CampaignView } from './views/Campaign';
 import { CampaignsView } from './views/Campaigns';
-import { CharacterEditor } from './views/CharacterEditor';
 import { CharactersView } from './views/Characters';
 import { ParticipantsView } from './views/Participants';
 import { HomeView } from './views/Home';
-import { JournalView } from './views/JournalView';
-import { PluginStudio } from './views/PluginStudio';
-import { SettingsView } from './views/Settings';
+
+// the heavier pages arrive when first opened: the app starts with the launcher alone
+const TableView = lazy(() => import('./table/TableView').then((m) => ({ default: m.TableView })));
+const CampaignView = lazy(() => import('./views/Campaign').then((m) => ({ default: m.CampaignView })));
+const CharacterEditor = lazy(() => import('./views/CharacterEditor').then((m) => ({ default: m.CharacterEditor })));
+const CompendiumView = lazy(() => import('./views/CompendiumView').then((m) => ({ default: m.CompendiumView })));
+const JournalView = lazy(() => import('./views/JournalView').then((m) => ({ default: m.JournalView })));
+const MapsView = lazy(() => import('./views/MapsView').then((m) => ({ default: m.MapsView })));
+const StudioView = lazy(() => import('./views/MapsView').then((m) => ({ default: m.StudioView })));
+const PluginStudio = lazy(() => import('./views/PluginStudio').then((m) => ({ default: m.PluginStudio })));
+const SettingsView = lazy(() => import('./views/Settings').then((m) => ({ default: m.SettingsView })));
+
+const Loading = ({ children }: { children: ReactNode }) => (
+  <Suspense
+    fallback={
+      <div className="stage-message">
+        <div className="spinner" />
+      </div>
+    }
+  >
+    {children}
+  </Suspense>
+);
 
 export function useThemeSync() {
   const settings = useSettings();
@@ -69,7 +84,9 @@ export function App() {
     return (
       <>
         <ErrorBoundary area="Lo studio delle mappe" key={`${route.kind}-${route.id}`}>
-          <StudioView kind={route.kind} id={route.id} />
+          <Loading>
+            <StudioView kind={route.kind} id={route.id} />
+          </Loading>
         </ErrorBoundary>
         <Toasts />
       </>
@@ -80,7 +97,9 @@ export function App() {
     return (
       <>
         <ErrorBoundary area="Il laboratorio delle estensioni" key={route.id ?? 'nuova'}>
-          <PluginStudio id={route.id} />
+          <Loading>
+            <PluginStudio id={route.id} />
+          </Loading>
         </ErrorBoundary>
         <Toasts />
       </>
@@ -91,7 +110,9 @@ export function App() {
     return (
       <>
         <ErrorBoundary area="Il tavolo" key={route.campaignId}>
-          <TableView campaignId={route.campaignId} />
+          <Loading>
+            <TableView campaignId={route.campaignId} />
+          </Loading>
         </ErrorBoundary>
         <Toasts />
       </>
@@ -103,6 +124,7 @@ export function App() {
       <TopBar />
       <main className="main">
         <ErrorBoundary area="Questa pagina" key={route.name}>
+          <Loading>
           {route.name === 'home' && <HomeView />}
           {route.name === 'campaigns' && <CampaignsView />}
           {route.name === 'campaign' && <CampaignView key={route.id} id={route.id} />}
@@ -113,6 +135,7 @@ export function App() {
           {route.name === 'journal' && <JournalView />}
           {route.name === 'maps' && <MapsView />}
           {route.name === 'settings' && <SettingsView initial={route.section} />}
+          </Loading>
         </ErrorBoundary>
       </main>
       <Toasts />

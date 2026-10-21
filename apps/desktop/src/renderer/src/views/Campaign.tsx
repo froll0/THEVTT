@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ChatThread } from '../components/ChatThread';
 import { coverStyle } from '../components/Cards';
 import { plainText, RichEditor, RichView } from '../components/RichText';
+import { formatSession, relativeDay } from '../lib/dates';
 import { recapForDiscord, toDiscord } from '../lib/discord';
 import { DiscordCard } from './DiscordCard';
 import { HomebrewEditor } from './HomebrewEditor';
@@ -347,20 +348,6 @@ export function CampaignView({ id }: { id: string }) {
 }
 
 /** "in 3 giorni", "domani", "tra 2 ore"… */
-export function relativeDay(iso: string): string {
-  const d = new Date(iso);
-  const diff = d.getTime() - Date.now();
-  if (diff < 0) return 'passata';
-  const hours = Math.round(diff / 3600_000);
-  if (hours < 1) return 'tra poco';
-  if (hours < 24 && d.getDate() === new Date().getDate()) return `oggi, tra ${hours} ${hours === 1 ? 'ora' : 'ore'}`;
-  const days = Math.round((new Date(d.toDateString()).getTime() - new Date(new Date().toDateString()).getTime()) / 86400_000);
-  return days === 1 ? 'domani' : `tra ${days} giorni`;
-}
-
-export const formatSession = (iso: string) =>
-  new Date(iso).toLocaleString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
-
 /** datetime-local value in local time */
 const toLocalInput = (iso: string) => {
   const d = new Date(iso);

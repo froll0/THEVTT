@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { CampaignCard, CharacterCard } from '../components/Cards';
 import { Avatar, Empty, Section } from '../components/ui';
 import { useApp } from '../store/app';
-import { formatSession, relativeDay } from './Campaign';
+import { formatSession, relativeDay } from '../lib/dates';
 
 export function HomeView() {
   const { user, campaigns, characters, invites, participants, api, run, refresh, go, upsertCampaign } = useApp();
