@@ -25,6 +25,10 @@ test('players keep their copy while the GM is away, and the journal syncs back',
   // the GM's computer goes off
   const profile = gm.profile;
   await gm.app.close();
+  // closing returns before the process is gone (macOS): wait until its server really stops answering
+  await expect
+    .poll(() => P.evaluate(() => fetch('http://localhost:4599/health').then(() => 'up', () => 'down')), { timeout: 20_000 })
+    .toBe('down');
   await P.reload();
   await expect(P.getByRole('status').filter({ hasText: 'Copia locale' })).toBeVisible({ timeout: 20_000 });
   await nav(P, 'Campagne');
