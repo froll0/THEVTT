@@ -39,20 +39,33 @@ test('by touch: a tap moves the selected token, two fingers pinch to zoom', asyn
   await expect(G.locator('.inspector input').first()).toHaveValue('Guerriero goblin');
   await G.keyboard.press('Escape');
 
-  // pinch out around the goblin: it stays under the fingers, the map grows (taps 1.5 cells off now miss it… unless zoomed)
-  await tap(G, cx + 210 + 105, cy);
-  await expect(G.locator('.inspector')).toHaveCount(0);
-  await finger(G, 'pointerdown', 1, cx + 170, cy);
-  await finger(G, 'pointerdown', 2, cx + 250, cy);
-  for (let i = 1; i <= 8; i++) {
-    await finger(G, 'pointermove', 1, cx + 170 - i * 10, cy);
-    await finger(G, 'pointermove', 2, cx + 250 + i * 10, cy);
+  // pinch out around the goblin: whatever the zoom was, it doubles and the goblin stays under the fingers
+  const gx = cx + 210;
+  const inspector = G.locator('.inspector input').first();
+  // how far from its middle a tap misses it now
+  let miss = 0;
+  for (let d = 10; d <= 300; d += 10) {
+    await tap(G, gx + d, cy);
+    if (await inspector.isVisible().catch(() => false)) {
+      await G.keyboard.press('Escape');
+      await expect(G.locator('.inspector')).toHaveCount(0);
+      continue;
+    }
+    miss = d;
+    break;
   }
-  await finger(G, 'pointerup', 1, cx + 90, cy);
-  await finger(G, 'pointerup', 2, cx + 330, cy);
-  // twice as big: 1.5 cells off the goblin's middle is now inside it
-  await tap(G, cx + 210 + 60, cy);
-  await expect(G.locator('.inspector input').first()).toHaveValue('Guerriero goblin');
+  expect(miss).toBeGreaterThan(0);
+  await finger(G, 'pointerdown', 1, gx - 40, cy);
+  await finger(G, 'pointerdown', 2, gx + 40, cy);
+  for (let i = 1; i <= 8; i++) {
+    await finger(G, 'pointermove', 1, gx - 40 - i * 5, cy);
+    await finger(G, 'pointermove', 2, gx + 40 + i * 5, cy);
+  }
+  await finger(G, 'pointerup', 1, gx - 80, cy);
+  await finger(G, 'pointerup', 2, gx + 80, cy);
+  // twice as big: where a tap missed it, now it lands on it
+  await tap(G, gx + miss, cy);
+  await expect(inspector).toHaveValue('Guerriero goblin');
 
   expect(gm.errors, gm.errors.join('\n')).toEqual([]);
   await gm.app.close();
