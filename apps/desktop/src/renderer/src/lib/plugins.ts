@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { localStore } from './platform';
 import { parsePlugin, type Plugin } from './pluginMeta';
 
-export { parsePlugin, type Plugin };
+export { parsePlugin, pluginCapabilities, CAPABILITIES, type Capability, type Plugin } from './pluginMeta';
 
 /**
  * Extensions: small scripts a user adds to their own app (a file, or pasted).
@@ -24,7 +24,7 @@ interface PluginStore {
   commands: { pluginId: string; name: string; description: string }[];
   errors: Record<string, string>;
   load(userId: string): Promise<void>;
-  install(code: string, fileName?: string): Plugin;
+  install(code: string, fileName?: string, source?: string): Plugin;
   /** the workshop saves over the extension it opened, even renamed */
   update(id: string, code: string): Plugin;
   toggle(id: string, enabled: boolean): void;
@@ -47,12 +47,13 @@ export const usePlugins = create<PluginStore>((set, get) => {
       const saved = await localStore.read<Plugin[]>(`plugins-${userId}`).catch(() => null);
       set({ userId, plugins: Array.isArray(saved) ? saved.filter((p) => p && typeof p.code === 'string') : [] });
     },
-    install: (code, fileName) => {
+    install: (code, fileName, source) => {
       if (code.length > MAX_PLUGIN_BYTES) throw new Error('Estensione troppo grande (max 200 kB)');
       const meta = parsePlugin(code, fileName?.replace(/\.[^.]+$/, ''));
       // the same name again: an update
       const old = get().plugins.find((p) => p.name === meta.name);
-      const plugin: Plugin = { id: old?.id ?? newId(), enabled: old?.enabled ?? false, installedAt: Date.now(), ...meta };
+      const from = source ?? old?.source;
+      const plugin: Plugin = { id: old?.id ?? newId(), enabled: old?.enabled ?? false, installedAt: Date.now(), ...meta, ...(from ? { source: from } : {}) };
       set({ plugins: old ? get().plugins.map((p) => (p.id === old.id ? plugin : p)) : [...get().plugins, plugin] });
       persist();
       return plugin;

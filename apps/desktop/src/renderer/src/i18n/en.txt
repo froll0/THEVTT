@@ -2486,3 +2486,49 @@ Guida ⇒ Guide
 Salva ({0}+S) ⇒ Save ({0}+S)
 Vai alla riga nel codice ⇒ Go to the line in the code
 riga {0} ⇒ line {0}
+# Catalogo delle estensioni
+Osserva il tavolo ⇒ Watches the table
+Legge il tavolo come lo vedi tu e reagisce a chat, tiri e turni ⇒ Reads the table as you see it and reacts to chat, rolls and turns
+Scrive in chat ⇒ Writes in chat
+Messaggi e schede in chat a tuo nome ⇒ Messages and cards in chat as you
+Tira dadi ⇒ Rolls dice
+Tiri in chat a tuo nome ⇒ Rolls in chat as you
+Agisce al tavolo ⇒ Acts at the table
+Azioni del tavolo come se le facessi tu (token, punti ferita, iniziativa…) ⇒ Table actions as if you did them (tokens, hit points, initiative…)
+Comandi in chat ⇒ Chat commands
+Aggiunge /comandi ⇒ Adds /commands
+Pulsanti ⇒ Buttons
+Aggiunge pulsanti alla barra delle macro ⇒ Adds buttons to the macro bar
+Lavora da sola ⇒ Works on its own
+Usa timer: può agire anche senza che succeda niente ⇒ Uses timers: it can act even when nothing happens
+Internet ⇒ Internet
+Si collega a siti esterni e può mandargli quello che vede ⇒ Connects to outside sites and can send them what it sees
+Non fa niente al tavolo ⇒ Does nothing at the table
+Cosa può fare ⇒ What it can do
+Da un link ⇒ From a link
+Le tue ({0}) ⇒ Yours ({0})
+Catalogo ⇒ Catalog
+Nessuna estensione. Creane una nel laboratorio, partendo da un modello, o prendine una dal catalogo. ⇒ No extensions. Make one in the workshop from a template, or take one from the catalog.
+Un’estensione da un link ⇒ An extension from a link
+Scarico… ⇒ Downloading…
+Scarica e leggi ⇒ Download and read
+Link dell’estensione ⇒ Extension link
+Il link a un file .js (anche su GitHub o in un gist). Prima di aggiungerla vedi cosa può fare e tutto il suo codice. ⇒ The link to a .js file (GitHub or a gist work too). Before adding it you see what it can do and all of its code.
+Attiva solo estensioni di cui ti fidi. Al tavolo potrà vedere quello che vedi tu (da master: tutto il tavolo, anche i segreti) e, leggendo il suo codice: ⇒ Only switch on extensions you trust. At the table it will see what you see (as GM: the whole table, secrets too) and, reading its code:
+niente di particolare: non usa le funzioni del tavolo ⇒ nothing in particular: it doesn't use the table's functions
+Aggiungere «{0}»? ⇒ Add «{0}»?
+Aggiorna ({0} → {1}) ⇒ Update ({0} → {1})
+Leggendo il suo codice, può: ⇒ Reading its code, it can:
+Il codice ({0} kB) ⇒ The code ({0} kB)
+Resta spenta finché non la attivi. ⇒ It stays off until you switch it on.
+Estensioni pronte, scritte per TheVTT. Le leggi prima di aggiungerle e restano spente finché non le attivi; poi puoi cambiarle nel laboratorio. ⇒ Ready extensions, written for TheVTT. You read them before adding them and they stay off until you switch them on; then you can change them in the workshop.
+Chat e dadi ⇒ Chat and dice
+Atmosfera ⇒ Atmosphere
+Aggiunta ⇒ Added
+Aggiungi {0} ⇒ Add {0}
+Aggiorna {0} ⇒ Update {0}
+Serve un link https:// ⇒ An https:// link is needed
+Il link non è valido ⇒ The link isn't valid
+Non riesco a scaricarla: controlla il link o la connessione ⇒ I can't download it: check the link or the connection
+Il sito risponde {0} ⇒ The site answers {0}
+Il link porta a una pagina web, non al file .js ⇒ The link leads to a web page, not to the .js file

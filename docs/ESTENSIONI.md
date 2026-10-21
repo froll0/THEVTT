@@ -1,8 +1,21 @@
 # Estensioni
 
-Un’estensione è un file `.js` che aggiungi dalle **Impostazioni → Estensioni**
-(da un file o incollando il codice). Resta spenta finché non la attivi, e gira
-solo mentre sei al tavolo.
+Un’estensione è un file `.js` che aggiungi dalle **Impostazioni → Estensioni**:
+dal **catalogo** integrato, **da un link** (un file `.js` su qualsiasi sito
+https, anche GitHub o un gist), da un file o incollando il codice. Prima di
+aggiungerla vedi cosa può fare e tutto il suo codice. Resta spenta finché non
+la attivi, e gira solo mentre sei al tavolo.
+
+## Cosa può fare, a colpo d’occhio
+
+L’app legge il codice e mostra cosa usa: osservare il tavolo, scrivere in chat,
+tirare dadi, agire al tavolo (`dispatch`), aggiungere comandi o pulsanti,
+lavorare da sola con dei timer, collegarsi a **internet**. Le ultime due, e
+le azioni al tavolo, sono evidenziate: un’estensione che va online può mandare
+fuori quello che vede.
+
+Per condividerne una basta metterla online (per esempio in un gist) e passare
+il link: chi la aggiunge la legge prima di attivarla.
 
 ## Il laboratorio
 
