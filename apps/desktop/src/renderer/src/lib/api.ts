@@ -7,6 +7,7 @@ import type {
   CreateCampaignRequest,
   JournalEntry,
   SessionRecap,
+  WikiPage,
   RsvpAnswer,
   RtcConfig,
   SaveCharacterRequest,
@@ -127,6 +128,10 @@ export class Api {
   createRecap = (campaignId: string, body: { title: string; body: string }) => this.req<SessionRecap>('POST', `/campaigns/${campaignId}/recaps`, body);
   updateRecap = (campaignId: string, id: string, body: { title: string; body: string }) => this.req<SessionRecap>('PATCH', `/campaigns/${campaignId}/recaps/${id}`, body);
   deleteRecap = (campaignId: string, id: string) => this.req('DELETE', `/campaigns/${campaignId}/recaps/${id}`);
+  wiki = (campaignId: string) => this.req<WikiPage[]>('GET', `/campaigns/${campaignId}/wiki`);
+  createWikiPage = (campaignId: string, body: Partial<Pick<WikiPage, 'title' | 'kind' | 'body' | 'secret' | 'visible'>>) => this.req<WikiPage>('POST', `/campaigns/${campaignId}/wiki`, body);
+  updateWikiPage = (campaignId: string, id: string, body: Partial<Pick<WikiPage, 'title' | 'kind' | 'body' | 'secret' | 'visible'>>) => this.req<WikiPage>('PATCH', `/campaigns/${campaignId}/wiki/${id}`, body);
+  deleteWikiPage = (campaignId: string, id: string) => this.req('DELETE', `/campaigns/${campaignId}/wiki/${id}`);
 
   journal = () => this.req<JournalEntry[]>('GET', '/journal');
   /** a page's current id: pages written offline get the server's id once sent */

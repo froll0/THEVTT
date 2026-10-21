@@ -14,6 +14,7 @@ export type Route =
   | { name: 'participants' }
   | { name: 'compendium' }
   | { name: 'journal' }
+  | { name: 'wiki'; campaignId: string; page?: string }
   | { name: 'maps' }
   | { name: 'studio'; kind: 'world' | 'scene'; id: string }
   | { name: 'workshop'; id: string | null }
@@ -205,6 +206,9 @@ export const useApp = create<AppState>((set, get) => {
         break;
       case 'campaign.updated':
         void refresh(['campaigns']);
+        break;
+      case 'wiki.updated':
+        void import('./wiki').then(({ useWiki }) => useWiki.getState().changed(n.campaignId));
         break;
       case 'campaign.deleted':
         gone.set(n.campaignId, ++liveSeq);

@@ -195,12 +195,46 @@ const InlineDice = Extension.create({
   },
 });
 
+/** [[Another page]]: a link to a page of the campaign's wiki */
+export const WIKI_LINK = /\[\[([^\[\]\n]{1,120})\]\]/g;
+
+const WikiLinks = Extension.create({
+  name: 'wikiLinks',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          decorations(state) {
+            const marks: Decoration[] = [];
+            state.doc.descendants((node, pos) => {
+              if (!node.isText || !node.text) return;
+              for (const m of node.text.matchAll(WIKI_LINK)) {
+                const from = pos + m.index!;
+                const to = from + m[0].length;
+                marks.push(Decoration.inline(from, to, { class: 'wiki-link', 'data-page': m[1]!.trim(), role: 'link', title: `Apri «${m[1]!.trim()}»` }));
+                // reading, the brackets go away: only the name shows
+                marks.push(Decoration.inline(from, from + 2, { class: 'wiki-bracket' }), Decoration.inline(to - 2, to, { class: 'wiki-bracket' }));
+              }
+            });
+            return DecorationSet.create(state.doc, marks);
+          },
+        },
+      }),
+    ];
+  },
+});
+
 /**
  * Rich text, read only. With `onRoll`, the dice written in it («2d6+3»)
- * become buttons that roll them.
+ * become buttons that roll them; with `onLink`, [[Page]] opens that page.
  */
-export function RichView({ value, className = '', onRoll }: { value: string; className?: string; onRoll?: (formula: string) => void }) {
-  const editor = useEditor({ extensions: onRoll ? [...extensions(), InlineDice] : extensions(), content: toHtml(value), editable: false, editorProps: { attributes: { class: 'rt-content' } } });
+export function RichView({ value, className = '', onRoll, onLink }: { value: string; className?: string; onRoll?: (formula: string) => void; onLink?: (title: string) => void }) {
+  const editor = useEditor({
+    extensions: [...extensions(), ...(onRoll ? [InlineDice] : []), ...(onLink ? [WikiLinks] : [])],
+    content: toHtml(value),
+    editable: false,
+    editorProps: { attributes: { class: 'rt-content' } },
+  });
   useEffect(() => {
     if (editor && !editor.isDestroyed) editor.commands.setContent(toHtml(value), { emitUpdate: false });
   }, [editor, value]);
@@ -212,6 +246,8 @@ export function RichView({ value, className = '', onRoll }: { value: string; cla
       onClick={(e) => {
         const el = (e.target as HTMLElement).closest('.inline-roll') as HTMLElement | null;
         if (el?.dataset.formula && onRoll) onRoll(el.dataset.formula);
+        const link = (e.target as HTMLElement).closest('.wiki-link') as HTMLElement | null;
+        if (link?.dataset.page && onLink) onLink(link.dataset.page);
       }}
     />
   );

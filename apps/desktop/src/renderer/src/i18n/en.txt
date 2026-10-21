@@ -2568,3 +2568,37 @@ Raggio del pennello, in caselle ⇒ Brush radius, in cells
 Raggio del pennello ⇒ Brush radius
 Acqua e lava animate ⇒ Animated water and lava
 Increspature sull’acqua, bagliori e scintille sulla lava (non per chi ha chiesto meno animazioni) ⇒ Ripples on water, glow and sparks on lava (not for those who asked for less motion)
+# Wiki della campagna
+Wiki della campagna ⇒ Campaign wiki
+Luoghi, personaggi, fazioni e storie di «{0}», collegati tra loro. ⇒ Places, characters, factions and stories of «{0}», linked together.
+Luoghi, personaggi e fazioni, collegati tra loro. ⇒ Places, characters and factions, linked together.
+{0} pagine: luoghi, personaggi, fazioni. ⇒ {0} pages: places, characters, factions.
+{0} pagina: luoghi, personaggi, fazioni. ⇒ {0} page: places, characters, factions.
+Apri la wiki ⇒ Open the wiki
+Luogo ⇒ Place
+Fazione ⇒ Faction
+Fazioni ⇒ Factions
+Evento ⇒ Event
+Eventi ⇒ Events
+Pagine della wiki ⇒ Wiki pages
+Cerca nella wiki ⇒ Search the wiki
+Ancora vuota: scrivi la prima pagina, un luogo o un personaggio. ⇒ Still empty: write the first page, a place or a character.
+Il master non ha ancora scritto niente. ⇒ The GM hasn't written anything yet.
+{0} · visibile ai giocatori ⇒ {0} · visible to players
+{0} · solo tu ⇒ {0} · only you
+Modifica la pagina ⇒ Edit the page
+Elimina la pagina ⇒ Delete the page
+Ancora niente da leggere. ⇒ Nothing to read yet.
+Solo per te ⇒ Only for you
+Citata in ⇒ Mentioned in
+Scegli una pagina, o scrivine una nuova. ⇒ Pick a page, or write a new one.
+Scegli una pagina. ⇒ Pick a page.
+Nel testo, [[Titolo]] porta a un’altra pagina. ⇒ In the text, [[Title]] leads to another page.
+«{0}» non è ancora stata scritta ⇒ «{0}» hasn't been written yet
+Dai un titolo alla pagina ⇒ Give the page a title
+C’è già una pagina con questo titolo ⇒ There's already a page with this title
+Cosa sanno tutti. [[Un’altra pagina]] fa un collegamento. ⇒ What everyone knows. [[Another page]] makes a link.
+Segreti, colpi di scena, statistiche: i giocatori non li ricevono mai ⇒ Secrets, twists, stats: players never receive them
+Parte segreta ⇒ Secret part
+La pagina sparisce per tutti. I collegamenti che la citano restano, e portano a una pagina da scrivere. ⇒ The page disappears for everyone. Links that mention it stay, and lead to a page to write.
+Apri «{0}» ⇒ Open «{0}»

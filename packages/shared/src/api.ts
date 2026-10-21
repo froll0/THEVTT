@@ -87,6 +87,24 @@ export interface ChatMessage {
   createdAt: string;
 }
 
+export const WIKI_KINDS = ['luogo', 'png', 'fazione', 'oggetto', 'evento', 'altro'] as const;
+export type WikiKind = (typeof WIKI_KINDS)[number];
+
+/** A page of the campaign's wiki. Players get only the visible ones, without the secret part. */
+export interface WikiPage {
+  id: string;
+  campaignId: string;
+  title: string;
+  kind: WikiKind;
+  /** rich text (HTML); [[Another page]] links to it */
+  body: string;
+  /** what only the GM reads (absent for players) */
+  secret?: string;
+  /** players can read it */
+  visible: boolean;
+  updatedAt: string;
+}
+
 export interface CreateCampaignRequest {
   name: string;
   description?: string;

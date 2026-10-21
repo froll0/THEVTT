@@ -1,0 +1,142 @@
+/* The campaign's wiki: an index on the side, the page on the right. */
+
+.wiki {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 18px;
+  min-height: 420px;
+}
+.wiki.compact {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+}
+.wiki-index {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.wiki.compact .wiki-index {
+  max-height: 34vh;
+  overflow: auto;
+}
+.wiki-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.wiki-search svg {
+  position: absolute;
+  left: 9px;
+  color: var(--fg-faint);
+}
+.wiki-search .input {
+  padding-left: 28px;
+  width: 100%;
+}
+.wiki-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 6px 0 2px;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.wiki-item {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 9px;
+  border-radius: var(--r-sm);
+  font-size: 0.86rem;
+}
+.wiki-item:hover,
+.wiki-item:focus-visible {
+  background: var(--fill);
+}
+.wiki-item.on {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.wiki-item svg {
+  flex: none;
+  color: var(--fg-faint);
+}
+.wiki-page {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 20px;
+  border-radius: var(--r-lg);
+  background: var(--fill);
+}
+.wiki.compact .wiki-page {
+  padding: 10px 12px;
+}
+.wiki-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.wiki-head h2 {
+  margin: 2px 0 0;
+}
+.wiki-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.wiki-link {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.wiki-link:hover {
+  text-decoration-style: solid;
+}
+.wiki-secret {
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px dashed color-mix(in srgb, var(--danger) 55%, transparent);
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
+}
+.wiki-secret h4 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 4px;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--danger);
+}
+.wiki-backlinks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.wiki-empty {
+  margin: auto;
+  text-align: center;
+}
+@media (max-width: 760px) {
+  .wiki {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.wiki-bracket {
+  display: none;
+}

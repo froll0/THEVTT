@@ -10,6 +10,7 @@ import { recapForDiscord, toDiscord } from '../lib/discord';
 import { DiscordCard } from './DiscordCard';
 import { HomebrewEditor } from './HomebrewEditor';
 import { SheetDesigner } from './SheetDesigner';
+import { useWiki } from '../store/wiki';
 import { Avatar, Empty, Field, Modal, Popover, readImage, Section } from '../components/ui';
 import { useApp } from '../store/app';
 
@@ -279,6 +280,7 @@ export function CampaignView({ id }: { id: string }) {
               )}
             </div>
           )}
+          <WikiCard campaign={campaign} />
           {isGm && <DiscordCard campaignId={campaign.id} />}
           {isGm && campaign.systemId === 'dnd5e-2024' && <HomebrewCard campaign={campaign} />}
           {isGm && campaign.systemId === 'libero' && <SheetsCard campaign={campaign} />}
@@ -564,6 +566,35 @@ export function CampaignChat({ campaign }: { campaign: Campaign }) {
         <ChatThread channel={`campaign:${campaign.id}`} people={campaign.members.map((m) => m.user)} placeholder="Scrivi al gruppo" />
       </div>
     </Section>
+  );
+}
+
+/** The campaign's wiki, one click away: how many pages, the last ones changed. */
+function WikiCard({ campaign }: { campaign: Campaign }) {
+  const go = useApp((s) => s.go);
+  const pages = useWiki((s) => s.pages[campaign.id]);
+  const load = useWiki((s) => s.load);
+  useEffect(() => {
+    void load(campaign.id).catch(() => undefined);
+  }, [campaign.id, load]);
+  const recent = [...(pages ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 4);
+  return (
+    <div className="panel-card">
+      <h3>Wiki della campagna</h3>
+      <p className="muted small">{pages?.length ? `${pages.length} ${pages.length === 1 ? 'pagina' : 'pagine'}: luoghi, personaggi, fazioni.` : 'Luoghi, personaggi e fazioni, collegati tra loro.'}</p>
+      {recent.length > 0 && (
+        <div className="workshop-chips" style={{ marginBottom: 6 }}>
+          {recent.map((p) => (
+            <button key={p.id} className="chip" onClick={() => go({ name: 'wiki', campaignId: campaign.id, page: p.title })}>
+              {p.title}
+            </button>
+          ))}
+        </div>
+      )}
+      <button className="btn sm" onClick={() => go({ name: 'wiki', campaignId: campaign.id })}>
+        Apri la wiki
+      </button>
+    </div>
   );
 }
 

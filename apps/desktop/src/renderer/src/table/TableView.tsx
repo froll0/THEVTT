@@ -1,6 +1,6 @@
 import { POOL_CHECKS, rotatePiece, sessionDigest, type PoolCheck, type SessionDigest } from '@thevtt/shared';
 import { getSystem, warhammer } from '@thevtt/systems';
-import { MonitorPlay, Coins, Clapperboard, Route, Sparkles, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
+import { BookMarked, MonitorPlay, Coins, Clapperboard, Route, Sparkles, LayoutGrid, ListChecks, PencilRuler, ArrowLeft, Keyboard, EyeOff, Trash2, X, BookText, Magnet, Redo2, Undo2, Pause, Play, Type, ArrowLeftRight, Eraser, Eye, Library, Music, Pencil, BookOpen, Circle, CloudFog, Crosshair, Dices, Map as MapIcon, Minus, MousePointer2, NotebookPen, Radio, Ruler, ScrollText, Server, Shapes, Square, Swords, Triangle, UserRoundPlus, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/Shell';
 import { Compendium, CompendiumEntryView } from '../components/Compendium';
@@ -32,10 +32,11 @@ import { BestiaryPanel, ChatPanel, DiceBar, DoorInspector, InitiativePanel, Note
 import { FloatingWindow, MinimizedWindow } from '../components/FloatingWindow';
 import { useWindows } from '../store/windows';
 import { Journal } from '../components/Journal';
+import { WikiBrowser } from '../components/Wiki';
 
 const DRAW_COLORS = ['', '#ffffff', '#ffd166', '#ef476f', '#06d6a0', '#4cc9f0', '#b388ff'];
 
-type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'encounters' | 'travel' | 'assistant' | 'scene' | 'notes' | 'quests' | 'treasure' | 'music' | 'rules';
+type DockTab = 'chat' | 'initiative' | 'sheet' | 'bestiary' | 'encounters' | 'travel' | 'assistant' | 'scene' | 'notes' | 'wiki' | 'quests' | 'treasure' | 'music' | 'rules';
 
 export function TableView({ campaignId }: { campaignId: string }) {
   const { campaigns, user, go, status } = useApp();
@@ -218,6 +219,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     ...(state?.systemId === 'wtow' ? [{ id: 'travel' as const, label: 'Talagaad e viaggi', icon: Route, gm: true }] : []),
     { id: 'scene', label: 'Scene', icon: MapIcon, gm: true },
     { id: 'notes', label: 'Note e dispense', icon: NotebookPen },
+    { id: 'wiki', label: 'Wiki della campagna', icon: BookMarked },
     { id: 'quests', label: 'Missioni', icon: ListChecks },
     { id: 'treasure', label: 'Tabelle e tesoro', icon: Coins },
     { id: 'music', label: 'Musica', icon: Music, gm: true },
@@ -578,6 +580,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 {tab === 'assistant' && isGm && <AssistantPanel />}
                 {tab === 'scene' && isGm && <ScenePanel />}
                 {tab === 'notes' && <NotesPanel />}
+                {tab === 'wiki' && <WikiBrowser campaignId={campaignId} isGm={isGm} compact />}
                 {tab === 'quests' && <QuestsPanel />}
                 {tab === 'treasure' && <TreasurePanel />}
                 {tab === 'music' && isGm && <MusicPanel />}

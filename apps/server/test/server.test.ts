@@ -264,6 +264,36 @@ describe('journal', () => {
     expect((await api('GET', `/campaigns/${camp.id}/recaps`, pl.token)).body).toEqual([]);
   });
 
+  it('keeps a campaign wiki: the GM writes, players read the visible pages without the secrets', async () => {
+    const gm = await register('wikigm');
+    const pl = await register('wikipl');
+    const other = await register('wikiother');
+    const camp = (await api('POST', '/campaigns', gm.token, { name: 'Atlante', systemId: 'dnd5e-2024' })).body;
+    await api('POST', `/campaigns/${camp.id}/invites`, gm.token, { userId: pl.user.id });
+    const [inv] = (await api('GET', '/invites', pl.token)).body;
+    await api('POST', `/invites/${inv.id}/accept`, pl.token);
+
+    const town = (await api('POST', `/campaigns/${camp.id}/wiki`, gm.token, { title: 'Roccanera', kind: 'luogo', body: '<p>Un borgo di minatori. Vedi [[Gilda del Ferro]].</p>', secret: '<p>Il sindaco è un vampiro.</p>', visible: true })).body;
+    expect(town).toMatchObject({ title: 'Roccanera', kind: 'luogo', visible: true, secret: '<p>Il sindaco è un vampiro.</p>' });
+    await api('POST', `/campaigns/${camp.id}/wiki`, gm.token, { title: 'Gilda del Ferro', kind: 'fazione', body: '<p>Segreta per ora.</p>' });
+    expect((await api('POST', `/campaigns/${camp.id}/wiki`, gm.token, { title: 'x', kind: 'drago' })).status).toBe(400);
+    expect((await api('POST', `/campaigns/${camp.id}/wiki`, pl.token, { title: 'Mia' })).status).toBe(403);
+
+    expect((await api('GET', `/campaigns/${camp.id}/wiki`, gm.token)).body).toHaveLength(2);
+    const seen = (await api('GET', `/campaigns/${camp.id}/wiki`, pl.token)).body;
+    expect(seen).toHaveLength(1);
+    expect(seen[0].title).toBe('Roccanera');
+    expect(seen[0].secret).toBeUndefined();
+    expect((await api('GET', `/campaigns/${camp.id}/wiki`, other.token)).status).toBe(404);
+
+    const edited = (await api('PATCH', `/campaigns/${camp.id}/wiki/${town.id}`, gm.token, { visible: false })).body;
+    expect(edited).toMatchObject({ title: 'Roccanera', visible: false, body: town.body });
+    expect((await api('GET', `/campaigns/${camp.id}/wiki`, pl.token)).body).toEqual([]);
+    expect((await api('DELETE', `/campaigns/${camp.id}/wiki/${town.id}`, pl.token)).status).toBe(403);
+    expect((await api('DELETE', `/campaigns/${camp.id}/wiki/${town.id}`, gm.token)).status).toBe(200);
+    expect((await api('GET', `/campaigns/${camp.id}/wiki`, gm.token)).body).toHaveLength(1);
+  });
+
   it('stores profile pictures and campaign covers', async () => {
     const a = await register('ritratto');
     const b = await register('altro');

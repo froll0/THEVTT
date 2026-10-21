@@ -118,6 +118,21 @@ const MIGRATIONS: string[] = [
   `
   ALTER TABLE campaigns ADD COLUMN homebrew TEXT;
   `,
+  // 6: the campaign's wiki: places, people, factions… what players may read, and the GM's secrets
+  `
+  CREATE TABLE wiki_pages (
+    id TEXT PRIMARY KEY,
+    campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    body TEXT NOT NULL,
+    secret TEXT NOT NULL DEFAULT '',
+    visible INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX idx_wiki_campaign ON wiki_pages(campaign_id, title);
+  `,
 ];
 
 export type Db = DatabaseSync;

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app';
+import { WIKI_KINDS, type WikiKind } from '@thevtt/shared';
 import { badRequest, forbidden, image, notFound, str } from '../errors';
 
 type IdParams = { Params: { id: string } };
@@ -62,6 +63,41 @@ export function campaignRoutes(app: FastifyInstance, { repo, hub }: Ctx): void {
     repo.requireRole(req.params.id, req.userId, 'gm');
     repo.deleteRecap(req.params.id, req.params.rid);
     recapsChanged(req.params.id, req.userId);
+    return { ok: true };
+  });
+
+  // the campaign's wiki: everyone reads (players the visible pages), the GM writes
+  type WikiParams = { Params: { id: string; pid: string } };
+  const wikiBody = (body: unknown) => {
+    const b = (body ?? {}) as Record<string, unknown>;
+    const text = (k: string) => (b[k] === undefined ? undefined : typeof b[k] === 'string' ? (b[k] as string) : '');
+    if (b.kind !== undefined && !(WIKI_KINDS as readonly unknown[]).includes(b.kind)) throw badRequest('Tipo di pagina non valido');
+    return {
+      title: b.title !== undefined ? str(body, 'title', { min: 1, max: 120 }) : undefined,
+      kind: b.kind as WikiKind | undefined,
+      body: text('body'),
+      secret: text('secret'),
+      visible: b.visible === undefined ? undefined : !!b.visible,
+    };
+  };
+  const wikiChanged = (campaignId: string, userId: string) => hub.notifyCampaign(campaignId, { kind: 'wiki.updated', campaignId }, userId);
+  app.get<IdParams>('/campaigns/:id/wiki', async (req) => repo.wiki(req.params.id, req.userId));
+  app.post<IdParams>('/campaigns/:id/wiki', async (req) => {
+    repo.requireRole(req.params.id, req.userId, 'gm');
+    const p = repo.saveWikiPage(req.params.id, wikiBody(req.body));
+    wikiChanged(req.params.id, req.userId);
+    return p;
+  });
+  app.patch<WikiParams>('/campaigns/:id/wiki/:pid', async (req) => {
+    repo.requireRole(req.params.id, req.userId, 'gm');
+    const p = repo.saveWikiPage(req.params.id, { ...wikiBody(req.body), id: req.params.pid });
+    wikiChanged(req.params.id, req.userId);
+    return p;
+  });
+  app.delete<WikiParams>('/campaigns/:id/wiki/:pid', async (req) => {
+    repo.requireRole(req.params.id, req.userId, 'gm');
+    repo.deleteWikiPage(req.params.id, req.params.pid);
+    wikiChanged(req.params.id, req.userId);
     return { ok: true };
   });
 

@@ -22,6 +22,7 @@ const JournalView = lazy(() => import('./views/JournalView').then((m) => ({ defa
 const MapsView = lazy(() => import('./views/MapsView').then((m) => ({ default: m.MapsView })));
 const StudioView = lazy(() => import('./views/MapsView').then((m) => ({ default: m.StudioView })));
 const PluginStudio = lazy(() => import('./views/PluginStudio').then((m) => ({ default: m.PluginStudio })));
+const WikiView = lazy(() => import('./views/WikiView').then((m) => ({ default: m.WikiView })));
 const SettingsView = lazy(() => import('./views/Settings').then((m) => ({ default: m.SettingsView })));
 
 const Loading = ({ children }: { children: ReactNode }) => (
@@ -134,6 +135,7 @@ export function App() {
           {route.name === 'participants' && <ParticipantsView />}
           {route.name === 'compendium' && <CompendiumView />}
           {route.name === 'journal' && <JournalView />}
+          {route.name === 'wiki' && <WikiView key={route.campaignId} campaignId={route.campaignId} page={route.page} />}
           {route.name === 'maps' && <MapsView />}
           {route.name === 'settings' && <SettingsView initial={route.section} />}
           </Loading>

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Campaign, CampaignInvite, CampaignRole, CharacterRecord, ChatMessage, FriendEntry, JournalEntry, SessionRecap, FriendStatus, RsvpAnswer, UserPublic } from '@thevtt/shared';
+import type { Campaign, CampaignInvite, CampaignRole, CharacterRecord, ChatMessage, FriendEntry, JournalEntry, SessionRecap, FriendStatus, RsvpAnswer, UserPublic, WikiKind, WikiPage } from '@thevtt/shared';
 import { tx, type Db } from './db';
 import { badRequest, conflict, forbidden, notFound } from './errors';
 
@@ -353,6 +353,68 @@ export class Repo {
   deleteRecap(campaignId: string, id: string): void {
     this.recap(campaignId, id);
     this.db.prepare('DELETE FROM campaign_recaps WHERE id = ?').run(id);
+  }
+
+  // ---------- campaign wiki ----------
+
+  private toWiki(r: Row, gm: boolean): WikiPage {
+    return {
+      id: r.id as string,
+      campaignId: r.campaign_id as string,
+      title: r.title as string,
+      kind: r.kind as WikiKind,
+      body: r.body as string,
+      ...(gm ? { secret: r.secret as string } : {}),
+      visible: !!r.visible,
+      updatedAt: r.updated_at as string,
+    };
+  }
+
+  /** the GM reads every page with its secrets; players the visible ones, without */
+  wiki(campaignId: string, userId: string): WikiPage[] {
+    const gm = this.requireRole(campaignId, userId) === 'gm';
+    const rows = this.db
+      .prepare(`SELECT * FROM wiki_pages WHERE campaign_id = ?${gm ? '' : ' AND visible = 1'} ORDER BY title COLLATE NOCASE`)
+      .all(campaignId) as Row[];
+    return rows.map((r) => this.toWiki(r, gm));
+  }
+
+  private wikiRow(campaignId: string, id: string): Row {
+    const r = this.db.prepare('SELECT * FROM wiki_pages WHERE id = ? AND campaign_id = ?').get(id, campaignId) as Row | undefined;
+    if (!r) throw notFound('Pagina non trovata');
+    return r;
+  }
+
+  saveWikiPage(campaignId: string, input: { id?: string; title?: string; kind?: WikiKind; body?: string; secret?: string; visible?: boolean }): WikiPage {
+    if ((input.body?.length ?? 0) > 200_000 || (input.secret?.length ?? 0) > 200_000) throw badRequest('Pagina troppo lunga');
+    const count = (this.db.prepare('SELECT COUNT(*) AS n FROM wiki_pages WHERE campaign_id = ?').get(campaignId) as { n: number }).n;
+    const t = now();
+    if (input.id) {
+      const cur = this.wikiRow(campaignId, input.id);
+      this.db
+        .prepare('UPDATE wiki_pages SET title = ?, kind = ?, body = ?, secret = ?, visible = ?, updated_at = ? WHERE id = ?')
+        .run(
+          input.title ?? (cur.title as string),
+          input.kind ?? (cur.kind as string),
+          input.body ?? (cur.body as string),
+          input.secret ?? (cur.secret as string),
+          input.visible === undefined ? (cur.visible as number) : input.visible ? 1 : 0,
+          t,
+          input.id,
+        );
+      return this.toWiki(this.wikiRow(campaignId, input.id), true);
+    }
+    if (count >= 2000) throw badRequest('La wiki ha già troppe pagine');
+    const id = randomUUID();
+    this.db
+      .prepare('INSERT INTO wiki_pages (id, campaign_id, title, kind, body, secret, visible, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(id, campaignId, input.title || 'Nuova pagina', input.kind ?? 'altro', input.body ?? '', input.secret ?? '', input.visible ? 1 : 0, t, t);
+    return this.toWiki(this.wikiRow(campaignId, id), true);
+  }
+
+  deleteWikiPage(campaignId: string, id: string): void {
+    this.wikiRow(campaignId, id);
+    this.db.prepare('DELETE FROM wiki_pages WHERE id = ?').run(id);
   }
 
   // ---------- journal ----------
