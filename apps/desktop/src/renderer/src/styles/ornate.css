@@ -1,0 +1,620 @@
+/*
+ * The illuminated layer of the fantasy look: landscapes, coats of arms,
+ * filigree corners on every frame, drop caps, scroll-work dividers, and the
+ * materials (oak, leather, brass, parchment, wax). Shapes are SVG masks
+ * painted with the theme's gold, so they follow the chosen accent.
+ */
+
+:root[data-skin='fantasy'] {
+  /* a filigree corner (top left); the others are its mirror images */
+  --corner-tl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M4 44V12Q4 4 12 4h32'/%3E%3Cpath d='M9 30V16q0-7 7-7h14'/%3E%3Cpath d='M12 4c12 0 17 9 11 14-4 3-8-1-5-4'/%3E%3Cpath d='M4 12c0 12 9 17 14 11 3-4-1-8-4-5'/%3E%3Cpath d='M44 4c5 0 8 2 9 5'/%3E%3Cpath d='M4 44c0 5 2 8 5 9'/%3E%3C/g%3E%3Ccircle cx='18' cy='18' r='2.6'/%3E%3Cpath d='M23 9q7 1 9 6-6 1-9-6zM9 23q1 7 6 9 1-6-6-9z'/%3E%3C/svg%3E");
+  --corner-tr: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg transform='matrix(-1 0 0 1 64 0)'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M4 44V12Q4 4 12 4h32'/%3E%3Cpath d='M9 30V16q0-7 7-7h14'/%3E%3Cpath d='M12 4c12 0 17 9 11 14-4 3-8-1-5-4'/%3E%3Cpath d='M4 12c0 12 9 17 14 11 3-4-1-8-4-5'/%3E%3Cpath d='M44 4c5 0 8 2 9 5'/%3E%3Cpath d='M4 44c0 5 2 8 5 9'/%3E%3C/g%3E%3Ccircle cx='18' cy='18' r='2.6'/%3E%3Cpath d='M23 9q7 1 9 6-6 1-9-6zM9 23q1 7 6 9 1-6-6-9z'/%3E%3C/g%3E%3C/svg%3E");
+  --corner-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg transform='matrix(1 0 0 -1 0 64)'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M4 44V12Q4 4 12 4h32'/%3E%3Cpath d='M9 30V16q0-7 7-7h14'/%3E%3Cpath d='M12 4c12 0 17 9 11 14-4 3-8-1-5-4'/%3E%3Cpath d='M4 12c0 12 9 17 14 11 3-4-1-8-4-5'/%3E%3Cpath d='M44 4c5 0 8 2 9 5'/%3E%3Cpath d='M4 44c0 5 2 8 5 9'/%3E%3C/g%3E%3Ccircle cx='18' cy='18' r='2.6'/%3E%3Cpath d='M23 9q7 1 9 6-6 1-9-6zM9 23q1 7 6 9 1-6-6-9z'/%3E%3C/g%3E%3C/svg%3E");
+  --corner-br: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg transform='matrix(-1 0 0 -1 64 64)'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M4 44V12Q4 4 12 4h32'/%3E%3Cpath d='M9 30V16q0-7 7-7h14'/%3E%3Cpath d='M12 4c12 0 17 9 11 14-4 3-8-1-5-4'/%3E%3Cpath d='M4 12c0 12 9 17 14 11 3-4-1-8-4-5'/%3E%3Cpath d='M44 4c5 0 8 2 9 5'/%3E%3Cpath d='M4 44c0 5 2 8 5 9'/%3E%3C/g%3E%3Ccircle cx='18' cy='18' r='2.6'/%3E%3Cpath d='M23 9q7 1 9 6-6 1-9-6zM9 23q1 7 6 9 1-6-6-9z'/%3E%3C/g%3E%3C/svg%3E");
+  /* scroll-work under titles: two curls and a lozenge */
+  --flourish: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 24'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M8 12H128'/%3E%3Cpath d='M192 12H312'/%3E%3Cpath d='M128 12c8 0 10-8 18-8 6 0 8 5 4 7-3 1-5-2-3-3'/%3E%3Cpath d='M192 12c-8 0-10-8-18-8-6 0-8 5-4 7 3 1 5-2 3-3'/%3E%3Cpath d='M128 12c8 0 10 8 18 8 6 0 8-5 4-7'/%3E%3Cpath d='M192 12c-8 0-10 8-18 8-6 0-8-5-4-7'/%3E%3C/g%3E%3Cpath d='M160 4l8 8-8 8-8-8z'/%3E%3Ccircle cx='8' cy='12' r='2'/%3E%3Ccircle cx='312' cy='12' r='2'/%3E%3C/svg%3E");
+  --corner: 44px;
+}
+
+/* ---------- the landscape, in the colours of the hour ---------- */
+:root[data-skin='fantasy'][data-theme='dark'] {
+  --scene-sky-top: #0a0d1c;
+  --scene-sky-bottom: #3a2a3a;
+  --scene-moon: #f4e7c5;
+  --scene-star: #fff3d2;
+  --scene-far: #2d2738;
+  --scene-mid: #1c1824;
+  --scene-near: #100d12;
+  --scene-mist: #9a86b0;
+  --scene-window: #ffc65a;
+  --scene-crescent: 0.88;
+}
+:root[data-skin='fantasy'][data-theme='light'] {
+  --scene-sky-top: #e9c48c;
+  --scene-sky-bottom: #f7ead0;
+  --scene-moon: #fff1c2;
+  --scene-star: #fff9ea;
+  --scene-far: #d2b48c;
+  --scene-mid: #b39470;
+  --scene-near: #8a6e4b;
+  --scene-mist: #fff8e8;
+  --scene-window: #ffb546;
+  --scene-crescent: 0;
+}
+.scenery {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+:root:not([data-skin='fantasy']) .scenery {
+  display: none;
+}
+:root[data-theme='light'] .scenery-stars {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-motion='full'] .scenery-stars circle {
+    animation: twinkle 5s ease-in-out infinite;
+  }
+  :root[data-motion='full'] .scenery-mist {
+    animation: mist 38s ease-in-out infinite alternate;
+  }
+  :root[data-motion='full'] .scenery-mist.slow {
+    animation-duration: 60s;
+  }
+  :root[data-motion='full'] .scenery-window {
+    animation: candle 3.2s ease-in-out infinite;
+  }
+  :root[data-motion='full'] .scenery-window.late {
+    animation-delay: 1.3s;
+  }
+}
+@keyframes twinkle {
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes mist {
+  to {
+    transform: translateX(160px);
+  }
+}
+@keyframes candle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.65;
+  }
+  60% {
+    opacity: 0.9;
+  }
+}
+
+/* ---------- filigree on every frame ---------- */
+:root[data-skin='fantasy'] :is(.tile, .panel-card, .auth-box, .home-banner, .hero, .wiki-page, .catalog-card, .designer-preview, .live-strip) {
+  position: relative;
+}
+:root[data-skin='fantasy'] :is(.tile, .panel-card, .auth-box, .home-banner, .hero, .wiki-page, .catalog-card, .live-strip)::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  z-index: 3;
+  pointer-events: none;
+  background: var(--gold);
+  opacity: 0.8;
+  -webkit-mask:
+    var(--corner-tl) top left / var(--corner) var(--corner) no-repeat,
+    var(--corner-tr) top right / var(--corner) var(--corner) no-repeat,
+    var(--corner-bl) bottom left / var(--corner) var(--corner) no-repeat,
+    var(--corner-br) bottom right / var(--corner) var(--corner) no-repeat;
+  mask:
+    var(--corner-tl) top left / var(--corner) var(--corner) no-repeat,
+    var(--corner-tr) top right / var(--corner) var(--corner) no-repeat,
+    var(--corner-bl) bottom left / var(--corner) var(--corner) no-repeat,
+    var(--corner-br) bottom right / var(--corner) var(--corner) no-repeat;
+}
+:root[data-skin='fantasy'] :is(.tile, .catalog-card, .live-strip)::after {
+  --corner: 28px;
+  inset: 3px;
+  opacity: 0.7;
+}
+/* small panels: small flourishes, out of the text's way */
+:root[data-skin='fantasy'] .panel-card::after {
+  --corner: 22px;
+  inset: 3px;
+  opacity: 0.65;
+}
+:root[data-skin='fantasy'] .panel-card {
+  padding-left: calc(var(--s4) + 6px);
+  padding-right: calc(var(--s4) + 6px);
+}
+/* modals: the corners of the window, drawn from its title bar */
+:root[data-skin='fantasy'] .modal {
+  position: relative;
+}
+:root[data-skin='fantasy'] .modal::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+  background: var(--gold);
+  opacity: 0.75;
+  -webkit-mask:
+    var(--corner-tl) top left / 52px 52px no-repeat,
+    var(--corner-tr) top right / 52px 52px no-repeat;
+  mask:
+    var(--corner-tl) top left / 52px 52px no-repeat,
+    var(--corner-tr) top right / 52px 52px no-repeat;
+}
+
+/* ---------- titles: an illuminated capital, scroll-work below ---------- */
+:root[data-skin='fantasy'] .page-header h1::first-letter,
+:root[data-skin='fantasy'] .hero h1::first-letter {
+  font-family: var(--font-deco);
+  font-size: 1.32em;
+  line-height: 0.8;
+  background: linear-gradient(180deg, #fff1b8 0%, var(--gold) 45%, color-mix(in oklab, var(--accent) 70%, #3a2408) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 rgb(0 0 0 / 0.5));
+  padding-right: 0.04em;
+}
+:root[data-skin='fantasy'] .page-header > div:first-child::after {
+  width: min(320px, 70%);
+  height: 18px;
+  margin-top: 10px;
+  background: var(--gold);
+  opacity: 0.85;
+  -webkit-mask: var(--flourish) left center / contain no-repeat;
+  mask: var(--flourish) left center / contain no-repeat;
+}
+:root[data-skin='fantasy'] .modal h2::after {
+  background: var(--gold) !important;
+  height: 14px !important;
+  width: 220px !important;
+  opacity: 0.8;
+  -webkit-mask: var(--flourish) left center / contain no-repeat;
+  mask: var(--flourish) left center / contain no-repeat;
+}
+/* section titles sit on a little ribbon */
+:root[data-skin='fantasy'] .section-title,
+:root[data-skin='fantasy'] .section-head > :first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+  padding: 3px 14px 3px 10px;
+  border-radius: 2px 14px 14px 2px;
+  background: linear-gradient(90deg, color-mix(in oklab, var(--accent) 24%, transparent), transparent 92%);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+
+/* ---------- the first screen: a night over the hills, the name in gold ---------- */
+:root[data-skin='fantasy'] .auth {
+  position: relative;
+  overflow: hidden auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: var(--scene-sky-top);
+}
+:root[data-skin='fantasy'] .auth-scene {
+  position: fixed;
+  top: var(--topbar);
+  height: calc(100% - var(--topbar));
+}
+:root[data-skin='fantasy'] .auth::before {
+  /* the lower half darkens, so the form reads */
+  content: '';
+  position: fixed;
+  inset: var(--topbar) 0 0;
+  pointer-events: none;
+  background: radial-gradient(70% 60% at 50% 62%, rgb(0 0 0 / 0.42), transparent 70%);
+}
+:root[data-skin='fantasy'][data-theme='light'] .auth::before {
+  background: radial-gradient(70% 60% at 50% 62%, rgb(255 246 222 / 0.55), transparent 70%);
+}
+.auth-hero {
+  display: none;
+}
+:root[data-skin='fantasy'] .auth-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 12px;
+  text-align: center;
+}
+:root[data-skin='fantasy'] .auth-title {
+  font-variant-ligatures: none;
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 6vw, 4.2rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-shadow:
+    0 2px 0 rgb(0 0 0 / 0.55),
+    0 0 30px color-mix(in oklab, var(--accent) 45%, transparent);
+}
+:root[data-skin='fantasy'][data-theme='light'] .auth-title {
+  color: color-mix(in oklab, var(--accent) 75%, #3a2408);
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.7), 0 0 24px rgb(255 220 140 / 0.6);
+}
+:root[data-skin='fantasy'] .auth-tagline {
+  font-family: var(--font-book);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: color-mix(in oklab, var(--fg) 85%, transparent);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+}
+:root[data-skin='fantasy'][data-theme='light'] .auth-tagline {
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.6);
+}
+:root[data-skin='fantasy'] .auth-box {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 24px;
+  background:
+    var(--grain),
+    linear-gradient(180deg, color-mix(in oklab, var(--bg-elev) 94%, transparent), color-mix(in oklab, var(--bg) 96%, transparent));
+  box-shadow:
+    inset 0 0 0 1px var(--trim),
+    inset 0 0 0 5px color-mix(in oklab, var(--bg) 70%, transparent),
+    inset 0 0 0 6px var(--trim-soft),
+    0 30px 80px rgb(0 0 0 / 0.55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  padding: 30px 30px 24px;
+}
+:root[data-skin='fantasy'] .auth-box .logo {
+  display: none;
+}
+
+/* ---------- the home: a banner over the hills ---------- */
+:root[data-skin='fantasy'] .page-header.home-banner {
+  min-height: 210px;
+  padding: 34px 36px 26px;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  align-items: flex-end;
+  box-shadow:
+    inset 0 0 0 1px var(--trim),
+    0 16px 40px rgb(0 0 0 / 0.35);
+}
+:root[data-skin='fantasy'] .home-banner > :not(.scenery) {
+  position: relative;
+  z-index: 2;
+}
+:root[data-skin='fantasy'] .home-banner .banner-scene {
+  z-index: 0;
+}
+:root[data-skin='fantasy'] .home-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0.1) 60%, transparent);
+}
+:root[data-skin='fantasy'][data-theme='light'] .home-banner::before {
+  background:
+    linear-gradient(0deg, rgb(255 246 222 / 0.88), rgb(255 246 222 / 0.35) 55%, transparent 85%),
+    linear-gradient(90deg, rgb(255 246 222 / 0.6), transparent 65%);
+}
+:root[data-skin='fantasy'][data-theme='dark'] .home-banner h1 {
+  color: #f6ead0;
+}
+:root[data-skin='fantasy'][data-theme='dark'] .home-banner p {
+  color: #e2d3b4;
+}
+
+/* ---------- campaigns: a drawn hero and coats of arms ---------- */
+:root[data-skin='fantasy'] .hero.drawn {
+  min-height: 250px;
+}
+.hero-scene {
+  z-index: 0;
+}
+:root[data-skin='fantasy'] .hero-content {
+  position: relative;
+  z-index: 2;
+}
+:root[data-skin='fantasy'] .hero-tools {
+  z-index: 4;
+}
+.hero-arms {
+  display: none;
+}
+:root[data-skin='fantasy'] .hero-arms {
+  display: block;
+  flex: none;
+  margin-right: 14px;
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.5));
+}
+:root[data-skin='fantasy'] .hero-content {
+  align-items: flex-end;
+}
+:root[data-skin='fantasy'][data-theme='dark'] .hero h1 {
+  color: #f6ead0;
+}
+:root[data-skin='fantasy'] .tile-cover.heraldic {
+  position: relative;
+  background-color: #1a1410;
+}
+:root[data-skin='fantasy'] .tile-cover.heraldic .cover-arms {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+}
+.cover-arms {
+  display: none;
+}
+:root[data-skin='fantasy'] .cover-arms {
+  display: block;
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.55));
+  transition: transform var(--dur) var(--ease);
+}
+:root[data-skin='fantasy'] .tile:hover .cover-arms {
+  transform: translateY(-3px) scale(1.05);
+}
+/* characters: the initial in a gilded medallion */
+:root[data-skin='fantasy'] .cover-medallion {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.18), transparent 55%),
+    radial-gradient(circle, color-mix(in oklab, var(--accent) 22%, #1a1310) 58%, transparent 60%),
+    conic-gradient(from 0deg, #f3d488, #8a6224, #f3d488, #8a6224, #f3d488);
+  box-shadow:
+    0 0 0 2px rgb(0 0 0 / 0.45),
+    0 8px 18px rgb(0 0 0 / 0.5),
+    inset 0 0 0 6px transparent;
+}
+:root[data-skin='fantasy'] .cover-medallion .cover-initial {
+  font-family: var(--font-deco);
+  font-size: 2.3rem;
+  line-height: 1;
+  background: linear-gradient(180deg, #fff1b8, var(--gold) 55%, #7a5317);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 rgb(0 0 0 / 0.6));
+}
+.cover-medallion {
+  display: contents;
+}
+:root[data-skin='fantasy'] .portrait-cover {
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- materials ---------- */
+/* buttons: primary as a gilded plaque, the others as dark leather with brass edges */
+:root[data-skin='fantasy'] .btn.primary {
+  background:
+    linear-gradient(180deg, rgb(255 248 220 / 0.35), transparent 45%),
+    linear-gradient(180deg, #e7c06a, #b5862f 55%, #8a6220);
+  color: #2a1a06;
+  text-shadow: 0 1px 0 rgb(255 240 200 / 0.6);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 236 180 / 0.55),
+    inset 0 -2px 0 rgb(80 50 10 / 0.45),
+    0 0 0 1px rgb(60 36 8 / 0.7),
+    0 3px 10px rgb(0 0 0 / 0.35);
+  letter-spacing: 0.02em;
+}
+:root[data-skin='fantasy'] .btn.primary:hover:not(:disabled) {
+  filter: brightness(1.07);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 236 180 / 0.7),
+    inset 0 -2px 0 rgb(80 50 10 / 0.45),
+    0 0 0 1px rgb(60 36 8 / 0.7),
+    0 0 18px color-mix(in oklab, var(--accent) 45%, transparent),
+    0 3px 10px rgb(0 0 0 / 0.35);
+}
+/* cards: an embossed panel, the cover framed like an inset painting */
+:root[data-skin='fantasy'] .tile {
+  background: var(--grain), linear-gradient(180deg, color-mix(in oklab, var(--bg-elev) 100%, transparent), var(--bg));
+  box-shadow:
+    inset 0 0 0 1px var(--trim),
+    0 10px 26px rgb(0 0 0 / 0.32);
+  transition:
+    transform var(--dur) var(--ease),
+    box-shadow var(--dur);
+}
+:root[data-skin='fantasy'] .tile.clickable:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 0 0 1px var(--gold),
+    0 0 24px color-mix(in oklab, var(--accent) 25%, transparent),
+    0 16px 32px rgb(0 0 0 / 0.4);
+}
+:root[data-skin='fantasy'] .tile-cover {
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.5),
+    inset 0 0 40px rgb(0 0 0 / 0.55);
+}
+/* the side panels: parchment cards with a ruled top */
+:root[data-skin='fantasy'] .panel-card {
+  background: var(--grain), linear-gradient(180deg, var(--bg-elev), var(--bg));
+  box-shadow:
+    inset 0 0 0 1px var(--trim),
+    inset 0 3px 0 color-mix(in oklab, var(--accent) 35%, transparent),
+    0 8px 22px rgb(0 0 0 / 0.28);
+}
+/* the page itself: candlelight from the top, darker edges */
+:root[data-skin='fantasy'][data-theme='dark'] .main {
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgb(255 190 90 / 0.08), transparent 60%),
+    radial-gradient(140% 100% at 50% 50%, transparent 55%, rgb(0 0 0 / 0.45)),
+    var(--grain);
+}
+:root[data-skin='fantasy'][data-theme='light'] .main {
+  background:
+    radial-gradient(140% 100% at 50% 50%, transparent 55%, rgb(120 80 30 / 0.16)),
+    var(--grain);
+}
+
+/* ---------- the table: oak and brass ---------- */
+:root[data-skin='fantasy'] .float.rail,
+:root[data-skin='fantasy'] .dicebar,
+:root[data-skin='fantasy'] .macrobar {
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.025) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, #3b2a1b, #24180f);
+  box-shadow:
+    inset 0 0 0 1px rgb(214 168 82 / 0.55),
+    inset 0 0 0 3px rgb(0 0 0 / 0.35),
+    0 10px 24px rgb(0 0 0 / 0.45);
+  color: #ead9b8;
+}
+:root[data-skin='fantasy'][data-theme='light'] .float.rail,
+:root[data-skin='fantasy'][data-theme='light'] .dicebar,
+:root[data-skin='fantasy'][data-theme='light'] .macrobar {
+  background:
+    repeating-linear-gradient(90deg, rgb(120 80 30 / 0.05) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, #e9d6ae, #d6bd8c);
+  color: #3a2810;
+  box-shadow:
+    inset 0 0 0 1px rgb(140 96 36 / 0.6),
+    0 10px 24px rgb(80 50 10 / 0.25);
+}
+:root[data-skin='fantasy'][data-theme='dark'] .float.rail .tool,
+:root[data-skin='fantasy'][data-theme='dark'] .dicebar button {
+  color: #ead9b8;
+}
+/* a roll in the chat: the total in a wax seal */
+:root[data-skin='fantasy'] .log-total,
+:root[data-skin='fantasy'] .roll-total {
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 6px;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #fbe9c8;
+  background: radial-gradient(circle at 35% 30%, #c4473c, #7e1d17 60%, #5a120e);
+  box-shadow:
+    inset 0 0 0 2px rgb(255 200 180 / 0.18),
+    inset 0 -3px 6px rgb(0 0 0 / 0.35),
+    0 2px 6px rgb(0 0 0 / 0.4);
+  text-shadow: 0 1px 0 rgb(0 0 0 / 0.5);
+}
+/* the moon is a crescent at night, the sun a full disc on parchment */
+:root[data-theme='dark'] .scenery-sun,
+:root[data-theme='light'] .scenery-moon {
+  display: none;
+}
+
+/* ---------- at the table: the dock is a leather-bound book ---------- */
+:root[data-skin='fantasy'] .dock {
+  background:
+    var(--grain),
+    linear-gradient(90deg, rgb(0 0 0 / 0.28), transparent 18px),
+    var(--material-solid);
+  box-shadow:
+    inset 1px 0 0 var(--trim),
+    inset 6px 0 0 rgb(0 0 0 / 0.25),
+    inset 7px 0 0 var(--trim-soft);
+}
+/* the tab strip: a spine with brass studs between the tabs */
+:root[data-skin='fantasy'] .dock-tabs {
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / 0.35), rgb(0 0 0 / 0.15) 60%, rgb(0 0 0 / 0.3)),
+    var(--leather);
+  box-shadow:
+    inset -1px 0 0 var(--trim),
+    inset 0 0 0 1px rgb(0 0 0 / 0.3);
+}
+:root[data-skin='fantasy'] .dock-tabs button {
+  border-radius: 6px;
+}
+:root[data-skin='fantasy'] .dock-tabs button.active {
+  color: #24170a;
+  background: linear-gradient(180deg, #ecc977, #b5862f);
+  box-shadow:
+    inset 0 1px 0 rgb(255 248 220 / 0.55),
+    0 0 0 1px rgb(60 36 8 / 0.6),
+    0 0 12px color-mix(in oklab, var(--accent) 45%, transparent);
+}
+/* the panel's title: on a ribbon, with scroll-work */
+:root[data-skin='fantasy'] .dock-title {
+  position: relative;
+  padding-bottom: 14px;
+}
+:root[data-skin='fantasy'] .dock-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 180px;
+  height: 12px;
+  background: var(--gold);
+  opacity: 0.75;
+  -webkit-mask: var(--flourish) left center / contain no-repeat;
+  mask: var(--flourish) left center / contain no-repeat;
+}
+/* the token inspector and floating windows: framed panels */
+:root[data-skin='fantasy'] :is(.inspector, .fwin) {
+  background: var(--grain), linear-gradient(180deg, var(--material-solid), var(--bg));
+  box-shadow:
+    inset 0 0 0 1px var(--trim),
+    inset 0 0 0 4px rgb(0 0 0 / 0.18),
+    inset 0 0 0 5px var(--trim-soft),
+    0 18px 50px rgb(0 0 0 / 0.5);
+}
+/* the chat: rolls on parchment slips, the total in its wax seal */
+:root[data-skin='fantasy'] .log-roll {
+  padding: 8px 10px 8px 12px;
+  border-left: 0;
+  border-radius: 4px 10px 10px 4px;
+  background:
+    var(--grain),
+    linear-gradient(90deg, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%);
+  box-shadow:
+    inset 3px 0 0 var(--gold),
+    inset 0 0 0 1px var(--trim-soft);
+}
+:root[data-skin='fantasy'] .log-roll.crit {
+  box-shadow:
+    inset 3px 0 0 var(--success),
+    inset 0 0 0 1px color-mix(in oklab, var(--success) 40%, transparent),
+    0 0 18px color-mix(in oklab, var(--success) 25%, transparent);
+}
+:root[data-skin='fantasy'] .log-roll.fumble {
+  box-shadow:
+    inset 3px 0 0 var(--danger),
+    inset 0 0 0 1px color-mix(in oklab, var(--danger) 40%, transparent);
+}
+:root[data-skin='fantasy'] .log-roll.crit .roll-total {
+  color: #1d2a12;
+  background: radial-gradient(circle at 35% 30%, #fff2b0, #d6a93a 55%, #8a6220);
+}
+:root[data-skin='fantasy'] .log-roll.fumble .roll-total {
+  color: #f1d9d2;
+  background: radial-gradient(circle at 35% 30%, #5a5a5a, #2a2626 60%, #141212);
+}
+
+/* the drawn hero: the same veil under the title, so it reads on the hills */
+:root[data-skin='fantasy'] .hero.drawn::before {
+  z-index: 1;
+}
+:root[data-skin='fantasy'][data-theme='light'] .hero.drawn::before {
+  background: linear-gradient(0deg, rgb(255 246 222 / 0.9), rgb(255 246 222 / 0.3) 50%, transparent 80%);
+}

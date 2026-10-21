@@ -13,6 +13,7 @@ import './styles/studio.css';
 import './styles/workshop.css';
 import './styles/wiki.css';
 import './styles/fantasy.css';
+import './styles/ornate.css';
 import '@fontsource-variable/inter/opsz.css';
 // the fantasy look: Cinzel for titles, EB Garamond for long texts, Alegreya Sans for the interface
 import '@fontsource/cinzel/500.css';

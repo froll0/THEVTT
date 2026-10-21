@@ -5,6 +5,7 @@ import { asGroupCode, displayServerAddress, normalizeServerAddress } from '../li
 import { bridge } from '../lib/platform';
 import { useApp, WEB_CLIENT } from '../store/app';
 import { DEFAULT_HOSTING, inviteAddress, localServerUrl, useHosting } from '../store/hosting';
+import { Scenery } from '../components/Scenery';
 import { BrandMark } from '../components/BrandMark';
 
 type Where = 'host' | 'join';
@@ -78,6 +79,11 @@ export function AuthView() {
 
   return (
     <div className="auth">
+      <Scenery className="auth-scene" seed={3} />
+      <div className="auth-hero" aria-hidden>
+        <span className="auth-title">TheVTT</span>
+        <span className="auth-tagline">Il tavolo dove nascono le leggende</span>
+      </div>
       <form className="auth-box" onSubmit={submit}>
         <div className="col" style={{ gap: 6 }}>
           <div className="logo">

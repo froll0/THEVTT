@@ -4,6 +4,8 @@ import { ArrowLeft, CalendarClock, Crown, ImagePlus, MoreHorizontal, Plus, X } f
 import { useEffect, useState } from 'react';
 import { ChatThread } from '../components/ChatThread';
 import { coverStyle } from '../components/Cards';
+import { CoatOfArms } from '../components/Heraldry';
+import { Scenery } from '../components/Scenery';
 import { plainText, RichEditor, RichView } from '../components/RichText';
 import { formatSession, relativeDay } from '../lib/dates';
 import { recapForDiscord, toDiscord } from '../lib/discord';
@@ -63,7 +65,9 @@ export function CampaignView({ id }: { id: string }) {
         <ArrowLeft size={14} /> Campagne
       </button>
 
-      <div className="hero" style={coverStyle(campaign.name, campaign.cover)}>
+      <div className={`hero ${campaign.cover ? '' : 'drawn'}`} style={coverStyle(campaign.name, campaign.cover)}>
+        {/* no picture: a landscape and the campaign's arms */}
+        {!campaign.cover && <Scenery className="hero-scene" seed={(campaign.name.length * 7 + campaign.name.charCodeAt(0)) % 50} />}
         {isGm && (
           <div className="hero-tools">
             <label className="btn sm">
@@ -112,7 +116,8 @@ export function CampaignView({ id }: { id: string }) {
           </div>
         )}
         <div className="hero-content">
-          <div className="col" style={{ gap: 4, minWidth: 0 }}>
+          <CoatOfArms name={campaign.name} size={64} className="hero-arms" />
+          <div className="col grow" style={{ gap: 4, minWidth: 0 }}>
             <div className="row">
               <h1 className="ellipsis" translate="no">
                 {campaign.name}

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { CampaignCard, CharacterCard } from '../components/Cards';
 import { Avatar, Empty, Section } from '../components/ui';
 import { useApp } from '../store/app';
+import { Scenery } from '../components/Scenery';
 import { formatSession, relativeDay } from '../lib/dates';
 
 export function HomeView() {
@@ -19,7 +20,8 @@ export function HomeView() {
 
   return (
     <div className="page wide">
-      <div className="page-header">
+      <div className="page-header home-banner">
+        <Scenery className="banner-scene" />
         <div>
           <h1>
             {greeting}, {user?.displayName}

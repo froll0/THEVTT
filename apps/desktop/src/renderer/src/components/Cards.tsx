@@ -3,6 +3,7 @@ import { getSystem } from '@thevtt/systems';
 import { CalendarClock, Crown, Plus } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useApp } from '../store/app';
+import { CoatOfArms } from './Heraldry';
 import { Avatar } from './ui';
 
 /** A stable, pleasant backdrop for things without a picture, from their name. */
@@ -27,7 +28,8 @@ export function CampaignCard({ c, action }: { c: Campaign; action?: ReactNode })
   const next = c.nextSession && new Date(c.nextSession).getTime() > Date.now() - 6 * 3600_000 ? c.nextSession : null;
   return (
     <div className="tile campaign-card clickable" onClick={() => go({ name: 'campaign', id: c.id })}>
-      <div className="tile-cover" style={coverStyle(c.name, c.cover)}>
+      <div className={`tile-cover ${c.cover ? '' : 'heraldic'}`} style={coverStyle(c.name, c.cover)}>
+        {!c.cover && <CoatOfArms name={c.name} size={58} className="cover-arms" />}
         <div className="tile-badges">
           {c.session && <span className="badge live solid">in gioco</span>}
           <span className="badge glassy">{isGm ? <><Crown size={10} /> Master</> : 'Giocatore'}</span>
@@ -77,7 +79,11 @@ export function CharacterCard({ c }: { c: CharacterRecord }) {
   return (
     <div className="tile character-card clickable" onClick={() => go({ name: 'character', id: c.id })}>
       <div className="tile-cover portrait-cover" style={coverStyle(c.name, portrait)}>
-        {!portrait && <span className="cover-initial">{c.name.slice(0, 1).toUpperCase()}</span>}
+        {!portrait && (
+          <span className="cover-medallion" aria-hidden>
+            <span className="cover-initial">{c.name.slice(0, 1).toUpperCase()}</span>
+          </span>
+        )}
         {issues > 0 && (
           <div className="tile-badges">
             <span className="badge glassy">bozza</span>
