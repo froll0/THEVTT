@@ -112,6 +112,11 @@ export const useApp = create<AppState>((set, get) => {
   const presence = new Map<string, { online: boolean; seq: number }>();
   /** the same for sessions starting and ending while the campaigns are on their way */
   const sessionNews = new Map<string, { session: SessionInfo | null; seq: number }>();
+  /** campaigns left or deleted: a list fetched before must not bring them back */
+  const gone = new Map<string, number>();
+  /** each kind of list: the newest request whose answer was used (older answers are dropped) */
+  const asked: Record<string, number> = {};
+  const used: Record<string, number> = {};
   const byPresence = (list: UserPublic[]) => list.sort((a, b) => Number(!!b.online) - Number(!!a.online) || a.displayName.localeCompare(b.displayName));
 
   let lookupTimer: ReturnType<typeof setTimeout> | null = null;
@@ -202,6 +207,7 @@ export const useApp = create<AppState>((set, get) => {
         void refresh(['campaigns']);
         break;
       case 'campaign.deleted':
+        gone.set(n.campaignId, ++liveSeq);
         set((s) => ({ campaigns: s.campaigns.filter((c) => c.id !== n.campaignId) }));
         if ((route.name === 'campaign' && route.id === n.campaignId) || (route.name === 'table' && route.campaignId === n.campaignId)) {
           toast('Non fai più parte di questa campagna', 'error');
@@ -292,24 +298,42 @@ export const useApp = create<AppState>((set, get) => {
     async refresh(what = ['participants', 'invites', 'campaigns', 'characters']) {
       const { api } = get();
       const tasks = what.map(async (w) => {
+        const mine = (asked[w] = (asked[w] ?? 0) + 1);
+        // an answer that a newer request's answer already replaced
+        const stale = () => {
+          if ((used[w] ?? 0) > mine) return true;
+          used[w] = mine;
+          return false;
+        };
         if (w === 'participants') {
-          const asked = liveSeq;
+          const before = liveSeq;
           const list = await api.participants();
+          if (stale()) return;
           // what changed while the list was on its way wins over it
           for (const p of list) {
             const live = presence.get(p.id);
-            if (live && live.seq > asked) p.online = live.online;
+            if (live && live.seq > before) p.online = live.online;
           }
           set({ participants: byPresence(list) });
         }
-        if (w === 'invites') set({ invites: await api.invites() });
-        if (w === 'characters') set({ characters: await api.characters() });
+        if (w === 'invites') {
+          const invites = await api.invites();
+          if (!stale()) set({ invites });
+        }
+        if (w === 'characters') {
+          const characters = await api.characters();
+          if (!stale()) set({ characters });
+        }
         if (w === 'campaigns') {
-          const asked = liveSeq;
-          const campaigns = (await api.campaigns()).map((c) => {
-            const news = sessionNews.get(c.id);
-            return news && news.seq > asked ? { ...c, session: news.session } : c;
-          });
+          const before = liveSeq;
+          const fetched = await api.campaigns();
+          if (stale()) return;
+          const campaigns = fetched
+            .filter((c) => !((gone.get(c.id) ?? 0) > before))
+            .map((c) => {
+              const news = sessionNews.get(c.id);
+              return news && news.seq > before ? { ...c, session: news.session } : c;
+            });
           const sessions: Record<string, SessionInfo> = {};
           for (const c of campaigns) if (c.session) sessions[c.id] = c.session;
           set({ campaigns, sessions });
