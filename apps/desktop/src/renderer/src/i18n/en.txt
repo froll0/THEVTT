@@ -2602,3 +2602,4 @@ Segreti, colpi di scena, statistiche: i giocatori non li ricevono mai ⇒ Secret
 Parte segreta ⇒ Secret part
 La pagina sparisce per tutti. I collegamenti che la citano restano, e portano a una pagina da scrivere. ⇒ The page disappears for everyone. Links that mention it stay, and lead to a page to write.
 Apri «{0}» ⇒ Open «{0}»
+Tocca la mappa per spostare {0} · due dita per zoom e spostamento ⇒ Tap the map to move {0} · two fingers to zoom and pan

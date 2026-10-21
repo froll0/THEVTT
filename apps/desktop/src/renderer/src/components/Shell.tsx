@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Bell, CloudOff, Check, LogOut, Maximize2, Minus, Radio, Settings, X } from 'lucide-react';
+import { ArrowDownToLine, Bell, BookText, Castle, CloudOff, Check, Home, Library, LogOut, Map as MapIcon, Maximize2, Minus, Radio, Settings, UserRound, Users, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { bridge } from '../lib/platform';
 import { unreadOf, useChat } from '../store/chat';
@@ -25,14 +25,15 @@ function WindowControls() {
   );
 }
 
-const NAV: { route: Route; label: string; match: Route['name'][] }[] = [
-  { route: { name: 'home' }, label: 'Home', match: ['home'] },
-  { route: { name: 'campaigns' }, label: 'Campagne', match: ['campaigns', 'campaign'] },
-  { route: { name: 'characters' }, label: 'Personaggi', match: ['characters', 'character'] },
-  { route: { name: 'journal' }, label: 'Diario', match: ['journal'] },
-  { route: { name: 'maps' }, label: 'Mappe', match: ['maps', 'studio'] },
-  { route: { name: 'compendium' }, label: 'Compendio', match: ['compendium'] },
-  { route: { name: 'participants' }, label: 'Partecipanti', match: ['participants'] },
+/** the icons show on phones, where the menu becomes a bar at the bottom */
+const NAV: { route: Route; label: string; match: Route['name'][]; icon: typeof Home }[] = [
+  { route: { name: 'home' }, label: 'Home', match: ['home'], icon: Home },
+  { route: { name: 'campaigns' }, label: 'Campagne', match: ['campaigns', 'campaign', 'wiki'], icon: Castle },
+  { route: { name: 'characters' }, label: 'Personaggi', match: ['characters', 'character'], icon: UserRound },
+  { route: { name: 'journal' }, label: 'Diario', match: ['journal'], icon: BookText },
+  { route: { name: 'maps' }, label: 'Mappe', match: ['maps', 'studio'], icon: MapIcon },
+  { route: { name: 'compendium' }, label: 'Compendio', match: ['compendium'], icon: Library },
+  { route: { name: 'participants' }, label: 'Partecipanti', match: ['participants'], icon: Users },
 ];
 
 function Notifications() {
@@ -201,7 +202,8 @@ export function TopBar({ children, nav = true }: { children?: ReactNode; nav?: b
         <nav className="nav">
           {NAV.map((n) => (
             <button key={n.label} className={n.match.includes(route.name) ? 'active' : ''} onClick={() => go(n.route)}>
-              {n.label}
+              <n.icon size={18} className="nav-icon" aria-hidden />
+              <span className="nav-label">{n.label}</span>
               {n.route.name === 'campaigns' && live && !unreadCampaigns && <span className="dot" aria-hidden title="Un tavolo è aperto" />}
               {n.route.name === 'campaigns' && unreadCampaigns > 0 && <span className="count" aria-hidden>{unreadCampaigns}</span>}
               {n.route.name === 'participants' && unreadDms > 0 && <span className="count" aria-hidden>{unreadDms}</span>}

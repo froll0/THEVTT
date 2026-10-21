@@ -56,6 +56,12 @@ export function TableView({ campaignId }: { campaignId: string }) {
   const [ending, setEnding] = useState<SessionDigest | null>(null);
   const cameraRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
   const { windows, open: openWindow, closeAll } = useWindows();
+  // on a phone a window (a sheet, a note…) takes the screen: the panel under it gives way
+  const windowCount = useRef(windows.length);
+  useEffect(() => {
+    if (windows.length > windowCount.current && window.innerWidth <= 720) setDockOpen(false);
+    windowCount.current = windows.length;
+  }, [windows.length]);
   const undoRedo = (which: 'undo' | 'redo') => {
     const t = useTable.getState();
     const label = t.state?.history?.[which][0];

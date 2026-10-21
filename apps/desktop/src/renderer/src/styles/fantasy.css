@@ -483,3 +483,23 @@
     background: #fff;
   }
 }
+
+/* phones: the menu at the bottom keeps the leather, in small type */
+@media (max-width: 720px) {
+  :root[data-skin='fantasy'][data-theme] .nav {
+    background: var(--leather, var(--material-thick)), var(--material-thick);
+    box-shadow: 0 -1px 0 var(--trim), 0 -6px 16px rgb(0 0 0 / 0.25);
+  }
+  :root[data-skin='fantasy'][data-theme] .nav button {
+    font-size: 0.6rem;
+    letter-spacing: 0.02em;
+    border-radius: 6px;
+  }
+}
+@media (max-width: 720px) {
+  /* a blurred bar would hold the menu inside it (fixed children follow a filtered parent) */
+  :root[data-skin] .topbar {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

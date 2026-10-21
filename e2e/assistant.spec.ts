@@ -26,7 +26,7 @@ test('the GM’s assistant: the key in the settings, the panel at the table', as
   await G.getByTitle('Assistente').click();
   await expect(G.getByRole('button', { name: 'PNG al volo' })).toBeVisible();
   await expect(G.getByLabel('Idea del PNG')).toBeVisible();
-  await G.getByRole('button', { name: 'La campagna' }).click();
+  await G.getByRole('button', { name: 'La campagna', exact: true }).click();
   await expect(G.getByLabel('Domanda sulla campagna')).toBeVisible();
   await expect(G.getByText('Legge i riassunti delle sessioni')).toBeVisible();
   expect(gm.errors).toEqual([]);

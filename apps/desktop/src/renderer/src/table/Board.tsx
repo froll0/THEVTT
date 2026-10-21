@@ -7,7 +7,7 @@ import { BoardAnnouncer } from './Announcer';
 import { animatedProp, drawProp, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { TerrainLayer, terrainSample, terrainSeed } from './terrainRender';
 import { drawLiveTerrain, liveCells } from './liveTerrain';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { readImage } from '../components/ui';
 import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
@@ -497,6 +497,8 @@ export function Board({
   const { state, assets, pings, role, selectedTokenId, selectedPropId, selectedWallId, group, dispatch, select, selectProp, selectWall, setGroup, toggleInGroup } = useTable();
   const board = useSettings((s) => s.board);
   const reduceMotion = useSettings((s) => s.reduceMotion);
+  // a finger rather than a mouse: hints about touch
+  const coarse = useMemo(() => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches, []);
   const colorblind = useSettings((s) => s.colorblind);
   const announce = useSettings((s) => s.announce);
   /** spells landing: a flash on each area as it appears */
@@ -1527,6 +1529,13 @@ export function Board({
   }, [cameraRef]);
 
   // ---------- input ----------
+  // fingers on the map: two of them pinch to zoom and drag to pan
+  const touches = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ dist: number; zoom: number; world: { x: number; y: number } } | null>(null);
+  /** a tap on the map moves the selected token there (phones: no dragging a small token under a finger) */
+  const tapMove = useRef<{ tokenId: string; sx: number; sy: number; wx: number; wy: number } | null>(null);
+  const fingers = () => [...touches.current.values()];
+
   const toWorld = (clientX: number, clientY: number) => {
     const rect = canvasRef.current!.getBoundingClientRect();
     const cam = cameraRef.current!;
@@ -1637,7 +1646,25 @@ export function Board({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!cameraRef.current) return;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    try {
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // a pointer the browser doesn't know (already gone): nothing to capture
+    }
+    tapMove.current = null;
+    if (e.pointerType === 'touch') {
+      touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (touches.current.size === 2) {
+        // a second finger: whatever the first one started gives way to the pinch
+        const [a, b] = fingers();
+        const mid = { x: (a!.x + b!.x) / 2, y: (a!.y + b!.y) / 2 };
+        pinch.current = { dist: Math.max(1, Math.hypot(a!.x - b!.x, a!.y - b!.y)), zoom: cameraRef.current.zoom, world: toWorld(mid.x, mid.y) };
+        gesture.current = { kind: 'none' };
+        dirty.current = true;
+        return;
+      }
+      if (touches.current.size > 2) return;
+    }
     const w = toWorld(e.clientX, e.clientY);
     const L = live.current;
     if (e.button === 2 && gesture.current.kind === 'wall') {
@@ -1805,6 +1832,13 @@ export function Board({
       return;
     }
     if (L.group.tokens.length || L.group.props.length) setGroup({ tokens: [], props: [] });
+    // a finger on empty map with one of my tokens selected: a tap there moves it (a drag still pans)
+    const sel = !t && L.selectedTokenId ? L.state?.tokens[L.selectedTokenId] : undefined;
+    if (e.pointerType === 'touch' && L.tool === 'select' && sel && sel.sceneId === L.scene?.id && canControl(sel, L.me, L.isGm)) {
+      tapMove.current = { tokenId: sel.id, sx: e.clientX, sy: e.clientY, wx: w.x, wy: w.y };
+      gesture.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, cx: cameraRef.current.x, cy: cameraRef.current.y };
+      return;
+    }
     if (t) {
       select(t.id);
       if (canControl(t, L.me, L.isGm)) {
@@ -1846,6 +1880,21 @@ export function Board({
     const g = gesture.current;
     const cam = cameraRef.current;
     if (!cam) return;
+    if (e.pointerType === 'touch' && touches.current.has(e.pointerId)) {
+      touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const p = pinch.current;
+      if (p && touches.current.size >= 2) {
+        const [a, b] = fingers();
+        const mid = { x: (a!.x + b!.x) / 2, y: (a!.y + b!.y) / 2 };
+        cam.zoom = Math.min(4, Math.max(0.15, (p.zoom * Math.hypot(a!.x - b!.x, a!.y - b!.y)) / p.dist));
+        // the point that was between the fingers stays between them
+        const rect = canvasRef.current!.getBoundingClientRect();
+        cam.x = p.world.x - (mid.x - rect.left) / cam.zoom;
+        cam.y = p.world.y - (mid.y - rect.top) / cam.zoom;
+        dirty.current = true;
+        return;
+      }
+    }
     const w = toWorld(e.clientX, e.clientY);
     altDown.current = e.altKey;
     const Lm = live.current;
@@ -1938,7 +1987,24 @@ export function Board({
     }
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e?: React.PointerEvent) => {
+    if (e?.pointerType === 'touch') {
+      touches.current.delete(e.pointerId);
+      if (pinch.current) {
+        // the pinch ends when a finger lifts; the one left doesn't start anything
+        if (touches.current.size < 2) pinch.current = null;
+        gesture.current = { kind: 'none' };
+        return;
+      }
+    }
+    const tm = tapMove.current;
+    tapMove.current = null;
+    if (tm && e && Math.hypot(e.clientX - tm.sx, e.clientY - tm.sy) < 10) {
+      const t = live.current.state?.tokens[tm.tokenId];
+      if (t) dispatch({ type: 'token.move', tokenId: t.id, ...tokenDropAt({ wx: tm.wx, wy: tm.wy, ox: (t.size * CELL) / 2, oy: (t.size * CELL) / 2 }, t) });
+      gesture.current = { kind: 'none' };
+      return;
+    }
     const g = gesture.current;
     if (g.kind === 'drag' && g.moved) {
       const t = live.current.state?.tokens[g.tokenId];
@@ -2175,6 +2241,10 @@ export function Board({
       {scene?.weather && <WeatherLayer weather={scene.weather} intensity={scene.weatherIntensity ?? 0.6} />}
       {announce && state && scene && <BoardAnnouncer />}
       {selectedTemplate && <div className="board-hint glass">Area selezionata · Canc per eliminarla</div>}
+      {coarse && tool === 'select' && !selectedTemplate && (() => {
+        const t = selectedTokenId ? state?.tokens[selectedTokenId] : undefined;
+        return t && t.sceneId === scene?.id && canControl(t, me, isGm) ? <div className="board-hint glass">Tocca la mappa per spostare {t.name} · due dita per zoom e spostamento</div> : null;
+      })()}
       {textDraft && (
         <input
           className="input board-text-input"
