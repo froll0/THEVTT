@@ -1,26 +1,29 @@
 ## Novità
 
-- **Una veste fantasy**: la nuova veste predefinita somiglia a una locanda a lume di candela nel tema scuro e a una pergamena nel tema chiaro.
-  - Ci sono anche i temi Grimorio, Bosco antico, Forgia, Gelo e Corte.
-  - Caratteri da manoscritto, cornici dorate, cuoio e ornamenti sui titoli.
-  - I testi delle pagine hanno un tono d'avventura.
-  - Lo stile precedente si chiama «Vetro» e resta disponibile in Impostazioni › Aspetto › Stile.
-- **Laboratorio delle estensioni**: puoi creare le tue estensioni dentro l'app, da Impostazioni › Estensioni › Crea nel laboratorio.
-  - **Editor**: colori in tinta con il tema e suggerimenti mentre scrivi. Dopo `thevtt.` compare tutto quello che puoi usare, con la spiegazione, e Tab passa al campo successivo. L'editor segnala subito parentesi o virgolette mancanti e nomi che non esistono.
-  - **Modelli e frammenti**: modelli pronti da cui partire (Critici e disastri, Araldo dei turni, Borsa del bottino, Colpo rapido, Segnalini ispirazione) e frammenti da inserire con un clic.
-  - **Intestazione**: nome, descrizione e versione si compilano da un modulo.
-  - **Banco di prova**: un tavolo finto con le regole vere, dove l'estensione gira mentre la scrivi. Provi subito i suoi pulsanti e comandi e puoi simulare un tiro, un 20 o un 1 naturale, il turno che passa.
-  - **Console**: mostra messaggi, tiri, errori e il nuovo `thevtt.log()`.
-  - **Guida, salvataggio ed esportazione**: una guida dell'API, Ctrl+S (⌘S su Mac) per salvare ed esportazione in `.js`.
+- **Wiki della campagna**: pagine per luoghi, personaggi, fazioni, oggetti ed eventi, collegate tra loro scrivendo `[[Titolo]]`.
+  - Ogni pagina mostra dove è citata, e si può cercare e filtrare per tipo.
+  - Il master decide quali pagine vedono i giocatori, e ognuna ha una parte «Solo per te» che i giocatori non ricevono mai.
+  - Si apre dalla campagna e al tavolo, nel pannello laterale; le modifiche arrivano subito a tutti.
+- **Schede della campagna per il sistema Libero**: il master disegna la scheda del suo gioco senza scrivere codice.
+  - Campi, tracciati, caselle e tiri si riordinano, con l'anteprima accanto come la vedranno i giocatori.
+  - I giocatori trovano queste schede per prime quando creano un personaggio.
+  - Nuovi tipi di campo: caselle da spuntare e tracciati a pallini.
+  - Le schede si esportano e importano come file.
+- **Catalogo delle estensioni**: estensioni pronte da aggiungere, più l'aggiunta da un link (anche GitHub o un gist).
+  - Prima di aggiungerne una ne leggi tutto il codice e vedi cosa può fare. Agire al tavolo e collegarsi a internet sono evidenziati.
+  - Nel laboratorio, un errore indica la riga del codice e un clic ti ci porta.
+- **Mappa**:
+  - la nebbia di guerra si dipinge anche a pennello o con un lazo;
+  - in combattimento ogni token lascia la scia del percorso fatto nel suo turno;
+  - acqua e lava si muovono: si possono spegnere dalla scena, e restano ferme con «meno animazioni».
+- **Telefono**:
+  - al tavolo due dita zoomano e spostano la mappa, e un tocco sposta il tuo token;
+  - schede e note occupano tutto lo schermo;
+  - fuori dal tavolo il menu diventa una barra in basso.
+- **Avvio più rapido**: le pagine pesanti si caricano solo quando le apri.
 
 ## Correzioni
 
-- **Sicurezza**:
-  - la finestra dell'app non può più essere portata su pagine esterne;
-  - gli aggiornamenti arrivano solo da GitHub, e un download interrotto viene scartato;
-  - dopo troppe password sbagliate l'accesso si blocca per qualche minuto.
-- **Tavolo**:
-  - colori e condizioni dei token vengono controllati prima di essere accettati;
-  - quando il master svuota la cronologia, se ne accorgono anche gli altri.
-- **Partecipanti e sessioni**: un giocatore appena entrato non risulta più offline per il master, e il pulsante «Siediti al tavolo» compare sempre appena il master avvia la sessione.
-- **Estensioni**: ognuna può aggiungere al massimo 12 pulsanti e 12 comandi.
+- **Messaggi e liste**: un messaggio arrivato mentre si apre una conversazione non va più perso. I non letti, le campagne eliminate e le altre liste non vengono più sovrascritti da dati vecchi arrivati in ritardo.
+- **Caselle di testo**: quelle grandi (calendario, note delle schede, codice incollato) mostrano di nuovo tutte le righe.
+- **Orologio del mondo**: il campo dell'ora non taglia più il testo.
