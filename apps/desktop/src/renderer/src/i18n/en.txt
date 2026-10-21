@@ -2559,3 +2559,12 @@ Mostra come pallini da riempire ⇒ Show as dots to fill
 {0} a pallini ⇒ {0} as dots
 della campagna ⇒ of the campaign
 {0}: {1} su {2} ⇒ {0}: {1} of {2}
+# Mappa: nebbia a mano, acqua e lava animate
+Trascina un rettangolo ⇒ Drag a rectangle
+Dipingi a mano libera ⇒ Paint freehand
+Lazo ⇒ Lasso
+Disegna il contorno: dentro si rivela (o si copre) ⇒ Draw the outline: inside gets revealed (or covered)
+Raggio del pennello, in caselle ⇒ Brush radius, in cells
+Raggio del pennello ⇒ Brush radius
+Acqua e lava animate ⇒ Animated water and lava
+Increspature sull’acqua, bagliori e scintille sulla lava (non per chi ha chiesto meno animazioni) ⇒ Ripples on water, glow and sparks on lava (not for those who asked for less motion)

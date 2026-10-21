@@ -6,6 +6,7 @@ import { drawBurst, type Burst } from './effects';
 import { BoardAnnouncer } from './Announcer';
 import { animatedProp, drawProp, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { TerrainLayer, terrainSample, terrainSeed } from './terrainRender';
+import { drawLiveTerrain, liveCells } from './liveTerrain';
 import { useEffect, useRef, useState } from 'react';
 import { readImage } from '../components/ui';
 import { useApp } from '../store/app';
@@ -20,6 +21,10 @@ export type Tool = 'select' | 'measure' | 'ping' | 'fog' | 'template' | 'draw' |
 
 export interface ToolOptions {
   fogReveal: boolean;
+  /** how the GM paints the fog: dragging a rectangle, a round brush, a shape drawn by hand */
+  fogShape?: 'rect' | 'brush' | 'lasso';
+  /** the fog brush's radius, in cells */
+  fogBrush?: number;
   shape: TemplateShape;
   /** drawing colour; empty = the player's own colour */
   drawColor: string;
@@ -325,6 +330,8 @@ type Gesture =
   | { kind: 'drag'; tokenId: string; ox: number; oy: number; wx: number; wy: number; moved: boolean }
   | { kind: 'measure'; fx: number; fy: number; tx: number; ty: number }
   | { kind: 'fog'; fx: number; fy: number; tx: number; ty: number }
+  /** fog brush or lasso: points in world px */
+  | { kind: 'fogpath'; points: { x: number; y: number }[] }
   | { kind: 'template'; fx: number; fy: number; tx: number; ty: number }
   | { kind: 'zone'; fx: number; fy: number; tx: number; ty: number }
   /** points in world pixels */
@@ -524,8 +531,8 @@ export function Board({
   const clearTargets = useTable((s) => s.clearTargets);
   /** a cone or line with no caster on the map: its point, set by a first click */
   const areaOrigin = useRef<{ x: number; y: number } | null>(null);
-  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard, targets, colorblind });
-  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard, targets, colorblind };
+  const live = useRef({ state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard, targets, colorblind, reduceMotion });
+  live.current = { state, assets, pings, scene, board, selectedTokenId, selectedPropId, selectedWallId, group, isGm, me, tool, options, selectedTemplate, speaking, pendingArea, clipboard, targets, colorblind, reduceMotion };
   const hoverWall = useRef<string | null>(null);
   dirty.current = true;
 
@@ -587,6 +594,7 @@ export function Board({
       return img.complete && img.naturalWidth ? img : null;
     };
 
+    let lastLiveFrame = 0;
     const frame = () => {
       raf = requestAnimationFrame(frame);
       const canvas = canvasRef.current;
@@ -598,7 +606,13 @@ export function Board({
         !!(L.scene?.background && L.assets[L.scene.background]?.startsWith('data:video/')) ||
         Object.values(L.state?.props ?? {}).some((p) => p.sceneId === L.scene?.id && (animatedProp(p) || (L.scene?.vision && p.light?.flicker))) ||
         (!!L.scene?.vision && Object.values(L.state?.tokens ?? {}).some((t) => t.sceneId === L.scene?.id && t.light?.flicker));
-      if (!canvas || !cam || !L.state || !L.scene || (!dirty.current && !animating)) return;
+      // water and lava move too, at a gentler pace (about 20 frames a second)
+      const liveGround = !L.reduceMotion && L.scene?.animateTerrain !== false ? liveCells(L.scene?.terrain) : null;
+      const terrainMoves = !!liveGround && (liveGround.water.length > 0 || liveGround.lava.length > 0);
+      const frameAt = performance.now();
+      if (!dirty.current && !animating && terrainMoves && frameAt - lastLiveFrame < 50) return;
+      if (!canvas || !cam || !L.state || !L.scene || (!dirty.current && !animating && !terrainMoves)) return;
+      lastLiveFrame = frameAt;
       dirty.current = false;
 
       const dpr = window.devicePixelRatio || 1;
@@ -635,6 +649,7 @@ export function Board({
       const terrain = pg0.kind === 'paint' ? pg0.terrain : L.scene.terrain;
       terrainLayer.current.update(terrain, L.scene.widthCells, L.scene.heightCells, terrainSeed(L.scene.seed ?? L.scene.id), L.scene.autoWalls !== false && L.scene.buildingWalls !== false);
       terrainLayer.current.draw(ctx, CELL);
+      if (terrainMoves && pg0.kind !== 'paint') drawLiveTerrain(ctx, liveGround!, L.scene.widthCells, CELL, view, frameAt);
       if (L.scene.showGrid && L.board.gridOpacity > 0 && L.scene.grid === 'hex') {
         ctx.strokeStyle = hexToRgba(L.board.gridColor, L.board.gridOpacity);
         ctx.lineWidth = 1 / cam.zoom;
@@ -1026,6 +1041,27 @@ export function Board({
         }
       }
 
+      // the way each fighter went in its turn: dashes and steps, strongest for whoever's turn it is
+      for (const t of tokens) {
+        if (!t.trail || t.trail.length < 2) continue;
+        const half = (t.size * CELL) / 2;
+        ctx.save();
+        ctx.globalAlpha = t.id === activeTokenId ? 0.9 : 0.45;
+        ctx.beginPath();
+        t.trail.forEach((p, i) => (i ? ctx.lineTo(p.x * CELL + half, p.y * CELL + half) : ctx.moveTo(p.x * CELL + half, p.y * CELL + half)));
+        ctx.setLineDash([8 / cam.zoom, 6 / cam.zoom]);
+        ctx.lineCap = 'round';
+        haloStroke(ctx, vivid(t.color), 2.5 / cam.zoom, cam.zoom);
+        ctx.setLineDash([]);
+        ctx.fillStyle = vivid(t.color);
+        for (const p of t.trail.slice(0, -1)) {
+          ctx.beginPath();
+          ctx.arc(p.x * CELL + half, p.y * CELL + half, 4 / cam.zoom, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
       for (const t of tokens) {
         // off screen (and not being dragged): nothing to draw; its aura still may reach in
         const reachT = (t.size + 2 * (t.aura?.radius ?? 0) + 2) * CELL;
@@ -1358,6 +1394,28 @@ export function Board({
         tag(ctx, `${fmt(x1 - x0)} × ${fmt(y1 - y0)} caselle`, g.tx, g.ty, cam.zoom);
       }
 
+      if (g.kind === 'fogpath' && g.points.length) {
+        const fill = L.options.fogReveal ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.45)';
+        ctx.beginPath();
+        g.points.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+        if (L.options.fogShape === 'lasso') {
+          ctx.closePath();
+          ctx.fillStyle = fill;
+          ctx.fill();
+          ctx.setLineDash([6 / cam.zoom, 4 / cam.zoom]);
+          haloStroke(ctx, acc, 2 / cam.zoom, cam.zoom);
+          ctx.setLineDash([]);
+        } else {
+          if (g.points.length === 1) ctx.lineTo(g.points[0]!.x + 0.1, g.points[0]!.y);
+          ctx.save();
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.lineWidth = 2 * (L.options.fogBrush ?? 1.5) * CELL;
+          ctx.strokeStyle = fill;
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
       if (g.kind === 'fog') {
         const x0 = Math.floor(Math.min(g.fx, g.tx) / CELL);
         const y0 = Math.floor(Math.min(g.fy, g.ty) / CELL);
@@ -1604,7 +1662,8 @@ export function Board({
       return;
     }
     if (L.tool === 'fog' && L.isGm) {
-      gesture.current = { kind: 'fog', fx: w.x, fy: w.y, tx: w.x, ty: w.y };
+      gesture.current = (L.options.fogShape ?? 'rect') === 'rect' ? { kind: 'fog', fx: w.x, fy: w.y, tx: w.x, ty: w.y } : { kind: 'fogpath', points: [{ x: w.x, y: w.y }] };
+      dirty.current = true;
       return;
     }
     if (L.tool === 'zones' && L.isGm && L.scene) {
@@ -1851,6 +1910,13 @@ export function Board({
       }
     } else if (g.kind === 'erase') {
       eraseAt(w.x, w.y);
+    } else if (g.kind === 'fogpath') {
+      // a point every quarter of a cell is plenty
+      const last = g.points[g.points.length - 1]!;
+      if (Math.hypot(w.x - last.x, w.y - last.y) >= CELL / 4 && g.points.length < 2000) {
+        g.points.push({ x: w.x, y: w.y });
+        dirty.current = true;
+      }
     } else if (g.kind === 'measure' || g.kind === 'fog' || g.kind === 'template' || g.kind === 'zone') {
       g.tx = w.x;
       g.ty = w.y;
@@ -1886,6 +1952,13 @@ export function Board({
       const y1 = Math.floor(Math.max(g.fy, g.ty) / CELL) + 1;
       if (!L.scene.fog?.enabled) dispatch({ type: 'fog.enable', sceneId: L.scene.id, enabled: true });
       dispatch({ type: 'fog.paint', sceneId: L.scene.id, x: x0, y: y0, w: x1 - x0, h: y1 - y0, reveal: L.options.fogReveal });
+    }
+    if (g.kind === 'fogpath' && L.scene) {
+      const points = g.points.map((p) => ({ x: Math.round((p.x / CELL) * 100) / 100, y: Math.round((p.y / CELL) * 100) / 100 }));
+      if (!L.scene.fog?.enabled) dispatch({ type: 'fog.enable', sceneId: L.scene.id, enabled: true });
+      if (L.options.fogShape === 'lasso') {
+        if (points.length >= 3) dispatch({ type: 'fog.lasso', sceneId: L.scene.id, points, reveal: L.options.fogReveal });
+      } else dispatch({ type: 'fog.stroke', sceneId: L.scene.id, points, radius: L.options.fogBrush ?? 1.5, reveal: L.options.fogReveal });
     }
     if (g.kind === 'group' && g.moved && L.state) {
       const { dx, dy } = groupDelta(g);

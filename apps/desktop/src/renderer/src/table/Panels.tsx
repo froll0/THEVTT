@@ -906,6 +906,10 @@ export function ScenePanel() {
         </Field>
       )}
       <div className="row between">
+        <span className="small" title="Increspature sull’acqua, bagliori e scintille sulla lava (non per chi ha chiesto meno animazioni)">Acqua e lava animate</span>
+        <Switch on={active.animateTerrain !== false} onChange={(on) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { animateTerrain: on } })} label="Acqua e lava animate" />
+      </div>
+      <div className="row between">
         <span className="small">Nebbia di guerra</span>
         <Switch on={!!active.fog?.enabled} onChange={(enabled) => dispatch({ type: 'fog.enable', sceneId: active.id, enabled })} />
       </div>

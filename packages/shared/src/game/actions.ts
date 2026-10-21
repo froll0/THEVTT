@@ -157,6 +157,10 @@ export type GameAction =
   | { type: 'fog.enable'; sceneId: string; enabled: boolean }
   | { type: 'fog.paint'; sceneId: string; x: number; y: number; w: number; h: number; reveal: boolean }
   | { type: 'fog.fill'; sceneId: string; reveal: boolean }
+  /** a brush along a line, radius in cells; points in cells */
+  | { type: 'fog.stroke'; sceneId: string; points: { x: number; y: number }[]; radius: number; reveal: boolean }
+  /** everything inside a shape drawn by hand; points in cells */
+  | { type: 'fog.lasso'; sceneId: string; points: { x: number; y: number }[]; reveal: boolean }
   | { type: 'template.create'; template: Omit<AreaTemplate, 'id' | 'authorId' | 'sceneId'> }
   | { type: 'template.delete'; templateId: string }
   | { type: 'template.clear' }

@@ -58,6 +58,8 @@ export interface Scene {
   weather?: Weather | null;
   /** 0.2 (a few drops) to 1 (a downpour) */
   weatherIntensity?: number;
+  /** water ripples and lava glows (unless switched off here, or by the viewer's own reduced motion) */
+  animateTerrain?: boolean;
 }
 
 export type Ambient = 'bright' | 'dim' | 'dark';
@@ -164,6 +166,8 @@ export interface Token {
   conditionRounds?: Record<string, number>;
   /** cells walked in its current turn (only during combat) */
   moved?: number;
+  /** where it went in its current turn, in cells, from where it started (only during combat) */
+  trail?: { x: number; y: number }[];
   /** zones crossed in its current turn (success-pool systems, only during combat) */
   zonesMoved?: number;
   /** the Manovrare action taken this turn (success-pool systems) */

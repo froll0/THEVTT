@@ -484,6 +484,24 @@ export function TableView({ campaignId }: { campaignId: string }) {
                 Copri
               </button>
               <span className="vsep" />
+              {(
+                [
+                  ['rect', 'Rettangolo', 'Trascina un rettangolo'],
+                  ['brush', 'Pennello', 'Dipingi a mano libera'],
+                  ['lasso', 'Lazo', 'Disegna il contorno: dentro si rivela (o si copre)'],
+                ] as const
+              ).map(([id, label, hint]) => (
+                <button key={id} className={`tool wide ${(options.fogShape ?? 'rect') === id ? 'active' : ''}`} onClick={() => setOptions({ ...options, fogShape: id })} title={hint} aria-pressed={(options.fogShape ?? 'rect') === id}>
+                  {label}
+                </button>
+              ))}
+              {options.fogShape === 'brush' && (
+                <label className="row small" style={{ gap: 4 }} title="Raggio del pennello, in caselle">
+                  <input type="range" min={0.5} max={6} step={0.5} value={options.fogBrush ?? 1.5} onChange={(e) => setOptions({ ...options, fogBrush: Number(e.target.value) })} aria-label="Raggio del pennello" />
+                  {options.fogBrush ?? 1.5}
+                </label>
+              )}
+              <span className="vsep" />
               <button className="tool wide" onClick={() => { if (!scene.fog?.enabled) table.dispatch({ type: 'fog.enable', sceneId: scene.id, enabled: true }); table.dispatch({ type: 'fog.fill', sceneId: scene.id, reveal: true }); }}>
                 Rivela tutto
               </button>

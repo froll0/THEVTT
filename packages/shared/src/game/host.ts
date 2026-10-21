@@ -1,7 +1,7 @@
 import { cryptoRng, DiceError, roll, successes, type RollResult, type Rng } from '../dice';
 import { newId } from '../id';
 import type { Ability, GameAction, HostToPlayer, PlayerToHost, TokenPatch } from './actions';
-import { emptyMask, paintRect, resizeMask } from './fog';
+import { emptyMask, paintPolygon, paintRect, paintStroke, resizeMask } from './fog';
 import { isAdventurePackage } from './adventure';
 import { COVER_AC, COVER_LABEL, coverBetween } from './cover';
 import { standingLabel } from './relations';
@@ -84,6 +84,8 @@ const UNDO_SCOPE: Partial<Record<GameAction['type'], { cols: UndoCol[]; label: s
   'fog.enable': { cols: ['scenes'], label: 'nebbia' },
   'fog.paint': { cols: ['scenes'], label: 'nebbia' },
   'fog.fill': { cols: ['scenes'], label: 'nebbia' },
+  'fog.stroke': { cols: ['scenes'], label: 'nebbia' },
+  'fog.lasso': { cols: ['scenes'], label: 'nebbia' },
   'scene.update': { cols: ['scenes', 'walls'], label: 'modifica della scena' },
   'terrain.set': { cols: ['scenes', 'walls'], label: 'mappa' },
   'hp.roll': { cols: ['tokens'], label: 'danni o cure' },
@@ -207,6 +209,10 @@ const IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,/;
 const VIDEO_DATA_URL = /^data:video\/(webm|mp4);base64,/;
 const AUDIO_DATA_URL = /^data:audio\/(mpeg|mp3|ogg|wav|x-wav|webm|mp4|x-m4a|aac|flac);base64,/;
 const MAX_DRAWINGS = 500;
+/** steps of a token's way kept for its turn */
+const MAX_TRAIL = 24;
+/** points of a fog stroke or lasso */
+const MAX_FOG_POINTS = 2000;
 
 const cleanShared = (v: unknown, players: GameState['players']): 'private' | 'all' | string[] =>
   v === 'all' ? 'all' : Array.isArray(v) ? v.filter((id): id is string => typeof id === 'string' && !!players[id]).slice(0, 50) : 'private';
@@ -508,6 +514,7 @@ export class GameHost {
         if (p.cellDistance !== undefined) scene.cellDistance = Math.min(1000, Math.max(0.1, Math.round(Number(p.cellDistance) * 10) / 10 || 1));
         if (p.unit !== undefined) scene.unit = p.unit === 'ft' ? 'ft' : 'm';
         if (p.showGrid !== undefined) scene.showGrid = !!p.showGrid;
+        if (p.animateTerrain !== undefined) scene.animateTerrain = !!p.animateTerrain;
         if (p.grid !== undefined) scene.grid = p.grid === 'hex' ? 'hex' : 'square';
         if (p.weather !== undefined) scene.weather = (WEATHERS as readonly string[]).includes(p.weather as string) ? p.weather : null;
         if (p.weatherIntensity !== undefined) scene.weatherIntensity = Math.min(1, Math.max(0.2, Number(p.weatherIntensity) || 0.6));
@@ -1100,6 +1107,8 @@ export class GameHost {
           t.moved = (t.moved ?? 0) + moveCost(scene.terrain, scene.widthCells, scene.heightCells, { x: t.x + half - 0.5, y: t.y + half - 0.5 }, { x: nx + half - 0.5, y: ny + half - 0.5 });
         }
         const from0 = { x: t.x, y: t.y };
+        // the way it went this turn, for everyone to see (a short one: the last steps)
+        if (fighting && (from0.x !== nx || from0.y !== ny)) t.trail = [...(t.trail?.length ? t.trail : [from0]), { x: nx, y: ny }].slice(-MAX_TRAIL);
         t.x = nx;
         t.y = ny;
         if (fighting && t.pool && (from0.x !== nx || from0.y !== ny)) this.zoneMove(from, t, from0);
@@ -1751,6 +1760,7 @@ export class GameHost {
         s.initiative = { round: 0, turn: 0, entries: [] };
         for (const t of Object.values(s.tokens)) {
           delete t.moved;
+          delete t.trail;
           delete t.zonesMoved;
           delete t.maneuver;
         }
@@ -1795,6 +1805,24 @@ export class GameHost {
         if (!scene) return { ok: false, reason: 'Scena inesistente' };
         const mask = scene.fog?.revealed.length === scene.widthCells * scene.heightCells ? scene.fog.revealed : emptyMask(scene.widthCells, scene.heightCells);
         scene.fog = { enabled: !!action.enabled, revealed: mask };
+        break;
+      }
+      case 'fog.stroke':
+      case 'fog.lasso': {
+        const denied = gmOnly();
+        if (denied) return denied;
+        const scene = s.scenes[action.sceneId];
+        if (!scene?.fog) return { ok: false, reason: 'La nebbia non è attiva' };
+        const pts = (Array.isArray(action.points) ? action.points : [])
+          .slice(0, MAX_FOG_POINTS)
+          .map((p) => ({ x: Number(p?.x), y: Number(p?.y) }))
+          .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+        if (!pts.length) return { ok: false, reason: 'Nessun punto' };
+        const { widthCells: w, heightCells: h } = scene;
+        scene.fog.revealed =
+          action.type === 'fog.stroke'
+            ? paintStroke(scene.fog.revealed, w, h, pts, Math.min(12, Math.max(0.5, Number(action.radius) || 1)), action.reveal)
+            : paintPolygon(scene.fog.revealed, w, h, pts, action.reveal);
         break;
       }
       case 'fog.paint':
@@ -2178,6 +2206,7 @@ export class GameHost {
     t.x = spot.x;
     t.y = spot.y;
     delete t.moved;
+    delete t.trail;
     if (!t.hidden) this.system(`${t.name} va su «${to.name}»`);
     // everyone's characters went through: the table goes with them
     const party = Object.values(s.tokens).filter((x) => x.ownerIds.length > 0 && (x.sceneId === from.id || x.sceneId === to.id));
@@ -2652,6 +2681,7 @@ export class GameHost {
   /** The start of a token's turn: its movement is fresh, its timed conditions tick down. */
   private startTurn(t: Token): void {
     t.moved = 0;
+    delete t.trail;
     if (t.nimble) t.nimble = { ...t.nimble, attacks: 0 };
     if (t.pool) t.zonesMoved = 0;
     delete t.maneuver;
