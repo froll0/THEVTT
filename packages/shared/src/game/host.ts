@@ -40,6 +40,7 @@ import {
   viewFor,
   worldTime,
   WEATHERS,
+  isElement,
   REVEAL_COLS,
   REVEAL_ROWS,
   damageAfter,
@@ -1854,6 +1855,7 @@ export class GameHost {
           size: Math.min(60, Math.max(0.5, Number(t.size) || 1)),
           angle: Number(t.angle) || 0,
           color: typeof t.color === 'string' ? t.color : player?.color ?? '#c9a227',
+          ...(isElement(t.element) ? { element: t.element } : {}),
           authorId: from,
         };
         break;

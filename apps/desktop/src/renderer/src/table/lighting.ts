@@ -15,7 +15,12 @@ interface LightingInput {
   viewers: Viewer[];
   lights: LightSource[];
   ambient: Ambient;
+  /** candlelight (the fantasy look): warm shadows, and every flame glows amber even without a colour */
+  warm?: boolean;
 }
+
+/** the glow of a light without a colour of its own, by candlelight */
+const CANDLE = '#ffb35c';
 
 /** how dark the shadow stays, per ambient light (1 = black) */
 const AMBIENT_DARKNESS: Record<Ambient, number> = { bright: 0, dim: 0.45, dark: 1 };
@@ -95,7 +100,7 @@ export function drawLighting(main: CanvasRenderingContext2D, input: LightingInpu
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.globalCompositeOperation = 'source-over';
   c.clearRect(0, 0, width, height);
-  c.fillStyle = 'rgb(6, 7, 10)';
+  c.fillStyle = input.warm ? 'rgb(11, 7, 4)' : 'rgb(6, 7, 10)';
   c.fillRect(0, 0, width, height);
   c.setTransform(transform);
   c.globalCompositeOperation = 'destination-out';
@@ -156,8 +161,9 @@ export function drawLighting(main: CanvasRenderingContext2D, input: LightingInpu
   main.drawImage(overlay, 0, 0);
   main.restore();
 
-  // warm glow of coloured lights, where they reach and only where someone sees
-  if (lights.some((l) => l.color) && strength > 0 && viewers.length) {
+  // warm glow of coloured lights (by candlelight: of every flame), where they reach and only where someone sees
+  const glowOf = (l: LightSource) => l.color ?? (input.warm ? CANDLE : undefined);
+  if (lights.some(glowOf) && strength > 0 && viewers.length) {
     main.save();
     main.beginPath();
     for (const v of viewers) {
@@ -167,15 +173,20 @@ export function drawLighting(main: CanvasRenderingContext2D, input: LightingInpu
     }
     main.clip();
     main.globalCompositeOperation = 'soft-light';
-    main.globalAlpha = 0.35 * Math.min(1, strength + 0.3);
+    const alpha = 0.35 * Math.min(1, strength + 0.3);
     for (const { l, poly } of litPolys) {
-      if (!l.color) continue;
+      const glow = glowOf(l);
+      if (!glow) continue;
       main.save();
+      // a candle's glow breathes with its flame; a lamp without colour glows a little less than a coloured one
+      const seed = l.x * 12.9898 + l.y * 78.233;
+      const breath = l.flicker ? 0.85 + 0.15 * Math.sin(now * 9.3 + seed) : 1;
+      main.globalAlpha = alpha * breath * (l.color ? 1 : 0.8);
       path(main, poly, cell);
       main.clip();
       const r = Math.max(l.dim, 0.01) * cell;
       const g = main.createRadialGradient(l.x * cell, l.y * cell, 0, l.x * cell, l.y * cell, r);
-      g.addColorStop(0, l.color);
+      g.addColorStop(0, glow);
       g.addColorStop(1, 'rgba(0,0,0,0)');
       main.fillStyle = g;
       main.beginPath();

@@ -138,6 +138,15 @@ describe('fog of war and area templates', () => {
     host.dispatch('gm', { type: 'template.clear' });
     expect(Object.keys(host.state.templates!)).toHaveLength(0);
   });
+
+  it('keeps the element of a spell’s area for its effect, only a known one', () => {
+    const { host } = setup();
+    host.dispatch('p1', { type: 'template.create', template: { shape: 'circle', x: 2, y: 2, size: 4, angle: 0, color: '#f80', element: 'fire' } });
+    host.dispatch('p1', { type: 'template.create', template: { shape: 'circle', x: 5, y: 5, size: 2, angle: 0, color: '#f80', element: 'glitter' as never } });
+    const [fire, odd] = Object.values(host.state.templates!);
+    expect(fire!.element).toBe('fire');
+    expect(odd).not.toHaveProperty('element');
+  });
 });
 
 describe('notes, cards, drawings and music', () => {

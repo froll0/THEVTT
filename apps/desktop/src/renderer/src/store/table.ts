@@ -10,6 +10,7 @@ import {
   type MapPackage,
   type PlayerToHost,
   type RtcConfig,
+  type SpellElement,
   type TableCharacter,
 } from '@thevtt/shared';
 import { create } from 'zustand';
@@ -63,7 +64,7 @@ interface TableStore {
   /** GM: a piece of map copied (or a ready-made room) waiting to be put down */
   clipboard: MapPiece | null;
   setClipboard(p: MapPiece | null): void;
-  pendingArea: { shape: 'circle' | 'cone' | 'line' | 'square'; size: number; label: string; originTokenId: string | null; save?: GroupSave } | null;
+  pendingArea: { shape: 'circle' | 'cone' | 'line' | 'square'; size: number; label: string; originTokenId: string | null; save?: GroupSave; element?: SpellElement } | null;
   setPendingArea(a: TableStore['pendingArea']): void;
   setEditor(sceneId: string | null): void;
   /** tokens marked as the targets of attacks (Ctrl+click), apart from the selection */

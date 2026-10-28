@@ -1,4 +1,4 @@
-import type { Ability, ChatCard, RollResult, Token } from '@thevtt/shared';
+import type { Ability, ChatCard, RollResult, SpellElement, Token } from '@thevtt/shared';
 import type { FC, ReactNode } from 'react';
 import { Dnd5eBestiary, dnd5eMonsterInitiative, Dnd5eStatBlock } from './dnd5e-2024/Bestiary';
 import { Dnd5eBuilder } from './dnd5e-2024/Builder';
@@ -50,7 +50,7 @@ export interface SheetTable {
   /** an attack against the selected target; false when nobody is targeted (then it's a plain roll) */
   attack(a: { name: string; bonus: number; damage: string; damageType?: string; mode?: 'normal' | 'adv' | 'dis' }): boolean;
   /** start placing the area of a spell on the map; with a save, those inside roll it once it's down */
-  area(a: { shape: 'circle' | 'cone' | 'line' | 'square'; metres: number; label: string; save?: GroupSave }): void;
+  area(a: { shape: 'circle' | 'cone' | 'line' | 'square'; metres: number; label: string; save?: GroupSave; element?: SpellElement }): void;
   /** the marked (or selected) tokens roll a saving throw; false when nobody is targeted */
   save(a: GroupSave & { label: string }): boolean;
   /** the caster now keeps a spell up */

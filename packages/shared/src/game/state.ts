@@ -123,6 +123,11 @@ export interface Prop {
 export type TemplateShape = 'circle' | 'cone' | 'line' | 'square';
 
 /** An area of effect drawn on the map. Coordinates and size in cells. */
+/** What a spell's area is made of: its look when it lands (sparks, embers, frost…). */
+export const ELEMENTS = ['fire', 'cold', 'lightning', 'thunder', 'acid', 'poison', 'necrotic', 'radiant', 'force', 'psychic'] as const;
+export type SpellElement = (typeof ELEMENTS)[number];
+export const isElement = (x: unknown): x is SpellElement => (ELEMENTS as readonly unknown[]).includes(x);
+
 export interface AreaTemplate {
   id: string;
   sceneId: string;
@@ -134,6 +139,8 @@ export interface AreaTemplate {
   /** radians, direction for cones and lines */
   angle: number;
   color: string;
+  /** from the spell that made it, for its effect */
+  element?: SpellElement;
   authorId: string;
 }
 

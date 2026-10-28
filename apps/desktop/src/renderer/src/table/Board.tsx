@@ -2,7 +2,7 @@ import { distance3d, tokensInAura, hexAt, hexCenter, hexCorners, hexDistance, he
 import { exploredTexture, updateExplored } from './explored';
 import { conditionImage, CONDITION_COLORS } from './conditionIcons';
 import { drawLighting } from './lighting';
-import { drawBurst, type Burst } from './effects';
+import { drawBurst, ELEMENT_COLOR, type Burst } from './effects';
 import { BoardAnnouncer } from './Announcer';
 import { animatedProp, drawProp, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { TerrainLayer, terrainSample, terrainSeed } from './terrainRender';
@@ -404,6 +404,9 @@ export function groupDeleteActions(state: { tokens: Record<string, Token>; props
   if (gm) for (const id of group.props) if (state.props?.[id]) out.push({ type: 'prop.delete', propId: id });
   return out;
 }
+
+/** the fantasy look lights the map by candle: warm shadows, amber flames */
+const candlelight = () => document.documentElement.dataset.skin === 'fantasy';
 
 export function Board({
   tool,
@@ -1340,7 +1343,7 @@ export function Board({
           if (sightMemo.current.state !== L.state || sightMemo.current.me !== L.me) sightMemo.current = { state: L.state, me: L.me, sight: sightFor(L.state, L.me) };
           const sight = sightMemo.current.sight!;
           const explored = exploredTexture(L.state.campaignId, L.scene.id);
-          drawLighting(ctx, { cell: CELL, bounds, explored, segments: sight.segments, viewers: sight.viewers, lights: sight.lights, ambient: sight.ambient }, ctx.getTransform(), 1);
+          drawLighting(ctx, { cell: CELL, bounds, explored, segments: sight.segments, viewers: sight.viewers, lights: sight.lights, ambient: sight.ambient, warm: candlelight() }, ctx.getTransform(), 1);
         } else if (L.options.lightPreview) {
           // what the players' tokens see, together
           const viewers = Object.values(L.state.tokens)
@@ -1348,7 +1351,7 @@ export function Board({
             .map((t) => ({ x: t.x + t.size / 2, y: t.y + t.size / 2, darkvision: t.darkvision ?? 0 }));
           drawLighting(
             ctx,
-            { cell: CELL, bounds, segments: blockingSegments(L.state, L.scene.id), viewers, lights: lightSources(L.state, L.scene.id), ambient: L.scene.ambient ?? 'bright' },
+            { cell: CELL, bounds, segments: blockingSegments(L.state, L.scene.id), viewers, lights: lightSources(L.state, L.scene.id), ambient: L.scene.ambient ?? 'bright', warm: candlelight() },
             ctx.getTransform(),
             0.7,
           );
@@ -1578,7 +1581,7 @@ export function Board({
     }
     const d = areaDraft();
     if (!d) return;
-    dispatch({ type: 'template.create', template: { ...d, color: accentColor() } });
+    dispatch({ type: 'template.create', template: { ...d, color: pa.element ? ELEMENT_COLOR[pa.element] : accentColor(), ...(pa.element ? { element: pa.element } : {}) } });
     const hits = tokensInArea(d);
     if (hits.length) dispatch({ type: 'chat', text: `${pa.label}: nell’area ${hits.map((t) => t.name).join(', ')}` });
     // those inside roll their saves; the damage lands by itself

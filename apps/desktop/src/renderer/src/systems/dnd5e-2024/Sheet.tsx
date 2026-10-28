@@ -1,4 +1,4 @@
-import { roll, type ChatCard } from '@thevtt/shared';
+import { isElement, roll, type ChatCard } from '@thevtt/shared';
 import { canLevelUp, dnd5e, DND_XP_LEVELS } from '@thevtt/systems';
 import { ArrowUpCircle, BookOpen, Dices, Heart, Minus, Moon, Plus, Shield, Skull, Sparkles, Sun } from 'lucide-react';
 import { useState } from 'react';
@@ -475,7 +475,7 @@ function SpellsTab({
     const groupSave = s.save && !s.attack ? { ability: s.save, dc: sc.saveDc, damage: dmgFormula, damageType, half: s.level > 0 } : undefined;
     const area = dnd5e.spellArea(s);
     if (area && table) {
-      table.area({ ...area, label, save: groupSave });
+      table.area({ ...area, label, save: groupSave, element: isElement(s.damageType) ? s.damageType : undefined });
       if (groupSave) return;
     }
     if (groupSave && table?.save({ ...groupSave, label })) return;

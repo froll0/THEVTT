@@ -36,7 +36,7 @@ export function useSheetTable(characterId: string): SheetTable | undefined {
     area: (a) => {
       const scene = state.scenes[state.activeSceneId];
       if (!scene) return;
-      table.setPendingArea({ shape: a.shape, size: metresToCells(scene, a.metres), label: a.label, originTokenId: own()?.id ?? null, save: a.save });
+      table.setPendingArea({ shape: a.shape, size: metresToCells(scene, a.metres), label: a.label, originTokenId: own()?.id ?? null, save: a.save, element: a.element });
       // the sheet steps aside, so the map is free to aim at
       useWindows.getState().update(`sheet:${characterId}`, { minimized: true });
       toast(`${a.label}: ${AREA_NAMES[a.shape]} di ${String(a.metres).replace('.', ',')} m. Clicca sulla mappa per posarla, Esc per annullare.`);
