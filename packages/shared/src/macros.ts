@@ -27,6 +27,8 @@ export type MacroStep =
   | { kind: 'initiative'; modifier: number | null }
   /** GM: a sound effect for everyone */
   | { kind: 'sound'; name: string }
+  /** the live scene's ambience (null: silence) */
+  | { kind: 'ambience'; name: string | null }
   /** a roll on one of the table's random tables */
   | { kind: 'table'; name: string; private?: boolean }
   | { kind: 'error'; line: number; text: string; message: string };
@@ -116,6 +118,10 @@ export function parseMacro(expanded: string): MacroStep[] {
       if (!rest) return err('Manca il suono, per esempio /suono tuono');
       return void steps.push({ kind: 'sound', name: rest });
     }
+    if (['ambiente', 'ambience'].includes(cmd)) {
+      if (!rest) return err('Manca l’ambiente, per esempio /ambiente taverna (o /ambiente silenzio)');
+      return void steps.push({ kind: 'ambience', name: /^(silenzio|nessuno|off)$/i.test(rest) ? null : rest });
+    }
     err(`Comando sconosciuto: /${cmd}`);
   });
   return steps;
@@ -136,6 +142,8 @@ export function describeStep(s: MacroStep): string {
       return s.modifier === null ? 'Aggiunge i token selezionati all’iniziativa (col loro bonus)' : `Aggiunge i token selezionati all’iniziativa con ${s.modifier >= 0 ? '+' : ''}${s.modifier}`;
     case 'sound':
       return `Fa sentire a tutti «${s.name}» (solo il master)`;
+    case 'ambience':
+      return s.name ? `Mette l’ambiente «${s.name}» nella scena (solo il master)` : 'Spegne l’ambiente della scena (solo il master)';
     case 'table':
       return `Tira sulla tabella «${s.name}»${s.private ? ' di nascosto' : ''}`;
     case 'error':

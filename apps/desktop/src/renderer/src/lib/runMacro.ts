@@ -1,4 +1,4 @@
-import { expandMacro, findSound, parseMacro, type GameAction, type GameState, type MacroStep, type Token } from '@thevtt/shared';
+import { expandMacro, findAmbience, findSound, parseMacro, type GameAction, type GameState, type MacroStep, type Token } from '@thevtt/shared';
 import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 
 /**
@@ -79,6 +79,11 @@ export function runMacro(
     if (!findSound(ctx.state.sounds ?? [], s.name)) return `Suono sconosciuto: «${s.name}»`;
   }
   for (const s of steps) {
+    if (s.kind !== 'ambience') continue;
+    if (!isGm) return 'Solo il master cambia l’ambiente';
+    if (s.name && !findAmbience(s.name)) return `Ambiente sconosciuto: «${s.name}»`;
+  }
+  for (const s of steps) {
     if (s.kind === 'roll') ctx.dispatch({ type: 'roll', formula: s.formula, label: s.label, private: s.private, blind: s.blind });
     else if (s.kind === 'chat') ctx.dispatch({ type: 'chat', text: s.text, private: s.private });
     else if (s.kind === 'hp') ctx.dispatch({ type: 'hp.roll', formula: s.formula, heal: s.heal, label: s.label, tokenIds: mine.map((t) => t.id) });
@@ -96,6 +101,8 @@ export function runMacro(
       ctx.dispatch({ type: 'table.roll', tableId: tableOf(s.name)!.id, private: s.private });
     } else if (s.kind === 'sound') {
       ctx.dispatch({ type: 'sfx.play', sound: findSound(ctx.state.sounds ?? [], s.name)!.id });
+    } else if (s.kind === 'ambience') {
+      ctx.dispatch({ type: 'scene.update', sceneId: ctx.state.activeSceneId, patch: { ambience: s.name ? findAmbience(s.name)! : null } });
     } else if (s.kind === 'initiative') {
       for (const t of mine) {
         let modifier = s.modifier;

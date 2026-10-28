@@ -81,6 +81,17 @@ describe('sound effects', () => {
     expect(findSound([], 'fanfara')).toBeUndefined();
   });
 
+  it('/ambiente sets the scene’s background sound, or silence', async () => {
+    const { findAmbience } = await import('../src');
+    expect(parseMacro('/ambiente taverna')).toEqual([{ kind: 'ambience', name: 'taverna' }]);
+    expect(parseMacro('/ambiente silenzio')).toEqual([{ kind: 'ambience', name: null }]);
+    expect(parseMacro('/ambiente')[0]).toMatchObject({ kind: 'error' });
+    expect(findAmbience('Fuoco')).toBe('fuoco');
+    expect(findAmbience('sotterraneo')).toBe('dungeon');
+    expect(findAmbience('discoteca')).toBeUndefined();
+    expect(describeStep({ kind: 'ambience', name: null })).toBe('Spegne l’ambiente della scena (solo il master)');
+  });
+
   it('the GM plays it for everyone; players cannot', async () => {
     const { createInitialState, GameHost } = await import('../src');
     const sent: { to: string; msg: unknown }[] = [];

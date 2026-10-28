@@ -7,6 +7,7 @@ import type { PartyLoot, RollTable, Shop } from './tables';
 import { visibleRelations, type Relations } from './relations';
 import type { Calendar } from './calendar';
 import type { NimbleToken } from './nimble';
+import type { Ambience } from './sounds';
 
 /**
  * Table state. It is owned and persisted by the GM's client (the host);
@@ -42,6 +43,8 @@ export interface Scene {
   bgOffsetY?: number;
   /** a track of the playlist that starts (fading in) when the scene goes live */
   music?: string | null;
+  /** the scene's background sound (tavern, forest, rain…), for everyone while it is live */
+  ambience?: Ambience | null;
   /** the map painted at the table, one terrain code per cell (see terrain.ts) */
   terrain?: string | null;
   /** rock and rooms of the painted map get their walls by themselves (default on) */

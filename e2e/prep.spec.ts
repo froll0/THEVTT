@@ -83,6 +83,10 @@ test('a player from the browser, in English; encounters launched in one click; t
   // a sound effect for everyone, from the GM's soundboard
   await G.getByTitle('Musica').click();
   await G.getByRole('list', { name: 'Effetti sonori' }).getByRole('listitem', { name: /Tuono/ }).click();
+  // and a background for the scene: the player hears it too, and finds it in the top bar
+  await G.getByRole('radiogroup', { name: 'Ambiente della scena' }).getByRole('radio', { name: /Taverna/ }).click();
+  await expect(G.getByRole('radio', { name: /Taverna/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(B.locator('.music-chip')).toContainText('Tavern');
   await G.getByRole('button', { name: 'Chiudi la sessione' }).click();
   const modal = G.locator('.modal', { hasText: 'Ho preparato una bozza' });
   await expect(modal).toBeVisible();

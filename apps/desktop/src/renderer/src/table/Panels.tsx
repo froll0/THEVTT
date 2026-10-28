@@ -1,4 +1,4 @@
-import { combatSummary, describeRoll, sessionStats, tokensInAura, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Weather, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
+import { AMBIENCES, combatSummary, describeRoll, sessionStats, tokensInAura, EXPOSURE_LEVELS, freeZones, MANEUVERS, isNat, mergePool, POOL_CHECKS, successes, type PoolCheck, type Ambient, type Weather, type Defenses, type Light, type LogEntry, type Note, type Prop, type Scene, type Token, type TokenPatch, type UserPublic, type Wall } from '@thevtt/shared';
 import { cellsToMetres, LIGHT_PRESETS, metresToCells, propKind } from './props';
 import { dnd5e, getSystem, warhammer } from '@thevtt/systems';
 import { ConditionIcon } from '../components/ConditionIcon';
@@ -905,6 +905,21 @@ export function ScenePanel() {
           </select>
         </Field>
       )}
+      <Field label="Ambiente sonoro">
+        <select
+          className="select"
+          value={active.ambience ?? ''}
+          onChange={(e) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { ambience: (e.target.value || null) as Scene['ambience'] } })}
+          title="Un suono di fondo per tutti mentre la scena è attiva"
+        >
+          <option value="">Nessuno</option>
+          {AMBIENCES.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+      </Field>
       <div className="row between">
         <span className="small" title="Increspature sull’acqua, bagliori e scintille sulla lava (non per chi ha chiesto meno animazioni)">Acqua e lava animate</span>
         <Switch on={active.animateTerrain !== false} onChange={(on) => dispatch({ type: 'scene.update', sceneId: active.id, patch: { animateTerrain: on } })} label="Acqua e lava animate" />

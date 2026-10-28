@@ -1,10 +1,11 @@
-import { BUILTIN_SOUNDS, type MusicState } from '@thevtt/shared';
-import { AudioLines, Music, Pause, Play, Plus, Repeat, Trash2, Volume2, VolumeX } from 'lucide-react';
+import { AMBIENCES, BUILTIN_SOUNDS, type MusicState } from '@thevtt/shared';
+import { AudioLines, Music, Pause, Trees, Play, Plus, Repeat, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Popover } from '../components/ui';
 import { useApp } from '../store/app';
 import { useSettings } from '../store/settings';
 import { useTable } from '../store/table';
+import { resumeAudio, startAmbience, type AmbiencePlayer } from '../lib/ambience';
 
 /** One audio element for the whole table: the panel and the top bar chip read it. */
 let audio: HTMLAudioElement | null = null;
@@ -152,6 +153,29 @@ export function MusicPlayer() {
   return null;
 }
 
+/** The live scene's ambience, for everyone, at each one's own volume; changing scene crossfades. */
+export function AmbienceLoop() {
+  const ambience = useTable((s) => (s.state ? s.state.scenes[s.state.activeSceneId]?.ambience : null)) ?? null;
+  const volume = useSettings((s) => s.musicVolume * s.ambienceVolume);
+  const player = useRef<AmbiencePlayer | null>(null);
+  const level = useRef(volume);
+  level.current = volume;
+  useEffect(() => {
+    if (!ambience) return;
+    const p = startAmbience(ambience, level.current);
+    player.current = p;
+    // a browser may hold sound back until the first click
+    window.addEventListener('pointerdown', resumeAudio, { once: true });
+    return () => {
+      p?.stop();
+      if (player.current === p) player.current = null;
+      window.removeEventListener('pointerdown', resumeAudio);
+    };
+  }, [ambience]);
+  useEffect(() => player.current?.setVolume(volume), [volume]);
+  return null;
+}
+
 function useAudioClock() {
   const [, tick] = useState(0);
   useEffect(() => {
@@ -162,45 +186,68 @@ function useAudioClock() {
   return { time: a.currentTime, duration: a.duration };
 }
 
-function VolumeSlider() {
+function VolumeSlider({ ambience }: { ambience?: boolean }) {
   const volume = useSettings((s) => s.musicVolume);
+  const amb = useSettings((s) => s.ambienceVolume);
   const set = useSettings((s) => s.set);
   return (
-    <div className="row" style={{ gap: 8 }}>
-      <button className="btn ghost sm icon" onClick={() => set({ musicVolume: volume > 0 ? 0 : 0.6 })} aria-label={volume > 0 ? 'Silenzia' : 'Riattiva audio'}>
-        {volume > 0 ? <Volume2 size={15} /> : <VolumeX size={15} />}
-      </button>
-      <input className="range grow" type="range" min={0} max={1} step={0.05} value={volume} onChange={(e) => set({ musicVolume: Number(e.target.value) })} aria-label="Volume musica" />
-    </div>
+    <>
+      <div className="row" style={{ gap: 8 }}>
+        <button className="btn ghost sm icon" onClick={() => set({ musicVolume: volume > 0 ? 0 : 0.6 })} aria-label={volume > 0 ? 'Silenzia' : 'Riattiva audio'}>
+          {volume > 0 ? <Volume2 size={15} /> : <VolumeX size={15} />}
+        </button>
+        <input className="range grow" type="range" min={0} max={1} step={0.05} value={volume} onChange={(e) => set({ musicVolume: Number(e.target.value) })} aria-label="Volume musica" />
+      </div>
+      {ambience && (
+        <div className="row" style={{ gap: 8 }} title="L’ambiente della scena, rispetto alla musica">
+          <span className="btn ghost sm icon" aria-hidden>
+            <Trees size={15} />
+          </span>
+          <input className="range grow" type="range" min={0} max={1} step={0.05} value={amb} onChange={(e) => set({ ambienceVolume: Number(e.target.value) })} aria-label="Volume ambiente" />
+        </div>
+      )}
+    </>
   );
 }
 
 /** Top bar: what's playing, with each player's own volume. */
 export function MusicChip() {
   const music = useTable((s) => s.state?.music);
+  const ambience = useTable((s) => (s.state ? s.state.scenes[s.state.activeSceneId]?.ambience : null));
   const track = music?.tracks.find((t) => t.id === music.current);
+  const place = AMBIENCES.find((a) => a.id === ambience);
   useAudioClock();
-  if (!music || !track) return null;
+  if (!track && !place) return null;
   const audible = !getAudio().paused;
   return (
     <Popover
       align="left"
       width={260}
       trigger={(_, toggle) => (
-        <button className={`badge music-chip ${music.playing ? 'live' : ''}`} data-audible={audible} onClick={toggle} title="Musica del tavolo">
-          <Music size={11} /> <span className="ellipsis">{track.name}</span>
+        <button className={`badge music-chip ${track && music?.playing ? 'live' : ''}`} data-audible={audible} onClick={toggle} title={track ? 'Musica del tavolo' : 'Ambiente della scena'}>
+          {track ? <Music size={11} /> : <Trees size={11} />} <span className="ellipsis">{track ? track.name : place!.name}</span>
         </button>
       )}
     >
       {() => (
         <div className="col" style={{ padding: 'var(--s3)', gap: 8 }}>
-          <div className="small">
-            <span className="faint">{music.playing ? 'In riproduzione' : 'In pausa'}</span>
-            <div className="ellipsis">
-              <b>{track.name}</b>
+          {track && (
+            <div className="small">
+              <span className="faint">{music?.playing ? 'In riproduzione' : 'In pausa'}</span>
+              <div className="ellipsis">
+                <b>{track.name}</b>
+              </div>
             </div>
-          </div>
-          <VolumeSlider />
+          )}
+          {place && (
+            <div className="small">
+              <span className="faint">Ambiente</span>
+              <div className="ellipsis">
+                <b>{place.name}</b>
+              </div>
+            </div>
+          )}
+          <VolumeSlider ambience={!!place} />
           <span className="faint tiny">Il volume vale solo per te.</span>
         </div>
       )}
@@ -331,8 +378,34 @@ export function MusicPanel() {
           ))}
         </div>
       )}
+      <AmbienceBoard />
       <SoundBoard />
     </div>
+  );
+}
+
+/** GM: the background sound of the live scene, for everyone; it stays with the scene. */
+function AmbienceBoard() {
+  const { state, dispatch } = useTable();
+  if (!state) return null;
+  const scene = state.scenes[state.activeSceneId];
+  if (!scene) return null;
+  const set = (ambience: (typeof AMBIENCES)[number]['id'] | null) => dispatch({ type: 'scene.update', sceneId: scene.id, patch: { ambience } });
+  return (
+    <>
+      <span className="section-title">Ambiente della scena</span>
+      <div className="sfx-grid" role="radiogroup" aria-label="Ambiente della scena">
+        <button role="radio" aria-checked={!scene.ambience} className={`btn sm sfx ${!scene.ambience ? 'on' : ''}`} onClick={() => set(null)}>
+          Silenzio
+        </button>
+        {AMBIENCES.map((a) => (
+          <button key={a.id} role="radio" aria-checked={scene.ambience === a.id} className={`btn sm sfx ${scene.ambience === a.id ? 'on' : ''}`} onClick={() => set(a.id)} title={`Lo sentono tutti, finché la scena «${scene.name}» è attiva`}>
+            <Trees size={12} /> {a.name}
+          </button>
+        ))}
+      </div>
+      <p className="faint tiny">Resta legato alla scena: torna da solo quando la riattivi. Ognuno ne regola il volume dalla musica in alto.</p>
+    </>
   );
 }
 

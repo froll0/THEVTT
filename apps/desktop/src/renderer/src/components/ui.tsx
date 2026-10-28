@@ -232,3 +232,17 @@ export async function readImage(file: File, maxSide = 4096, { opaque = false, qu
     URL.revokeObjectURL(url);
   }
 }
+
+/** Whether a media query matches, following changes (the phone layout: '(max-width: 720px)'). */
+export function useMedia(query: string): boolean {
+  const [on, setOn] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return;
+    const mq = matchMedia(query);
+    const change = () => setOn(mq.matches);
+    change();
+    mq.addEventListener('change', change);
+    return () => mq.removeEventListener('change', change);
+  }, [query]);
+  return on;
+}

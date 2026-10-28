@@ -8,6 +8,7 @@ import { standingLabel } from './relations';
 import { cleanCalendar, dateOf, eventsBetween } from './calendar';
 import { actionsFromInitiative, addDisadvantage, damageVsArmor, type NimbleToken } from './nimble';
 import { isMapPackage } from './library';
+import { isAmbience } from './sounds';
 import { BUILTIN_SOUNDS } from './sounds';
 import { cleanTerrain, moveCost, resizeTerrain, terrainWalls } from './terrain';
 import { lineOfSight } from './vision';
@@ -528,6 +529,7 @@ export class GameHost {
           if (p.music !== null && !s.music?.tracks.some((t) => t.id === p.music)) return { ok: false, reason: 'Brano inesistente' };
           scene.music = p.music;
         }
+        if (p.ambience !== undefined) scene.ambience = isAmbience(p.ambience) ? p.ambience : null;
         if (p.ambient !== undefined) scene.ambient = p.ambient === 'dark' || p.ambient === 'dim' ? p.ambient : 'bright';
         if (p.daylight !== undefined) {
           scene.daylight = !!p.daylight;

@@ -1,13 +1,15 @@
 import { listSystems } from '@thevtt/systems';
 import { useState } from 'react';
 import { Compendium } from '../components/Compendium';
-import { Tabs } from '../components/ui';
+import { Tabs, useMedia } from '../components/ui';
 import { getSystemUi } from '../systems';
 
 const KEY = 'thevtt.compendium.system';
 
 /** Launcher: the rules, always at hand outside the table too, for each game. */
 export function CompendiumView() {
+  // on a phone: the list, then the open entry with a way back (three columns do not fit)
+  const phone = useMedia('(max-width: 720px)');
   const systems = listSystems().filter((s) => getSystemUi(s.id)?.compendium);
   const [systemId, setSystemId] = useState(() => {
     try {
@@ -33,7 +35,7 @@ export function CompendiumView() {
           <Tabs value={systemId} onChange={pick} options={systems.map((s) => ({ id: s.id, label: s.shortName }))} />
         </div>
       )}
-      <Compendium key={systemId} systemId={systemId} />
+      <Compendium key={systemId} systemId={systemId} compact={phone} />
     </div>
   );
 }

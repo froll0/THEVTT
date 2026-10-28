@@ -2603,3 +2603,16 @@ Parte segreta ⇒ Secret part
 La pagina sparisce per tutti. I collegamenti che la citano restano, e portano a una pagina da scrivere. ⇒ The page disappears for everyone. Links that mention it stay, and lead to a page to write.
 Apri «{0}» ⇒ Open «{0}»
 Tocca la mappa per spostare {0} · due dita per zoom e spostamento ⇒ Tap the map to move {0} · two fingers to zoom and pan
+Ambiente della scena ⇒ Scene ambience
+Ambiente sonoro ⇒ Ambience
+Ambiente ⇒ Ambience
+Silenzio ⇒ Silence
+Sotterraneo ⇒ Dungeon
+Notte ⇒ Night
+Vento sulle vette ⇒ Mountain wind
+Volume ambiente ⇒ Ambience volume
+L’ambiente della scena, rispetto alla musica ⇒ The scene's ambience, relative to the music
+Lo sentono tutti, finché la scena «{0}» è attiva ⇒ Everyone hears it while the scene «{0}» is live
+Un suono di fondo per tutti mentre la scena è attiva ⇒ A background sound for everyone while the scene is live
+Resta legato alla scena: torna da solo quando la riattivi. Ognuno ne regola il volume dalla musica in alto. ⇒ It stays with the scene: it comes back by itself when you make it live again. Everyone sets its volume from the music in the top bar.
+il suono di fondo della scena (master): taverna, foresta, pioggia, mare… o silenzio ⇒ the scene's background sound (GM): taverna, foresta, pioggia, mare… or silenzio

@@ -33,6 +33,8 @@ export interface Settings {
   directConnection: boolean;
   /** table music volume, 0..1 (each player sets their own) */
   musicVolume: number;
+  /** the scenes' ambiences, relative to the music volume, 0..1 */
+  ambienceVolume: number;
   /** rolling 3D dice on the table */
   dice3d: boolean;
   /** one's own dice, seen by the whole table (null: the player colour) */
@@ -74,6 +76,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dockPosition: 'right',
   directConnection: true,
   musicVolume: 0.6,
+  ambienceVolume: 0.7,
   dice3d: true,
   diceSkin: null,
   npcVoices: false,

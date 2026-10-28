@@ -13,7 +13,7 @@ import { Board, CELL, DEFAULT_TOOL_OPTIONS, groupDeleteActions, type Tool, type 
 import { DiceLayer } from './DiceLayer';
 import { SpokenLines } from './SpokenLines';
 import { PluginRuntime } from './PluginRuntime';
-import { MusicChip, MusicPanel, MusicPlayer } from './Music';
+import { AmbienceLoop, MusicChip, MusicPanel, MusicPlayer } from './Music';
 import { CallControls, CallTiles, type CallPerson } from './Call';
 import { GroupSaveForm } from './Saves';
 import { QuestsPanel, RestPrompt, WorldClock } from './World';
@@ -313,6 +313,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
         )}
       </TopBar>
       {state && <MusicPlayer />}
+      {state && <AmbienceLoop />}
       <div className={`table-body dock-${dockPosition}`}>
         <div className="stage">
           {state && scene && phase === 'waiting' && !isGm && (

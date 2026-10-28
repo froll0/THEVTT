@@ -22,6 +22,15 @@ describe('scene music and dice', () => {
     expect(host.state.scenes[arena.id]!.music).toBeNull();
   });
 
+  it('a scene keeps its ambience; only known ones, players cannot change it', () => {
+    const host = table();
+    expect(host.dispatch('gm', { type: 'scene.update', sceneId: 's1', patch: { ambience: 'taverna' } }).ok).toBe(true);
+    expect(host.state.scenes.s1!.ambience).toBe('taverna');
+    host.dispatch('gm', { type: 'scene.update', sceneId: 's1', patch: { ambience: 'discoteca' as never } });
+    expect(host.state.scenes.s1!.ambience).toBeNull();
+    expect(host.dispatch('p1', { type: 'scene.update', sceneId: 's1', patch: { ambience: 'mare' } }).ok).toBe(false);
+  });
+
   it('everyone picks their own dice', () => {
     const host = table();
     expect(host.dispatch('p1', { type: 'dice.skin', skin: { color: '#112233', ink: '#ffffff', finish: 'metallo' } }).ok).toBe(true);
