@@ -155,7 +155,7 @@ export function PluginSettings() {
             </Setting>
           ))}
           {!plugins.length && (
-            <p className="faint small">
+            <p className="faint small row" style={{ padding: '12px 14px', gap: 6 }}>
               <Puzzle size={13} /> Nessuna estensione. Creane una nel laboratorio, partendo da un modello, o prendine una dal catalogo.
             </p>
           )}

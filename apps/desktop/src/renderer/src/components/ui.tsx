@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../store/app';
+import { Scenery, type SceneMotif } from './Scenery';
 
 export function Avatar({ user, size = 32, presence }: { user: Pick<UserPublic, 'displayName' | 'avatarColor' | 'online' | 'avatar'>; size?: number; presence?: boolean }) {
   const initials = user.displayName
@@ -171,9 +172,11 @@ export function Setting({ title, hint, children }: { title: ReactNode; hint?: Re
   );
 }
 
-export function PageHeader({ title, subtitle, children }: { title: string; subtitle?: string; children?: ReactNode }) {
+/** A page's title over a little landscape (in the fantasy look; plain otherwise). */
+export function PageHeader({ title, subtitle, children, scene = 'castle', seed }: { title: string; subtitle?: string; children?: ReactNode; scene?: SceneMotif | false; seed?: number }) {
   return (
-    <div className="page-header">
+    <div className={`page-header${scene ? ' banner' : ''}`}>
+      {scene && <Scenery className="banner-scene" motif={scene} frame="middle" seed={seed ?? title.length * 7 + 3} />}
       <div>
         <h1>{title}</h1>
         {subtitle && <p>{subtitle}</p>}

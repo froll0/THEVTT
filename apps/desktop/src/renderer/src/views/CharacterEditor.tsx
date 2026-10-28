@@ -2,6 +2,7 @@ import { describeRoll, roll, successes } from '@thevtt/shared';
 import { free, getSystem, listSystems } from '@thevtt/systems';
 import { ArrowLeft, MoreHorizontal, Printer } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { CoatOfArms } from '../components/Heraldry';
 import { Empty, Modal, PageHeader, Popover } from '../components/ui';
 import { useApp } from '../store/app';
 import { getSystemUi } from '../systems';
@@ -73,10 +74,11 @@ export function CharacterEditor({ id, systemId: requestedSystem, assignTo }: { i
   if (!system || !ui) {
     return (
       <div className="page">
-        <PageHeader title="Nuovo personaggio" subtitle="Per quale gioco?" />
+        <PageHeader scene="stones" seed={13} title="Nuovo personaggio" subtitle="Per quale gioco?" />
         <div className="option-grid">
           {systems.map((s) => (
-            <button key={s.id} className="option" onClick={() => { setSystemId(s.id); setData(s.createCharacter()); }}>
+            <button key={s.id} className="option with-arms" onClick={() => { setSystemId(s.id); setData(s.createCharacter()); }}>
+              <CoatOfArms name={s.name} size={44} className="option-arms" />
               <b>{s.name}</b>
               <small>{s.description}</small>
             </button>
@@ -124,7 +126,7 @@ export function CharacterEditor({ id, systemId: requestedSystem, assignTo }: { i
       </button>
       {mode === 'build' ? (
         <>
-          <PageHeader title={name || (existing ? 'Modifica personaggio' : 'Nuovo personaggio')} subtitle={system.name}>
+          <PageHeader scene="village" seed={4} title={name || (existing ? 'Modifica personaggio' : 'Nuovo personaggio')} subtitle={system.name}>
             {existing && !issues.length && (
               <button className="btn ghost" onClick={() => setMode('sheet')}>
                 Torna alla scheda

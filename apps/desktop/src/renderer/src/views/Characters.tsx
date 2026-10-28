@@ -51,7 +51,7 @@ export function CharactersView() {
 
   return (
     <div className="page wide">
-      <PageHeader title="Personaggi" subtitle="I tuoi eroi, pronti per la prossima avventura.">
+      <PageHeader scene="village" title="Personaggi" subtitle="I tuoi eroi, pronti per la prossima avventura.">
         <label className="btn ghost" title="Un file di personaggi di TheVTT, oppure un personaggio di D&D Beyond (JSON) o di Foundry VTT (Export Data)">
           <Upload size={14} /> Importa
           <input aria-label="Importa personaggi" type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && void importFile(e.target.files[0]).then(() => (e.target.value = ''))} />

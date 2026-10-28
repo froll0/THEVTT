@@ -13,7 +13,7 @@ export function WikiView({ campaignId, page }: { campaignId: string; page?: stri
       <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => go({ name: 'campaign', id: campaignId })}>
         <ArrowLeft size={14} /> {campaign.name}
       </button>
-      <PageHeader title="Wiki della campagna" subtitle={`Luoghi, personaggi, fazioni e storie di «${campaign.name}», collegati tra loro.`} />
+      <PageHeader scene="tower" title="Wiki della campagna" subtitle={`Luoghi, personaggi, fazioni e storie di «${campaign.name}», collegati tra loro.`} />
       <WikiBrowser campaignId={campaignId} isGm={campaign.gmId === user?.id} initial={page} />
     </div>
   );

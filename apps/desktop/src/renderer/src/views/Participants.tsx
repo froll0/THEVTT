@@ -46,7 +46,7 @@ export function ParticipantsView() {
 
   return (
     <div className="page">
-      <PageHeader title="Partecipanti" subtitle="La compagnia di questo server: invitali alle tue campagne o scrivi loro in privato." />
+      <PageHeader scene="village" seed={9} title="Partecipanti" subtitle="La compagnia di questo server: invitali alle tue campagne o scrivi loro in privato." />
       {participants.length > 6 && (
         <div className="search-field">
           <Search size={14} />

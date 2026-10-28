@@ -20,7 +20,7 @@ export function HomeView() {
 
   return (
     <div className="page wide">
-      <div className="page-header home-banner">
+      <div className="page-header banner home-banner">
         <Scenery className="banner-scene" />
         <div>
           <h1>

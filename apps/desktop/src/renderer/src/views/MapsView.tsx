@@ -77,7 +77,7 @@ export function MapsView() {
 
   return (
     <div className="page wide">
-      <PageHeader title="Mappe" subtitle="Il tavolo del cartografo: mondi da esplorare e mappe per le sessioni, pronti per ogni campagna.">
+      <PageHeader seed={21} title="Mappe" subtitle="Il tavolo del cartografo: mondi da esplorare e mappe per le sessioni, pronti per ogni campagna.">
         <div className="row" style={{ position: 'relative' }}>
           <Search size={14} className="faint" style={{ position: 'absolute', left: 10 }} />
           <input className="input" style={{ paddingLeft: 30, width: 200 }} placeholder="Cerca…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cerca nelle mappe" />

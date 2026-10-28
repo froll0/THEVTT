@@ -28,7 +28,7 @@ export function SettingsView({ initial }: { initial?: SettingsSection }) {
   const [section, setSection] = useState<SettingsSection>(initial ?? 'appearance');
   return (
     <div className="page wide">
-      <PageHeader title="Impostazioni" />
+      <PageHeader scene="tower" seed={5} title="Impostazioni" />
       <div className="settings">
         <nav className="settings-nav">
           {SECTIONS.filter((s) => !s.desktop || bridge).map((s) => (
